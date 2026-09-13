@@ -57,6 +57,7 @@ pub(crate) struct TestWindowState {
     native_context_menus_supported: bool,
     native_context_menu_cancel_fails: bool,
     pending_context_menu: Option<PendingContextMenu>,
+    draw_count: usize,
 }
 
 struct PendingContextMenu {
@@ -133,7 +134,13 @@ impl TestWindow {
             native_context_menus_supported: false,
             native_context_menu_cancel_fails: false,
             pending_context_menu: None,
+            draw_count: 0,
         })))
+    }
+
+    #[cfg(test)]
+    pub(crate) fn draw_count(&self) -> usize {
+        self.0.lock().draw_count
     }
 
     pub(crate) fn set_native_context_menus_supported(&self, supported: bool) {
@@ -527,6 +534,7 @@ impl PlatformWindow for TestWindow {
     fn draw(&self, scene: &Scene) {
         let scale_factor = self.scale_factor();
         let mut state = self.0.lock();
+        state.draw_count += 1;
         let device_size: Size<DevicePixels> = state.bounds.size.to_device_pixels(scale_factor);
         if let Some(renderer) = &mut state.renderer {
             renderer.render_scene(scene, device_size).warn_on_err();

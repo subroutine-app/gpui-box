@@ -9672,6 +9672,40 @@ mod tests {
     }
 
     #[test]
+    fn test_clean_frame_request_without_presentation_does_not_submit_scene() {
+        let mut cx = TestAppContext::single();
+        let window = cx.add_window(|_, _| EmptyView);
+        let platform_window = cx.test_window(window.into());
+
+        // The first platform tick submits the initially dirty window.
+        platform_window.simulate_request_frame(RequestFrameOptions {
+            require_presentation: false,
+            force_render: false,
+        });
+        let before = platform_window.draw_count();
+
+        platform_window.simulate_request_frame(RequestFrameOptions {
+            require_presentation: false,
+            force_render: false,
+        });
+        assert_eq!(
+            platform_window.draw_count(),
+            before,
+            "a clean frame-clock tick resubmitted the cached scene"
+        );
+
+        platform_window.simulate_request_frame(RequestFrameOptions {
+            require_presentation: true,
+            force_render: false,
+        });
+        assert_eq!(
+            platform_window.draw_count(),
+            before + 1,
+            "an explicit presentation request did not submit the cached scene"
+        );
+    }
+
+    #[test]
     fn test_frame_request_while_app_is_borrowed_is_deferred() {
         let mut cx = TestAppContext::single();
         let renders = Rc::new(Cell::new(0));

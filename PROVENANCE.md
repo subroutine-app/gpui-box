@@ -49,7 +49,9 @@ certify native keyboard, accessibility, persistence or rendering.
 The source-line projection index, projected editable geometry, and disjoint
 painted accessibility regions are original GPUI Box framework work. Editor
 fold identities and transient toggle policy are original Kit work; no new
-source import or historical receipt change is involved.
+source import or historical receipt change is involved. Browser frame-clock
+ticks now submit only dirty scenes or explicit presentation requests; this is
+an original GPUI Box web-platform correction and imports no source.
 
 The September 2026 Windows hosting corrections (per-child regions, complete
 empty-frame submission, and retry-safe saved-region ownership) are original

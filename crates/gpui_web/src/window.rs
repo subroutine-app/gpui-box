@@ -610,7 +610,11 @@ impl WebWindowInner {
                 |callbacks| &mut callbacks.request_frame,
                 |callback| {
                     callback(RequestFrameOptions {
-                        require_presentation: true,
+                        // RAF is the browser's frame clock, not evidence that the
+                        // cached scene changed. Dirty views and animation callbacks
+                        // still draw on this tick; an idle window must not resubmit
+                        // the same scene at the display refresh rate.
+                        require_presentation: false,
                         force_render: false,
                     })
                 },

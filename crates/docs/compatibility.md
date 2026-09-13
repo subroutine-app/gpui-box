@@ -35,6 +35,9 @@ Linux builder and sticky/nested-deferred integration tests cover these shared
 invariants; browser smoke checks TreeGrid ancestry on WebGL2 and WebGPU. Native
 macOS and Windows adapter validation remains the on-demand Platforms lane;
 the shared change does not alter clipping, transforms, hit testing, or paint.
+Browser `requestAnimationFrame` remains the single-threaded frame clock, but an
+idle tick no longer requests presentation: only a dirty view, animation callback,
+high-rate input hold, or explicit presentation request submits the cached scene.
 
 Windows native-view clips are independent child-local regions as well as a
 host union; clipping never changes full layout dimensions. Empty frames hide
