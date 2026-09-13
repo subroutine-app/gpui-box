@@ -393,6 +393,19 @@ string_keys! {
     KbdControl => "kbd.control", "Ctrl";
     KbdAlt => "kbd.alt", "Alt";
     KbdShift => "kbd.shift", "Shift";
+    KbdFunction => "kbd.function", "Fn";
+    KbdSpace => "kbd.space", "Space";
+    KbdBackspace => "kbd.backspace", "Backspace";
+    KbdDelete => "kbd.delete", "Delete";
+    KbdEscape => "kbd.escape", "Esc";
+    KbdEnter => "kbd.enter", "Enter";
+    KbdPageDown => "kbd.page-down", "Page Down";
+    KbdPageUp => "kbd.page-up", "Page Up";
+    KbdTab => "kbd.tab", "Tab";
+    KbdLeft => "kbd.left", "Left";
+    KbdRight => "kbd.right", "Right";
+    KbdUp => "kbd.up", "Up";
+    KbdDown => "kbd.down", "Down";
 
     // Data grid.
     GridSelectedNoun => "grid.selected-noun", "selected";

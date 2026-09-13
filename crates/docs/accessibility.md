@@ -75,7 +75,7 @@ diagnostic coordinator is not a condition of platform accessibility.
 GPUI can forward that AccessKit tree to NSAccessibility on macOS, UI Automation
 on Windows, AT-SPI on Linux, and an invisible semantic DOM mirror in browsers.
 Linux compatibility and the remaining native adapter proofs are active work in
-`docs/foundation-roadmap.md`; they are not complete or release-gating yet. The
+`crates/docs/foundation-roadmap.md`; they are not complete or release-gating yet. The
 rows below describe the current adapter paths. Deterministic tests
 exercise the AccessKit tree, and the browser smoke exercises the DOM mirror's
 roles, focus, actions, and canvas-scaled bounds. The macOS smoke check
@@ -208,7 +208,7 @@ this smoke check. Native text-selection mutation remains unverified, while the
 real AccessKit action path is covered deterministically. VoiceOver speech,
 navigation order, value/range adjustment, selection, and announcement timing
 remain manual, unverified boundaries. The automated macOS, Windows, Linux, and
-Web completion plan is in `docs/foundation-roadmap.md`.
+Web completion plan is in `crates/docs/foundation-roadmap.md`.
 
 On Windows, the same command runs in the repository's interactive
 `windows-2025` job. It uses PID-scoped UI Automation to set and read an Edit

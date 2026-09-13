@@ -770,7 +770,7 @@ or colour question came up.
 
 This pass supersedes the current-status conclusions above without rewriting
 that historical audit. It reviewed all 180 public components in
-`docs/api-index.json` against their current Rust API and implementation,
+`crates/docs/api-index.json` against their current Rust API and implementation,
 declared exhibits, both macOS `studio-dark` and `studio-light` headless
 baselines, and focused behavior tests. Scores use this 100-point rubric:
 

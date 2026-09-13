@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "authority": "docs/api-index.json",
+  "authority": "crates/docs/api-index.json",
   "components": [
     {
       "name": "AbilityBar",

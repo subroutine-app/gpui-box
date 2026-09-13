@@ -583,7 +583,7 @@ fn dependencies_from_manifest(
 }
 
 fn guides(root: &Path) -> Result<Vec<Value>> {
-    let mut paths = fs::read_dir(root.join("docs"))?
+    let mut paths = fs::read_dir(root.join("crates/docs"))?
         .map(|entry| entry.map(|entry| entry.path()))
         .collect::<std::io::Result<Vec<_>>>()?;
     paths.retain(|path| path.extension().is_some_and(|extension| extension == "md"));
@@ -615,7 +615,7 @@ fn recipes(root: &Path, guides: &[Value]) -> Result<Vec<Value>> {
     let mut ids = BTreeSet::new();
     for guide in guides {
         let slug = string(guide, "slug");
-        let body = fs::read_to_string(root.join("docs").join(format!("{slug}.md")))?;
+        let body = fs::read_to_string(root.join("crates/docs").join(format!("{slug}.md")))?;
         for title in body.lines().filter_map(|line| line.strip_prefix("## ")) {
             let base = format!("{slug}-{}", slugify(title));
             let mut id = base.clone();

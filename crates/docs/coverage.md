@@ -5,7 +5,7 @@ one provides, and what is deliberately out of scope. GPUI Box is the
 application substrate: if a downstream desktop or browser-hosted product
 needs a surface to exist, the surface belongs here unless it is a host
 fact, a locale fact, a transport, or a platform chrome the OS already
-owns. `docs/components.md` describes the components themselves; this file
+owns. `crates/docs/components.md` describes the components themselves; this file
 exists so a gap is a recorded decision rather than an oversight.
 
 Glass optics use a shared height field, Snell refraction, spectral indices and
@@ -15,11 +15,11 @@ single-interface screen-space optics, not full volume transport: no second
 interface, internal bounces, caustics, hidden-background recovery or real
 environment reflection is claimed. Scattering remains a uniform Gaussian;
 background-busyness probes and fused-outline shadows remain deferred. See
-`docs/compatibility.md` for the material contract and platform evidence boundary.
+`crates/docs/compatibility.md` for the material contract and platform evidence boundary.
 
 A component counts as covered only when it has all four of: a public builder or
 view, a scene in `gpui_kit::scenes`, behaviour tests driven through simulated
-input, and an entry in `docs/components.md`.
+input, and an entry in `crates/docs/components.md`.
 
 ## Covered
 
@@ -100,7 +100,7 @@ against every surface that implements it.
 
 | System | Contract | Implemented by |
 |---|---|---|
-| Drag and drop (`gpui_kit::interaction::dnd`) | `docs/interaction.md` | `List`, `Tree`, `Tabs`, `Dropzone`, `DataGrid` (column headers), `Dock`/`DockTree` (panel headers, groups, split edges) |
+| Drag and drop (`gpui_kit::interaction::dnd`) | `crates/docs/interaction.md` | `List`, `Tree`, `Tabs`, `Dropzone`, `DataGrid` (column headers), `Dock`/`DockTree` (panel headers, groups, split edges) |
 
 Drag and drop is covered: the contract is written down, the scenes `drag-list`,
 `drag-tree`, and `dropzone` stage it, and `crates/gpui-kit/tests/it/dnd.rs`
@@ -140,7 +140,7 @@ Both are covered and neither replaces the other. `Table` takes materialized
 rows and lays all of them out; `DataGrid` takes a render closure and lays out
 only the rows the viewport holds, which is what buys it column resizing and
 reordering, a pinned group, selection over an incompletely loaded set, opened
-rows, and cell editing. `docs/components.md` has the guidance on which to
+rows, and cell editing. `crates/docs/components.md` has the guidance on which to
 reach for. A wide `DataGrid` uses one horizontal viewport for its header,
 virtualized body, and summary, while a pinned leading group remains frozen at
 the reading edge. Its remaining fit-to-content limit is stated rather than
@@ -169,7 +169,7 @@ own; both are exercised through every control and overlay that uses them.
   Correctness there is calendar, time-zone and locale work, not UI work, and a
   library that shipped a half-correct calendar would be worse than one that
   shipped none. So the components own no date arithmetic at all and read every
-  fact from a host-implemented `DateAdapter`; `docs/datetime.md` is the
+  fact from a host-implemented `DateAdapter`; `crates/docs/datetime.md` is the
   contract. The reference calendar the scenes and tests run on is behind the
   `fixtures` feature, off by default, so it cannot be mistaken for a default.
 - **Time formatting.** `Timeline` displays times and day headings, and
@@ -199,7 +199,7 @@ own; both are exercised through every control and overlay that uses them.
 - **Doing what a document says.** `Markdown` draws HTML as the characters
   somebody wrote, reports a link rather than opening it, and names an image
   rather than fetching it. There is no HTML renderer here, no URL policy, and
-  no network; `docs/content.md` states why each of those is a refusal rather
+  no network; `crates/docs/content.md` states why each of those is a refusal rather
   than a gap, and what a host has to supply instead.
 - **Delivering a message.** `MessageList` renders five delivery states and
   reports a retry. Sending anything, deciding what a resend means, and knowing
@@ -228,11 +228,11 @@ own; both are exercised through every control and overlay that uses them.
   `VideoPlayer` ask a `MediaTransport`; `PlatformMediaTransport` currently
   implements it with AVFoundation on macOS and Media Foundation on Windows.
   Linux GStreamer and Web HTML media adapters are planned work in
-  `docs/foundation-roadmap.md`, not permanent no-backend policy. Playlist and
+  `crates/docs/foundation-roadmap.md`, not permanent no-backend policy. Playlist and
   queue ownership, URL/auth policy, DRM, subtitle/track policy, output-device
   policy, custom cache/retry and capture remain host responsibilities.
 - **Reading a 3D model that is not glTF.** `ModelViewer` reads the subset of
-  glTF 2.0 stated in `docs/components.md` and refuses everything else, without
+  glTF 2.0 stated in `crates/docs/components.md` and refuses everything else, without
   a scene-graph dependency, a material system, or a texture pipeline. Other
   formats, materials, animation and skinning are not gaps to be filled here:
   a document that needs them is one an application converts before it arrives.
@@ -668,7 +668,7 @@ of which had been failing silently in every theme:
   `TokenDocument::validate` refuses the theme. The dark neutral ramp was
   respaced and the light one retuned to pass it. That is what made the card,
   table, dock and popup boundaries in dozens of the `High` rows visible;
-  `contrast.rs` and `docs/token-model.md` carry the contract.
+  `contrast.rs` and `crates/docs/token-model.md` carry the contract.
 - **Tone distinction.** `muted`, `faint`, `placeholder` and `disabled` were
   three different facts wearing one grey in dark, and an inverted ladder in
   light, while every foreground/background contrast pair passed. Each rung now
@@ -703,7 +703,7 @@ looks like.
 
 ### Motion framework boundaries
 
-The primitives in `docs/motion.md` cover a value moving from one state to
+The primitives in `crates/docs/motion.md` cover a value moving from one state to
 another, motion that is interrupted, composed or driven by a gesture, and
 springs described as a duration and a bounce. The remaining entries are
 renderer/framework boundaries, not missing catalog components.
@@ -867,7 +867,7 @@ was already here rather than beside it, which is the whole reason they are
 small: `Collapsible` is an `Accordion` with one section, `Menubar` is a row of
 `Menu` views with the row's own three behaviours added, and `Toggle` is a
 `Button` that publishes a checked state. Two of them state a limit rather than
-inventing an answer, and `docs/components.md` carries both — what `CopyButton`
+inventing an answer, and `crates/docs/components.md` carries both — what `CopyButton`
 can and cannot know about the clipboard, and what a hover card's grace period
 is for. `Cascader`, `AnchorList`, and `DiagnosticsList` are also covered above;
 they compose the existing popover/menu, navigation, list, filter, badge, and
@@ -973,7 +973,7 @@ physical-device/browser delivery coverage beyond the framework platform lanes.
 | Text range highlighting | `HighlightedText`, `LogStream`, `CodeView` and `DiffView` render caller-supplied ranges while constructing their text. GPUI still has no API that marks a substring of an arbitrary already-rendered text element, which blocks a generic find-in-page overlay. |
 | Writing direction | `LayoutDirection` supplies logical row order, start/end spacing and borders, text alignment, directional glyph mirroring, and reading-order keyboard traversal across controls, navigation, menus, calendars, trees, structured views, and schema forms. Unicode bidi shaping keeps mixed Arabic/Hebrew, Latin, punctuation, and numbers in logical order. Host-owned localized copy, locale formatting, and a larger language-specific bidi corpus remain integration work rather than component geometry. |
 | Number, date, and quantity formatting | `NumberAdapter` owns every library-authored numeric shape — grouped counts and decimals, editable parsing, plural category, count-of-total, percent, multiplier, dimensions, ordinals, signed deltas, lower bounds, and affix placement. `Strings` owns every phrase and its zero/one/two/few/many/other variants. Dates remain the parallel `DateAdapter` contract. See "Numbers a catalogue cannot fix alone" below. |
-| Assistive technology gaps | Basic semantics, grapheme-based editable and read-only text runs, shared shaped character/caret geometry, selection actions, explicit live-region properties, same-window labelled-by/described-by relationships, and deferred-overlay active descendants now reach GPUI's AccessKit platform tree. macOS and Windows natively verify relationship-derived field name/help and editable character/caret geometry; Windows additionally verifies ValuePattern editing and MenuItem focus/invocation/lifetime. Cross-tree completion focus is deterministic only. Native-child handoff, platform live-event verification, remaining Windows overlay/event sessions, and Linux AT-SPI validation are active foundation work; see `docs/accessibility.md` and `docs/foundation-roadmap.md`. |
+| Assistive technology gaps | Basic semantics, grapheme-based editable and read-only text runs, shared shaped character/caret geometry, selection actions, explicit live-region properties, same-window labelled-by/described-by relationships, and deferred-overlay active descendants now reach GPUI's AccessKit platform tree. macOS and Windows natively verify relationship-derived field name/help and editable character/caret geometry; Windows additionally verifies ValuePattern editing and MenuItem focus/invocation/lifetime. Cross-tree completion focus is deterministic only. Native-child handoff, platform live-event verification, remaining Windows overlay/event sessions, and Linux AT-SPI validation are active foundation work; see `crates/docs/accessibility.md` and `crates/docs/foundation-roadmap.md`. |
 | Validation vocabulary | `ValidationState` is the caller-owned `Pending` / `Validating` / `Invalid { reason }` / `Valid` ladder. `FormField` presents it without painting in-flight work as failure; `SchemaForm` keeps field and whole-form validation separate and blocks submission while an explicitly managed check is pending or validating. Rules and timing remain host-owned. |
 | Schema field participation | `FieldVisibility` records the result of a host-owned condition without evaluating it. Hidden fields are absent from rendering and field validation; `HiddenSubmission::Omit` removes the subtree only from `submission_values`, while `Include` preserves its complete held subtree. `values` stays lossless, and a hidden object or repeated-list parent governs every descendant. |
 | Settings search | `SettingsList` takes the query a host commonly receives from `SearchField` and owns matching, filtering, result counting, and the no-match state for complete `SettingsSection` builders. Label, description, badge, displayed value, management reason, section context, and `SettingsRow::search_terms` all use the installed `SearchMatcher`; text hidden inside an arbitrary caller control must be named explicitly. Matches retain section and row order rather than turning preferences into a ranked command palette. |
@@ -1013,7 +1013,7 @@ pins and what breaks them, including the two breaks the compiler cannot see: a
 token key and a semantic id. The publishable crates are a crates.io cohort;
 GPUI Box is no longer a git dependency of itself. An enforceable structural
 and calibrated timing budget is active foundation work in
-`docs/foundation-roadmap.md`; until that phase lands, virtualization behavior
+`crates/docs/foundation-roadmap.md`; until that phase lands, virtualization behavior
 tests still do not fail on every class of slowdown.
 The hosted catalog at gpui-box.origingame.dev is the published documentation;
 it is deployed from a checkout and is not itself a crates.io release.
@@ -1023,7 +1023,7 @@ fixed device-pixel size, so it does not depend on a composited, frontmost
 window or the host display. Linux (llvmpipe) is compared at every commit by
 `gate full` on the orb; macOS (Metal) and Windows (WARP) are compared when the
 dispatch-only `Platforms` workflow runs, which is on demand rather than on
-push. `docs/screenshot-testing.md` describes the gate and review workflow.
+push. `crates/docs/screenshot-testing.md` describes the gate and review workflow.
 
 ## Rules every covered component follows
 

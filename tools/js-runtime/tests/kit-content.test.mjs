@@ -26,7 +26,7 @@ test('cross-field contracts reject ambiguous data and unowned resource locators'
 });
 
 test('content membership and every native fixture use the closed executable contract', () => {
-  const catalog = JSON.parse(readFileSync(new URL('../../../docs/api-index.json', import.meta.url)));
+  const catalog = JSON.parse(readFileSync(new URL('../../../crates/docs/api-index.json', import.meta.url)));
   assert.deepEqual(Object.keys(familySchemas).sort(), catalog.components.filter(c => c.path.startsWith('gpui_kit::content::')).map(c => c.name).sort());
   const fixtures = JSON.parse(readFileSync(new URL('../../app-host/src/kit_bindings/content/fixture/nodes.json', import.meta.url)));
   for (const node of fixtures) validateValue(node.props, familySchemas[node.component].props);

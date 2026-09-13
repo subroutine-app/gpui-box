@@ -1,11 +1,14 @@
 //! Animating a value toward a target that can change mid-flight.
 
-use std::time::Duration;
+use std::{
+    ops::{Add, Mul},
+    time::Duration,
+};
 
 use gpui::{App, SharedString, Window};
 use web_time::Instant;
 
-use super::{Interpolate, MotionSpec, keyed};
+use super::{Interpolate, MotionSpec, ScaleAxes, keyed};
 
 /// A value that animates toward whatever it is last told to be.
 ///
@@ -192,6 +195,43 @@ impl<T: Interpolate> Transition<T> {
         self.elapsed = self.total();
     }
 
+    /// Re-expresses both ends of the current run in a changed coordinate space.
+    ///
+    /// The playhead, carried progress velocity, and frame clock are preserved.
+    /// This is for affine changes to the meaning of a value — zooming or moving
+    /// an origin — rather than for choosing a new destination, which remains
+    /// [`Transition::set`]'s job.
+    pub fn transform(&mut self, mut transform: impl FnMut(T) -> T) {
+        self.from = transform(self.from);
+        self.to = transform(self.to);
+    }
+
+    /// Uniformly rescales both where the transition came from and where it is
+    /// going without restarting its clock.
+    pub fn scale_by(&mut self, ratio: f32)
+    where
+        T: Mul<f32, Output = T>,
+    {
+        self.transform(|value| value * ratio);
+    }
+
+    /// Rescales horizontal and vertical coordinates independently without
+    /// restarting the transition.
+    pub fn scale_by_axes(&mut self, x_ratio: f32, y_ratio: f32)
+    where
+        T: ScaleAxes,
+    {
+        self.transform(|value| value.scale_axes(x_ratio, y_ratio));
+    }
+
+    /// Translates both ends of the current run without restarting its clock.
+    pub fn offset_by(&mut self, delta: T)
+    where
+        T: Add<T, Output = T>,
+    {
+        self.transform(|value| value + delta);
+    }
+
     pub fn advance(&mut self, delta: Duration) {
         self.elapsed = (self.elapsed + delta).min(self.total());
     }
@@ -289,6 +329,7 @@ where
 mod tests {
     use super::*;
     use crate::motion::{CubicBezier, MotionSpec, Spring};
+    use gpui::px;
 
     fn linear(duration_ms: u64) -> MotionSpec {
         MotionSpec::new(duration_ms, CubicBezier::new(0.0, 0.0, 1.0, 1.0))
@@ -354,6 +395,48 @@ mod tests {
         transition.snap(10.0);
         assert_eq!(transition.value(), 10.0);
         assert!(!transition.is_animating());
+    }
+
+    #[test]
+    fn scaling_rebases_both_ends_without_restarting_the_playhead() {
+        let mut transition = Transition::new(0.0_f32, linear(200));
+        transition.set(10.0);
+        transition.advance(Duration::from_millis(100));
+
+        transition.scale_by(2.0);
+
+        assert_eq!(transition.target(), 20.0);
+        assert!((transition.value() - 10.0).abs() < 0.1);
+        transition.advance(Duration::from_millis(50));
+        assert!((transition.value() - 15.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn translating_rebases_both_ends_without_restarting_the_playhead() {
+        let mut transition = Transition::new(px(0.0), linear(200));
+        transition.set(px(10.0));
+        transition.advance(Duration::from_millis(100));
+
+        transition.offset_by(px(20.0));
+
+        assert_eq!(transition.target(), px(30.0));
+        assert!((transition.value().as_f32() - 25.0).abs() < 0.1);
+        transition.advance(Duration::from_millis(50));
+        assert!((transition.value().as_f32() - 27.5).abs() < 0.1);
+    }
+
+    #[test]
+    fn compound_geometry_can_rebase_each_axis_independently() {
+        let mut transition = Transition::new(gpui::point(px(0.0), px(10.0)), linear(200));
+        transition.set(gpui::point(px(10.0), px(30.0)));
+        transition.advance(Duration::from_millis(100));
+
+        transition.scale_by_axes(2.0, 3.0);
+
+        assert_eq!(transition.target(), gpui::point(px(20.0), px(90.0)));
+        let value = transition.value();
+        assert!((value.x.as_f32() - 10.0).abs() < 0.1);
+        assert!((value.y.as_f32() - 60.0).abs() < 0.1);
     }
 
     #[test]

@@ -90,8 +90,8 @@ Install the asset source while constructing the application, then call
 `gpui_kit::install` before opening a window. Components hold only transient
 visual state. Values, selections, persistence, transports, and refusals belong
 to the caller; disabled controls install no action handler. See
-[`docs/host-view-boundary.md`](docs/host-view-boundary.md) and
-[`docs/truthful-ui.md`](docs/truthful-ui.md).
+[`crates/docs/host-view-boundary.md`](crates/docs/host-view-boundary.md) and
+[`crates/docs/truthful-ui.md`](crates/docs/truthful-ui.md).
 
 Tokens in `crates/gpui-kit-tokens/tokens/*.json` are authoritative. The kit
 re-exports its common assets, theme, token, and semantics APIs. Public Rust API,
@@ -130,11 +130,11 @@ headless catalogs run on demand through the dispatch-only `Platforms`
 workflow. `web smoke` drives a real Chromium session when the browser gallery
 changes. Browser validation is single-threaded and does not claim
 screen-reader announcements. Exact support and limitations are in
-[`docs/compatibility.md`](docs/compatibility.md).
+[`crates/docs/compatibility.md`](crates/docs/compatibility.md).
 
 `cargo run -p xtask -- performance check` enforces deterministic structural
 budgets for the 10,000-item virtualized surfaces and writes a machine-readable
-report. See [`docs/performance-testing.md`](docs/performance-testing.md).
+report. See [`crates/docs/performance-testing.md`](crates/docs/performance-testing.md).
 
 ## Imported framework and independence
 
@@ -154,5 +154,5 @@ retain their stated terms. See [`THIRD_PARTY_NOTICES`](THIRD_PARTY_NOTICES).
 
 The former <https://gpui-kit.origingame.dev> endpoint remains a compatibility
 alias backed by the same immutable BWG release; it is not a second deployment.
-Deployment details are in [`docs/deploying.md`](docs/deploying.md), and release
-operations are in [`docs/releasing.md`](docs/releasing.md).
+Deployment details are in [`crates/docs/deploying.md`](crates/docs/deploying.md), and release
+operations are in [`crates/docs/releasing.md`](crates/docs/releasing.md).

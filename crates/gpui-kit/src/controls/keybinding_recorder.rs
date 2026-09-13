@@ -520,7 +520,7 @@ mod tests {
         let keystroke = Keystroke::parse("cmd-shift-p").expect("parses");
         let caps =
             crate::overlay::caps(&keystroke.unparse(), true, &crate::strings::Strings::new());
-        assert_eq!(caps, vec![SharedString::from("⌘⇧P")]);
+        assert_eq!(caps, vec![SharedString::from("⇧⌘P")]);
     }
 
     #[test]

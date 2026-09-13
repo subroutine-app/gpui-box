@@ -21,6 +21,10 @@ native operation capabilities. These are original GPUI Box corrections following
 an executed UIKit first-frame failure, not imported platform code. Desktop-only
 mobile host-check trait implementations explicitly reject non-native operations;
 they do not fabricate handles or claim desktop backend support.
+The 80 ms coarse-wheel transition shared by overflowing elements and
+variable-height lists is original GPUI Box input/layout work as well. These
+changes import no additional source and do not alter either frozen receipt.
+Kit transition coordinate rebasing is recorded separately in P21.
 The existing platform-independent priority queue is exported consistently across
 hosts. Non-Android builds explicitly reject NDK surface calls rather than linking
 Android symbols. These corrections add no source import or scheduling algorithm.
@@ -54,8 +58,11 @@ The shared mouse cancellation event, button-bound pointer capture, text/click
 cleanup, browser chord reconciliation, and Windows chord capture lifetime are
 likewise local framework corrections with no imported source.
 Opt-in inline deferred accessibility ancestry, source-order child reservations, and
-active-accessibility cache rebuilding are original GPUI Box corrections. They
-change no platform renderer or frozen import receipt.
+active-accessibility cache rebuilding are original GPUI Box corrections. The
+80 ms coarse-wheel transition shared by overflowing elements and variable-height
+lists is original GPUI Box input/layout work as well. These changes import no
+additional source and do not alter either frozen receipt. Kit transition
+coordinate rebasing is recorded separately in P21.
 
 ## P01: GPUI / Zed filtered framework import
 
@@ -882,7 +889,7 @@ native hit-testing/stacking tests and lifetime restoration are original GPUI Box
 framework work. They extend the existing macOS/Windows platform-view contract;
 no Zed source synchronization or framework Git dependency is introduced. The
 historical import receipt is unchanged. Native Wayland embedding and X11 scene
-overlays above native children are not implemented; see docs/webview.md.
+overlays above native children are not implemented; see crates/docs/webview.md.
 
 ### Native browser engines
 
@@ -1063,3 +1070,38 @@ These changes do not alter the frozen historical import receipt or introduce
 an external source/package authority. Reference observations do not establish
 Apple-equivalent optics, volume transport or native-platform verification of
 the GPUI implementation.
+
+## P21: gpui-ce transition coordinate rebasing
+
+- Upstream: <https://github.com/brendon-felix/gpui-ce>
+- Reviewed revision: `da19cf4da4a9177f5202bc22ed77b4bbf0a28c9d`
+- Source commits: `cfec5ff014f43c19ff0e35a2fbd18e225a92ab3e` and
+  `edd2ee5634b4e1ad751f47960f0c46de9d153597`
+- License: Apache-2.0; Copyright 2026 Brendon Felix
+- Source locations: `crates/gpui/src/transition.rs` and
+  `crates/gpui/src/geometry.rs`
+- Destinations: `crates/gpui-kit/src/motion/transition.rs` and
+  `crates/gpui-kit/src/motion/interpolate.rs`
+
+The uniform scale, independent-axis scale, and translation contracts were
+adapted into Kit's existing value transition rather than restoring gpui-ce's
+window-owned transition state or creating another GPUI type universe. GPUI Box
+also exposes the shared endpoint transform explicitly, supports `Bounds`, and
+keeps its existing spring momentum, reduced-motion handling, scheduler clock,
+and focused pure-state tests.
+
+## P22: GPUI Component `Kbd` source port
+
+- Upstream: <https://github.com/longbridge/gpui-component>
+- Reviewed revision: `b885b07c981ebc488e1c9e564bae170d6fb2d6e3`
+- Latest source-file revision: `49b4ad411e1494037743d1326a8084367373d6ac`
+- License: Apache-2.0; Copyright 2024–2025 Longbridge
+- Source location: `crates/ui/src/kbd.rs`
+- Destination: `crates/gpui-kit/src/overlay/kbd.rs`
+
+The compact single-pill presentation, platform modifier ordering and notation,
+filled/outline/plain appearances, and action-binding lookup helpers are adapted
+from the source above. GPUI Box preserves its existing string constructor and
+stable semantic ids, resolves visible key names through Kit strings, maps paint
+and geometry to its token authority, and retains invalid caller input visibly.
+No gpui-component package, theme, asset, or second GPUI type universe is added.

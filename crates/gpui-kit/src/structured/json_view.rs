@@ -13,7 +13,7 @@
 //!
 //! - A number is carried as the text the document contained. A `f64` cannot
 //!   hold every integer a JSON document can write, and it cannot tell `1.10`
-//!   from `1.1`; this crate also formats no numbers (`docs/coverage.md`
+//!   from `1.1`; this crate also formats no numbers (`crates/docs/coverage.md`
 //!   records that gap), so re-rendering one would be inventing digits.
 //! - An object is a `Vec` of pairs rather than a map. JSON documents have an
 //!   order and may repeat a key; a map would silently reorder the first and

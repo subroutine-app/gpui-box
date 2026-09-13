@@ -7,7 +7,7 @@ version.workspace = true
 license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
-readme = "../../docs/mcp.md"
+readme = "../../crates/docs/mcp.md"
 
 [dependencies]
 anyhow.workspace = true

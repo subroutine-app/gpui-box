@@ -173,8 +173,8 @@ struct Catalog {
 
 impl Catalog {
     fn local(root: PathBuf) -> Result<Self> {
-        let api = read_json(root.join("docs/api-index.json"))?;
-        let developer = read_json(root.join("docs/developer-index.json"))?;
+        let api = read_json(root.join("crates/docs/api-index.json"))?;
+        let developer = read_json(root.join("crates/docs/developer-index.json"))?;
         validate_indexes(&api, &developer)?;
         let revision = git_revision(&root).unwrap_or_else(|| "working-copy".to_string());
         Ok(Self {
@@ -274,7 +274,7 @@ impl Catalog {
                 .join("resources/guides")
                 .join(format!("{slug}.md"))
         } else {
-            self.root.join("docs").join(format!("{slug}.md"))
+            self.root.join("crates/docs").join(format!("{slug}.md"))
         };
         std::fs::read_to_string(&path).with_context(|| format!("read guide {slug:?}"))
     }
@@ -283,7 +283,7 @@ impl Catalog {
         let path = if self.hosted {
             self.root.join("llms.txt")
         } else {
-            self.root.join("docs/llms.txt")
+            self.root.join("crates/docs/llms.txt")
         };
         Ok(std::fs::read_to_string(path)?)
     }
@@ -1704,8 +1704,8 @@ fn checked_root(root: PathBuf) -> Result<PathBuf> {
 fn find_root(start: &Path) -> Option<PathBuf> {
     start.ancestors().find_map(|candidate| {
         (candidate.join("package-authority.toml").is_file()
-            && candidate.join("docs/api-index.json").is_file()
-            && candidate.join("docs/developer-index.json").is_file())
+            && candidate.join("crates/docs/api-index.json").is_file()
+            && candidate.join("crates/docs/developer-index.json").is_file())
         .then(|| candidate.to_path_buf())
     })
 }

@@ -78,7 +78,7 @@ that stopped before it was released reports `Velocity::ZERO` rather than the
 speed it had before the pause — the difference between a flick and a
 deliberate placement, and the reason a host can tell them apart with
 `motion::flick`. A staged drag has no pointer and no gesture, so it reports
-zero too. `docs/motion.md` says how the measurement is taken and what can be
+zero too. `crates/docs/motion.md` says how the measurement is taken and what can be
 built on it.
 
 The library does nothing with the speed on its own. Reordering is not a

@@ -764,7 +764,7 @@ impl Painter {
     ///
     /// A link and an image each need their own bounds so a test and a pointer
     /// can find them, and GPUI has no way to hang a probe on a byte range
-    /// inside a shaped line. The cost is stated in `docs/content.md`: a line
+    /// inside a shaped line. The cost is stated in `crates/docs/content.md`: a line
     /// breaks between runs rather than inside one that spans two styles.
     fn inline_row(
         &mut self,

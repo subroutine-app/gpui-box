@@ -1,20 +1,30 @@
 //! Rendering a keyboard shortcut the way the platform writes it.
 
-use gpui::{App, IntoElement, RenderOnce, SharedString, Window, div, prelude::*, px};
+use gpui::{
+    Action, App, AsKeystroke, FocusHandle, IntoElement, KeyContext, Keystroke, RenderOnce,
+    SharedString, Window, div, prelude::*, px, relative,
+};
 use gpui_kit_semantics::{NodeSpec, Role, Semantic};
 
-use crate::foundation::{ActiveTheme, Ident, StyledExt};
+use crate::foundation::{ActiveTheme, Ident};
 use crate::strings::{ActiveStrings, StringKey, Strings};
 
-/// A keyboard shortcut, written the way the current platform writes it.
+/// A compact tag that displays a platform-formatted keyboard shortcut.
 ///
-/// macOS composes modifiers into one glyph run, while other platforms spell
-/// them out and join with `+`, matching what users read elsewhere in their
-/// system.
+/// The shortcut is rendered in one pill. macOS uses its conventional modifier
+/// glyphs, while other platforms spell modifiers out and join them with `+`.
 #[derive(Debug, Clone, IntoElement)]
 pub struct Kbd {
     keystroke: SharedString,
     ident: Option<Ident>,
+    appearance: bool,
+    outline: bool,
+}
+
+impl From<Keystroke> for Kbd {
+    fn from(stroke: Keystroke) -> Self {
+        Self::new(stroke.unparse())
+    }
 }
 
 impl Kbd {
@@ -23,6 +33,8 @@ impl Kbd {
         Self {
             keystroke: keystroke.into(),
             ident: None,
+            appearance: true,
+            outline: false,
         }
     }
 
@@ -33,6 +45,59 @@ impl Kbd {
         self
     }
 
+    /// Controls whether the shortcut has its compact key-cap appearance.
+    pub fn appearance(mut self, appearance: bool) -> Self {
+        self.appearance = appearance;
+        self
+    }
+
+    /// Draws the key cap with a quiet outline instead of a filled background.
+    pub fn outline(mut self) -> Self {
+        self.outline = true;
+        self
+    }
+
+    /// Returns the first binding for an action in the current focus context.
+    pub fn binding_for_action(
+        action: &dyn Action,
+        context: Option<&str>,
+        window: &Window,
+    ) -> Option<Self> {
+        let key_context = context.and_then(|context| KeyContext::parse(context).ok());
+        let binding = match key_context {
+            Some(context) => {
+                window.highest_precedence_binding_for_action_in_context(action, context)
+            }
+            None => window.highest_precedence_binding_for_action(action),
+        }?;
+        binding
+            .keystrokes()
+            .first()
+            .map(|key| Self::from(key.as_keystroke().clone()))
+    }
+
+    /// Returns the first binding for an action as if `focus_handle` were focused.
+    pub fn binding_for_action_in(
+        action: &dyn Action,
+        focus_handle: &FocusHandle,
+        window: &Window,
+    ) -> Option<Self> {
+        window
+            .highest_precedence_binding_for_action_in(action, focus_handle)?
+            .keystrokes()
+            .first()
+            .map(|key| Self::from(key.as_keystroke().clone()))
+    }
+
+    /// Formats a parsed keystroke for the current platform.
+    pub fn format(keystroke: &Keystroke) -> String {
+        format_for_platform(keystroke, cfg!(target_os = "macos"), &Strings::new())
+    }
+
+    /// Returns the one compact label drawn by this component.
+    ///
+    /// This retains the former `caps` query for source compatibility even
+    /// though the component no longer draws one cap per modifier.
     pub fn caps(&self, cx: &App) -> Vec<SharedString> {
         caps(
             self.keystroke.as_ref(),
@@ -45,41 +110,41 @@ impl Kbd {
 impl RenderOnce for Kbd {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.theme().clone();
-        let published = self.ident.as_ref().map(|ident| {
-            NodeSpec::new(ident.semantic_id(), Role::Text).text(self.keystroke.clone())
-        });
-        // A cap is sized from the same control step its chip is, rather than
-        // from the caption scale, and a cap the symbol face has to draw is
-        // sized a step above that. Those glyphs are drawn well inside their
-        // em, so at caption size the mark a reader has to recognise came out
-        // at around seven pixels and ⌫, ⌦ and ⇥ stopped being separable from
-        // each other.
-        let metrics = theme.control.get(gpui_kit_theme::ControlSize::Sm);
-        let element =
+        let label = self
+            .caps(cx)
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| self.keystroke.clone());
+        let published = self
+            .ident
+            .as_ref()
+            .map(|ident| NodeSpec::new(ident.semantic_id(), Role::Text).text(label.clone()));
+
+        let element = if self.appearance {
             div()
-                .row()
-                .gap(px(theme.spacing.xs / 2.0))
-                .children(self.caps(cx).into_iter().map(|cap| {
-                    let size = if drawn_by_symbol_face(cap.as_ref()) {
-                        theme.typography.subtitle.size
-                    } else {
-                        metrics.font_size
-                    };
-                    div()
-                        .h(px(metrics.height))
-                        .min_w(px(metrics.height))
-                        .px(px(theme.spacing.xs))
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .radius(&theme, gpui_kit_theme::Radius::Small)
-                        .bg(theme.colors.hover)
-                        .mono(&theme)
-                        .font_fallbacks(gpui_kit_assets::key_fallbacks())
-                        .text_size(px(size))
-                        .text_color(theme.colors.text_muted)
-                        .child(cap)
-                }));
+                .text_color(theme.colors.text_muted)
+                .bg(theme.colors.hover)
+                .when(self.outline, |element| {
+                    element
+                        .border(px(theme.borders.hairline))
+                        .border_color(theme.colors.hairline)
+                        .bg(theme.colors.canvas)
+                })
+                .py(px(theme.spacing.xxs))
+                .px(px(theme.spacing.xs))
+                .min_w(px(theme.control.xs.height))
+                .text_center()
+                .rounded(px(theme.radii.control / 2.0))
+                .line_height(relative(1.0))
+                .text_size(px(theme.control.xs.font_size))
+                .whitespace_normal()
+                .flex_shrink_0()
+                .font_fallbacks(gpui_kit_assets::key_fallbacks())
+                .child(label)
+        } else {
+            div().child(label)
+        };
+
         match published {
             Some(spec) => element.semantic_in(cx, spec).into_any_element(),
             None => element.into_any_element(),
@@ -87,82 +152,98 @@ impl RenderOnce for Kbd {
     }
 }
 
-/// Whether a cap contains a glyph the bundled fallback face has to draw.
+/// Formats one GPUI keystroke as the single label drawn by [`Kbd`].
 ///
-/// The arrows are not among them: the mono face draws those itself, at the
-/// same size as the letters beside them.
-fn drawn_by_symbol_face(cap: &str) -> bool {
-    cap.chars()
-        .any(|glyph| matches!(glyph, '⌘' | '⌃' | '⌥' | '⇧' | '⏎' | '⌫' | '⌦' | '⇥' | '␣'))
-}
-
-/// Splits a keystroke into the caps to draw.
-///
-/// Written as a free function so the platform choice can be tested on any host.
+/// Invalid input remains visible rather than being silently converted into an
+/// empty shortcut. The `macos` argument keeps platform formatting testable on
+/// every host.
 pub fn caps(keystroke: &str, macos: bool, strings: &Strings) -> Vec<SharedString> {
-    let mut modifiers = String::new();
-    let mut caps: Vec<SharedString> = Vec::new();
-    let parts: Vec<&str> = keystroke
-        .split('-')
-        .filter(|part| !part.is_empty())
-        .collect();
-    let Some((key, modifier_parts)) = parts.split_last() else {
+    if keystroke.is_empty() {
         return Vec::new();
-    };
-
-    for modifier in modifier_parts {
-        let label = modifier_label(modifier, macos, strings);
-        if macos {
-            modifiers.push_str(&label);
-        } else {
-            caps.push(label.into());
-        }
     }
-    let key = key_label(key, macos);
-    if macos {
-        modifiers.push_str(&key);
-        vec![modifiers.into()]
-    } else {
-        caps.push(key.into());
-        caps
+
+    match Keystroke::parse(keystroke) {
+        Ok(keystroke) => vec![format_for_platform(&keystroke, macos, strings).into()],
+        Err(_) => vec![SharedString::from(keystroke.to_owned())],
     }
 }
 
-/// The symbol forms are only ever reached under macOS, where they are what a
-/// keyboard shortcut is expected to look like.
-///
-/// The Geist faces draw `⇧` and `⇥` but none of the others, so the asset crate
-/// bundles a small fallback face for the remainder. Leaving that to whatever
-/// font the host machine happened to install made this component's output
-/// depend on the machine rather than on the caller's data.
-fn modifier_label(modifier: &str, macos: bool, strings: &Strings) -> String {
-    match (modifier, macos) {
-        ("cmd" | "super" | "win", true) => "⌘".into(),
-        ("cmd" | "super" | "win", false) => strings.text(StringKey::KbdSuper).to_string(),
+fn format_for_platform(keystroke: &Keystroke, macos: bool, strings: &Strings) -> String {
+    let mut parts = Vec::new();
+
+    // This is the order users see in platform shortcut notation: ⌃⌥⇧⌘ on
+    // macOS and Ctrl+Alt+Shift+Win elsewhere.
+    if keystroke.modifiers.control {
+        parts.push(if macos {
+            "⌃".to_owned()
+        } else {
+            strings.text(StringKey::KbdControl).to_string()
+        });
+    }
+    if keystroke.modifiers.alt {
+        parts.push(if macos {
+            "⌥".to_owned()
+        } else {
+            strings.text(StringKey::KbdAlt).to_string()
+        });
+    }
+    if keystroke.modifiers.shift {
+        parts.push(if macos {
+            "⇧".to_owned()
+        } else {
+            strings.text(StringKey::KbdShift).to_string()
+        });
+    }
+    if keystroke.modifiers.platform {
+        parts.push(if macos {
+            "⌘".to_owned()
+        } else {
+            strings.text(StringKey::KbdSuper).to_string()
+        });
+    }
+    if keystroke.modifiers.function {
+        parts.push(strings.text(StringKey::KbdFunction).to_string());
+    }
+
+    parts.push(key_label(&keystroke.key, macos, strings));
+    parts.join(if macos { "" } else { "+" })
+}
+
+fn key_label(key: &str, macos: bool, strings: &Strings) -> String {
+    match (key, macos) {
         ("ctrl" | "control", true) => "⌃".into(),
         ("ctrl" | "control", false) => strings.text(StringKey::KbdControl).to_string(),
         ("alt" | "option", true) => "⌥".into(),
         ("alt" | "option", false) => strings.text(StringKey::KbdAlt).to_string(),
         ("shift", true) => "⇧".into(),
         ("shift", false) => strings.text(StringKey::KbdShift).to_string(),
-        (other, _) => capitalize(other),
-    }
-}
-
-fn key_label(key: &str, macos: bool) -> String {
-    match (key, macos) {
-        // U+23CE, not U+21A9: the bundled mono face draws the hooked arrow as
-        // a shape that reads as something other than a return key.
-        ("enter", true) => "⏎".into(),
-        ("escape", true) => "esc".into(),
+        ("cmd" | "super" | "win" | "platform", true) => "⌘".into(),
+        ("cmd" | "super" | "win" | "platform", false) => {
+            strings.text(StringKey::KbdSuper).to_string()
+        }
+        ("function" | "fn", _) => strings.text(StringKey::KbdFunction).to_string(),
+        ("space", true) => "␣".into(),
+        ("space", false) => strings.text(StringKey::KbdSpace).to_string(),
         ("backspace", true) => "⌫".into(),
+        ("backspace", false) => strings.text(StringKey::KbdBackspace).to_string(),
         ("delete", true) => "⌦".into(),
+        ("delete", false) => strings.text(StringKey::KbdDelete).to_string(),
+        ("escape", true) => "esc".into(),
+        ("escape", false) => strings.text(StringKey::KbdEscape).to_string(),
+        ("enter", true) => "⏎".into(),
+        ("enter", false) => strings.text(StringKey::KbdEnter).to_string(),
+        ("pagedown", _) => strings.text(StringKey::KbdPageDown).to_string(),
+        ("pageup", _) => strings.text(StringKey::KbdPageUp).to_string(),
         ("tab", true) => "⇥".into(),
-        ("up", _) => "↑".into(),
-        ("down", _) => "↓".into(),
-        ("left", _) => "←".into(),
-        ("right", _) => "→".into(),
-        ("space", _) => "␣".into(),
+        ("tab", false) => strings.text(StringKey::KbdTab).to_string(),
+        ("left", true) => "←".into(),
+        ("left", false) => strings.text(StringKey::KbdLeft).to_string(),
+        ("right", true) => "→".into(),
+        ("right", false) => strings.text(StringKey::KbdRight).to_string(),
+        ("up", true) => "↑".into(),
+        ("up", false) => strings.text(StringKey::KbdUp).to_string(),
+        ("down", true) => "↓".into(),
+        ("down", false) => strings.text(StringKey::KbdDown).to_string(),
         (other, _) if other.chars().count() == 1 => other.to_uppercase(),
         (other, _) => capitalize(other),
     }
@@ -181,54 +262,61 @@ mod tests {
     use super::*;
 
     #[test]
-    fn macos_composes_modifiers_into_one_cap() {
+    fn macos_uses_one_compact_label_in_platform_order() {
         assert_eq!(
-            caps("cmd-shift-p", true, &Strings::new()),
-            vec![SharedString::from("⌘⇧P")]
+            caps("cmd-ctrl-shift-alt-a", true, &Strings::new()),
+            vec![SharedString::from("⌃⌥⇧⌘A")]
         );
     }
 
     #[test]
-    fn other_platforms_spell_each_modifier_out() {
+    fn other_platforms_use_one_plus_separated_label() {
         assert_eq!(
-            caps("ctrl-shift-p", false, &Strings::new()),
-            vec![
-                SharedString::from("Ctrl"),
-                SharedString::from("Shift"),
-                SharedString::from("P")
-            ]
+            caps("cmd-ctrl-shift-alt-a", false, &Strings::new()),
+            vec![SharedString::from("Ctrl+Alt+Shift+Win+A")]
         );
     }
 
     #[test]
-    fn named_keys_use_their_symbols_where_the_platform_expects_them() {
+    fn named_keys_follow_gpui_component_notation() {
+        let strings = Strings::new();
         assert_eq!(
-            caps("enter", true, &Strings::new()),
-            vec![SharedString::from("⏎")]
+            caps("escape", true, &strings),
+            vec![SharedString::from("esc")]
         );
         assert_eq!(
-            caps("enter", false, &Strings::new()),
-            vec![SharedString::from("Enter")]
+            caps("shift-delete", true, &strings),
+            vec![SharedString::from("⇧⌦")]
         );
         assert_eq!(
-            caps("up", false, &Strings::new()),
-            vec![SharedString::from("↑")]
+            caps("alt-left", false, &strings),
+            vec![SharedString::from("Alt+Left")]
+        );
+        assert_eq!(
+            caps("shift-space", false, &strings),
+            vec![SharedString::from("Shift+Space")]
         );
     }
 
     #[test]
-    fn the_caps_that_need_the_symbol_face_are_the_ones_it_draws() {
-        assert!(drawn_by_symbol_face("⌘⇧P"));
-        assert!(drawn_by_symbol_face("⌫"));
-        assert!(!drawn_by_symbol_face("esc"));
-        assert!(
-            !drawn_by_symbol_face("↑"),
-            "the mono face draws the arrows itself"
+    fn parser_handles_literal_separator_keys() {
+        let strings = Strings::new();
+        assert_eq!(
+            caps("cmd--", true, &strings),
+            vec![SharedString::from("⌘-")]
+        );
+        assert_eq!(
+            caps("cmd-+", true, &strings),
+            vec![SharedString::from("⌘+")]
         );
     }
 
     #[test]
-    fn an_empty_keystroke_draws_nothing() {
+    fn invalid_source_stays_visible_and_empty_source_draws_nothing() {
+        assert_eq!(
+            caps("ctrl-not-a-key-extra", false, &Strings::new()),
+            vec![SharedString::from("ctrl-not-a-key-extra")]
+        );
         assert!(caps("", true, &Strings::new()).is_empty());
     }
 }

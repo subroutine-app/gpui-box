@@ -43,7 +43,7 @@ jobs:
       - name: Publish calibrated verdict
         if: always()
         run: |
-          echo 'CPU shaping only; within_noise/inconclusive is not proof of equivalence. See docs/performance-testing.md.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'CPU shaping only; within_noise/inconclusive is not proof of equivalence. See crates/docs/performance-testing.md.' >> "$GITHUB_STEP_SUMMARY"
           if test -f target/timing/review/report.json; then
             jq '{verdict, error, baseline: .baseline.revision, candidate: .candidate.revision, results}' target/timing/review/report.json >> "$GITHUB_STEP_SUMMARY"
           fi

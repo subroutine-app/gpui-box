@@ -25,7 +25,7 @@
 //! # }
 //! ```
 //!
-//! See `docs/reactive.md`.
+//! See `crates/docs/reactive.md`.
 
 mod form;
 mod history;

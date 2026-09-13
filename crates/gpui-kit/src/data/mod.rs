@@ -6,7 +6,7 @@
 //! [`DataGrid`] takes a render closure and lays out only the rows its viewport
 //! holds, which is what buys it column resizing and reordering, a pinned
 //! group, selection over an incompletely loaded set, opened rows, and cell
-//! editing. `docs/components.md` has the guidance on which to reach for.
+//! editing. `crates/docs/components.md` has the guidance on which to reach for.
 //!
 //! None of these owns the data. Rows, order, expansion, and selection are all
 //! caller-owned; each surface reports what was operated and renders exactly

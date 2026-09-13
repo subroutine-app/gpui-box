@@ -63,7 +63,7 @@ cargo run -p xtask -- tokens generate
 cargo run -p xtask -- tokens check
 ```
 
-Do not hand-edit `docs/token-reference.md`.
+Do not hand-edit `crates/docs/token-reference.md`.
 
 ## Truthful UI
 
@@ -90,7 +90,7 @@ Do not add product or provider trademarks to the generic asset crate.
 
 ## The generated API index
 
-`docs/api-index.json` carries every component, the exact signature of every
+`crates/docs/api-index.json` carries every component, the exact signature of every
 public method, what each reports, and the scenes that review it. It is
 generated from the source, so it is the answer when it and any prose disagree:
 
@@ -130,7 +130,7 @@ requires the function to be named after the scene.
 So a new component needs a scene that builds it, in the family file next to
 the components it sits with — not a mention inside a shell.
 
-`docs/llms.txt` is the entry point for a program reading this repository, and
+`crates/docs/llms.txt` is the entry point for a program reading this repository, and
 `tools/mcp` serves the generated developer catalog as MCP tools and resources.
 The stateless remote server and checkout stdio server both read this tree's
 indexes, not crates.io `gpui-box-mcp`. Remote `/mcp` is the immutable BWG
@@ -149,7 +149,7 @@ that is not `origin/main`, builds one static Linux/x86-64 bundle, streams it
 through the restricted BWG receiver, and then runs
 `tools/site/verify-deployment.sh`, which proves hosted `/build-info.json` names
 that commit with the same package, symbol, component, type, and scene counts
-as `docs/developer-index.json`, that `POST /mcp` `tools/list` returns every
+as `crates/docs/developer-index.json`, that `POST /mcp` `tools/list` returns every
 remote tool, and that `search_components` with an empty query returns every
 component. The dispatch-only `Deploy site and MCP` workflow is the fallback
 when no machine holds the deployment identity. A push that changes the catalog
@@ -195,7 +195,7 @@ Linux set is the one every commit checks; the other two move only when a
 
 Never hold a baseline from a real window. A window negotiates its size with
 the display it opens on, which is how `snapshots/macos` came to hold two
-incompatible sets that no machine could pass; `docs/screenshot-testing.md`
+incompatible sets that no machine could pass; `crates/docs/screenshot-testing.md`
 records what that cost.
 
 A comparison allows one step per channel. Exactness does not hold even within
@@ -216,7 +216,7 @@ The harness lives in `tools/headless-visual` as its own workspace with
 renderer-specific dependencies and a separate lockfile. It and the root
 workspace must resolve the same local GPUI Box package authority without Git
 sources or patches; run `cargo run -p xtask -- dependencies check` after
-changing it. See `docs/screenshot-testing.md`.
+changing it. See `crates/docs/screenshot-testing.md`.
 
 `cargo run -p xtask -- scenes render` opens the real gallery window and writes
 to `target/scenes`. It holds no baseline and is not a gate; it is how motion

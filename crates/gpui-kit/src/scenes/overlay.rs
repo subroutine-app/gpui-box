@@ -5,9 +5,9 @@ use super::support::*;
 pub(super) fn kbd(_window: &mut Window, cx: &mut App) -> AnyElement {
     let theme = cx.theme().clone();
     // A keystroke is only ever read beside the thing it performs, so the
-    // exhibit shows it where it is used: at the end of a menu row, at the end
-    // of a sentence, and in the run of special keys whose glyphs are the part
-    // that goes wrong.
+    // exhibit shows the compact single-pill treatment where it is used: at
+    // the end of a menu row, inline with prose, and in the run of special keys
+    // whose platform notation is the part that goes wrong.
     let named = |label: &'static str, keystroke: &'static str, id: &'static str| {
         div()
             .row()
@@ -40,10 +40,17 @@ pub(super) fn kbd(_window: &mut Window, cx: &mut App) -> AnyElement {
                 .child(div().w_full().h(px(theme.space(Space::Sm))))
                 .child(named("Rename in place", "cmd-alt-r", "scene.kbd.rename")),
         )
-        .child(caption(
-            &theme,
-            "the keys that need the bundled symbol face",
-        ))
+        .child(caption(&theme, "filled, outlined, and plain notation"))
+        .child(
+            row(&theme)
+                .gap_token(&theme, Space::Sm)
+                .child(Kbd::new("cmd-shift-p").id("scene.kbd.filled"))
+                .child(Kbd::new("cmd-ctrl-t").outline().id("scene.kbd.outline"))
+                .child(Kbd::new("cmd--").id("scene.kbd.minus"))
+                .child(Kbd::new("cmd-+").id("scene.kbd.plus"))
+                .child(Kbd::new("escape").appearance(false).id("scene.kbd.plain")),
+        )
+        .child(caption(&theme, "platform notation for named keys"))
         .child(
             row(&theme)
                 .gap_token(&theme, Space::Sm)

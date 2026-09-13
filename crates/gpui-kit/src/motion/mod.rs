@@ -8,7 +8,8 @@
 //! - [`MotionRole`] names why a component moves and [`MotionPolicy`] resolves
 //!   that reason into the one theme-backed specification and reduced-motion
 //!   answer every component shares;
-//! - [`Interpolate`] moves a value between two states;
+//! - [`Interpolate`] moves a value between two states, while [`ScaleAxes`]
+//!   re-expresses compound geometry when its coordinate space changes;
 //! - [`Keyframes`] takes a value through named stops rather than straight
 //!   across;
 //! - [`Transition`] animates a value whose target can change mid-flight,
@@ -85,7 +86,7 @@ pub use gesture::{
     Flick, VELOCITY_WINDOW, Velocity, VelocityTracker, flick, overscroll, rubber_band,
 };
 pub use glide::Glide;
-pub use interpolate::Interpolate;
+pub use interpolate::{Interpolate, ScaleAxes};
 pub use keyframes::{Keyframe, Keyframes};
 pub use micro::{Micro, MicroMark, MicroMotion, micro};
 pub use policy::{MotionDisposition, MotionPolicy, MotionRole, ResolvedMotion};

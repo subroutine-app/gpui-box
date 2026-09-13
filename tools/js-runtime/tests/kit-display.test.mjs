@@ -25,7 +25,7 @@ test('real factories clone caller data and register only enabled typed actions',
 });
 test('every display component has a native fixture and closed schema; generated data is current', () => {
   assert.deepEqual(Object.keys(props).sort(), Object.keys(familySchemas).sort());
-  const index = JSON.parse(readFileSync(new URL('../../../docs/api-index.json', import.meta.url)));
+  const index = JSON.parse(readFileSync(new URL('../../../crates/docs/api-index.json', import.meta.url)));
   const expected = index.components.filter(c => c.source.startsWith('crates/gpui-kit/src/display/') && !c.name.endsWith('Chart') && !['Divider', 'Plot', 'Sparkline', 'ChartLegend'].includes(c.name)).map(c => c.name).sort();
   assert.deepEqual(Object.keys(familySchemas).sort(), expected);
   for (const [component, value] of Object.entries(props)) {

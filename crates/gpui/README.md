@@ -131,6 +131,6 @@ a second command model.
 
 - [GPUI Box repository](https://github.com/fran0220/gpui-box)
 - [Umbrella project README](https://github.com/fran0220/gpui-box/blob/main/README.md)
-- [Compatibility notes](https://github.com/fran0220/gpui-box/blob/main/docs/compatibility.md)
+- [Compatibility notes](https://github.com/fran0220/gpui-box/blob/main/crates/docs/compatibility.md)
 - [Source provenance](https://github.com/fran0220/gpui-box/blob/main/PROVENANCE.md)
 - [Examples](https://github.com/fran0220/gpui-box/tree/main/crates/gpui/examples)

@@ -1,9 +1,10 @@
 """Equal counts must not hide schema or identity drift on either hostname."""
+
 import os
-from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -20,18 +21,27 @@ class VerifyDeployment(unittest.TestCase):
                 command.write_text("#!/usr/bin/env bash\n" + body + "\n")
                 command.chmod(0o755)
             env = dict(os.environ, PATH=f"{directory}:{os.environ['PATH']}")
-            result = subprocess.run(["bash", str(ROOT / "tools/site/deploy-main.sh")],
-                                    env=env, capture_output=True, text=True, timeout=10)
+            result = subprocess.run(
+                ["bash", str(ROOT / "tools/site/deploy-main.sh")],
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
             self.assertNotEqual(result.returncode, 0)
-            self.assertFalse(marker.exists(), "must not observe a new expectation after validating main")
+            self.assertFalse(
+                marker.exists(),
+                "must not observe a new expectation after validating main",
+            )
 
     def test_exact_catalog_and_equal_count_corruption(self):
         with tempfile.TemporaryDirectory() as directory:
             curl = Path(directory) / "curl"
-            curl.write_text('''#!/usr/bin/env python3
+            curl.write_text("""#!/usr/bin/env python3
 import json, os, pathlib, sys
 root = pathlib.Path(os.environ["FIXTURE_ROOT"])
-developer = json.loads((root / "docs/developer-index.json").read_text())
+developer = json.loads((root / "crates/docs/developer-index.json").read_text())
 tools = json.loads((root / "tools/mcp/tools.json").read_text())
 url = sys.argv[-1]
 mode = os.environ["FAULT"] if "gpui-kit.origingame.dev" in url else ""
@@ -50,15 +60,31 @@ else:
         if mode == "identity": ids[0] = ids[1]
         result = {"structuredContent": {"matches": [{"id": id} for id in ids], "nextCursor": None}}
     print(json.dumps({"jsonrpc": "2.0", "id": request["id"], "result": result}))
-''')
+""")
             curl.chmod(0o755)
             for fault in ["", "name", "schema", "identity"]:
                 with self.subTest(fault=fault):
-                    env = dict(os.environ, PATH=f"{directory}:{os.environ['PATH']}",
-                               FIXTURE_ROOT=str(ROOT), FAULT=fault)
-                    result = subprocess.run(["bash", str(ROOT / "tools/site/verify-deployment.sh"), "a" * 40],
-                                            env=env, capture_output=True, text=True, timeout=10)
-                    self.assertEqual(result.returncode == 0, not fault, result.stdout + result.stderr)
+                    env = dict(
+                        os.environ,
+                        PATH=f"{directory}:{os.environ['PATH']}",
+                        FIXTURE_ROOT=str(ROOT),
+                        FAULT=fault,
+                    )
+                    result = subprocess.run(
+                        [
+                            "bash",
+                            str(ROOT / "tools/site/verify-deployment.sh"),
+                            "a" * 40,
+                        ],
+                        env=env,
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                        check=False,
+                    )
+                    self.assertEqual(
+                        result.returncode == 0, not fault, result.stdout + result.stderr
+                    )
 
 
 if __name__ == "__main__":

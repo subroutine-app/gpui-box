@@ -9,7 +9,7 @@ without a window.
 | Physics | `Spring` | Closed-form damped spring from stiffness, damping and mass. |
 | Specification | `MotionSpec` | A curve — or a spring, via `MotionSpec::sprung` — plus duration and delay. |
 | Policy | `MotionRole`, `MotionPolicy`, `ResolvedMotion` | Names why UI moves, resolves one theme-backed specification, and chooses the reduced-motion disposition. |
-| Value | `Interpolate` | Moves `f32`, `Pixels`, `Rems`, `Hsla`, `Point` and `Size`, and measures how far apart two of them are. |
+| Value | `Interpolate`, `ScaleAxes` | Moves `f32`, `Pixels`, `Rems`, `Hsla`, `Point`, `Size`, and `Bounds`, measures distance, and rebases compound geometry across changed axes. |
 | Path | `Keyframes` | Takes a value through named stops rather than straight across. |
 | State | `Transition` | Animates a value whose target can change mid-flight, carrying the speed it already had. |
 | Gesture | `VelocityTracker` | Measures how fast a gesture is moving, so `flick`, `rubber_band` and `Transition::release` have a speed to work from. |
@@ -235,7 +235,24 @@ moves, a panel that opens) resolves its finite role and uses `Transition` or
 
 - retargeting a `Transition` continues from the value on screen instead of
   restarting from the old target;
+- `Transition::scale_by`, `scale_by_axes`, and `offset_by` re-express both ends
+  of an in-flight run when its coordinate space changes, preserving its
+  playhead instead of turning zoom or origin movement into a second animation;
 - reversing a `Presence` mid-flight resumes from what is currently visible.
+
+A transition's target is caller-owned state; its coordinate system may not be.
+When a viewport zooms or its origin moves, rebase the run before setting any
+new target:
+
+```rust
+transition.scale_by_axes(width_ratio, height_ratio);
+transition.offset_by(origin_delta);
+transition.set(next_target);
+```
+
+`ScaleAxes` is implemented for `Point`, `Size`, and `Bounds`. `transform` is the
+lower-level form for another affine coordinate representation. These methods do
+not advance or restart the clock and do not schedule a frame by themselves.
 
 ## Describing a run, and driving it by hand
 
@@ -343,7 +360,7 @@ Three effects are built on it:
   frame — because the band is where the hand is holding it.
 
 Nothing in this library overscrolls, so `rubber_band` is provided for a caller
-and used by no component here. That is recorded in `docs/coverage.md`.
+and used by no component here. That is recorded in `crates/docs/coverage.md`.
 
 ## Scroll-linked values
 

@@ -20,7 +20,7 @@
 //! Rule 1 catches `"Show {n} more lines"`; rule 2 catches `.label("copy")`,
 //! which rule 1 would read as an id.
 //!
-//! Every suspect has to be listed in `docs/strings-allowlist.txt`. The
+//! Every suspect has to be listed in `crates/docs/strings-allowlist.txt`. The
 //! allowlist is an explicit file rather than a cleverer rule because the
 //! remaining literals are not one shape: they are `Debug` names, panic
 //! messages, `Display` implementations for host-facing errors, published
@@ -84,7 +84,7 @@ const SHOWN: &[&str] = &[
 ];
 
 pub fn check(root: &Path) -> Result<()> {
-    let allowlist_path = root.join("docs").join("strings-allowlist.txt");
+    let allowlist_path = root.join("crates/docs").join("strings-allowlist.txt");
     let allowed = read_allowlist(&allowlist_path)?;
     let found = scan(&root.join("crates").join("gpui-kit").join("src"))?;
 
@@ -129,7 +129,7 @@ pub fn check(root: &Path) -> Result<()> {
 /// Rewrites the allowlist from what is in the tree, for the one case where
 /// that is honest: a reviewer who has just read every entry.
 pub fn generate(root: &Path) -> Result<()> {
-    let path = root.join("docs").join("strings-allowlist.txt");
+    let path = root.join("crates/docs").join("strings-allowlist.txt");
     let found = scan(&root.join("crates").join("gpui-kit").join("src"))?;
     let texts: BTreeSet<String> = found.into_iter().map(|suspect| suspect.text).collect();
     let mut out = String::from(HEADER);

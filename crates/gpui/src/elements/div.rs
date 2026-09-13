@@ -16,11 +16,11 @@
 //! constructed by combining these two systems into an all-in-one element.
 
 use crate::{
-    Action, AnyDrag, AnyElement, AnyTooltip, AnyView, App, Bounds, ClickEvent, DispatchPhase,
-    Display, Edges, Element, ElementId, Entity, EntityId, ExternalDragPayload,
-    ExternalDragPayloadSource, FocusHandle, Global, GlobalElementId, Hitbox, HitboxBehavior,
-    HitboxId, InspectorElementId, IntoElement, IsZero, KeyContext, KeyDownEvent, KeyUpEvent,
-    KeyboardButton, KeyboardClickEvent, LayoutId, ModifiersChangedEvent, MouseButton,
+    Action, AnyDrag, AnyElement, AnyTooltip, AnyView, App, Bounds, ClickEvent,
+    CoarseScrollTransition, DispatchPhase, Display, Edges, Element, ElementId, Entity, EntityId,
+    ExternalDragPayload, ExternalDragPayloadSource, FocusHandle, Global, GlobalElementId, Hitbox,
+    HitboxBehavior, HitboxId, InspectorElementId, IntoElement, IsZero, KeyContext, KeyDownEvent,
+    KeyUpEvent, KeyboardButton, KeyboardClickEvent, LayoutId, ModifiersChangedEvent, MouseButton,
     MouseClickEvent, MouseDownEvent, MouseExitEvent, MouseMoveEvent, MousePressureEvent,
     MouseUpEvent, OngoingScroll, Overflow, ParentElement, PinchEvent, Pixels, Point, Render,
     ScrollWheelEvent, SharedString, Size, Style, StyleRefinement, Styled, Task, TooltipId,
@@ -2255,6 +2255,7 @@ pub struct Interactivity {
     pub(crate) scroll_anchor: Option<ScrollAnchor>,
     pub(crate) scroll_offset: Option<Rc<RefCell<Point<Pixels>>>>,
     pub(crate) ongoing_scroll: Option<Rc<RefCell<OngoingScroll>>>,
+    pub(crate) coarse_scroll: Option<Rc<RefCell<CoarseScrollTransition>>>,
     pub(crate) group: Option<SharedString>,
     /// The base style of the element, before any modifications are applied
     /// by focus, active, etc.
@@ -2379,6 +2380,7 @@ impl Interactivity {
                     let scroll_handle_state = scroll_handle.0.borrow();
                     self.scroll_offset = Some(scroll_handle_state.offset.clone());
                     self.ongoing_scroll = Some(scroll_handle_state.ongoing_scroll.clone());
+                    self.coarse_scroll = Some(scroll_handle_state.coarse_scroll.clone());
                 } else if (self.base_style.overflow.x == Some(Overflow::Scroll)
                     || self.base_style.overflow.y == Some(Overflow::Scroll))
                     && let Some(element_state) = element_state.as_mut()
@@ -2393,6 +2395,14 @@ impl Interactivity {
                         element_state
                             .ongoing_scroll
                             .get_or_insert_with(|| Rc::new(RefCell::new(OngoingScroll::default())))
+                            .clone(),
+                    );
+                    self.coarse_scroll = Some(
+                        element_state
+                            .coarse_scroll
+                            .get_or_insert_with(|| {
+                                Rc::new(RefCell::new(CoarseScrollTransition::default()))
+                            })
                             .clone(),
                     );
                 }
@@ -2570,9 +2580,23 @@ impl Interactivity {
         bounds: Bounds<Pixels>,
         style: &Style,
         window: &mut Window,
-        _cx: &mut App,
+        cx: &mut App,
     ) -> Point<Pixels> {
         if let Some(scroll_offset) = self.scroll_offset.as_ref() {
+            if let Some(coarse_scroll) = &self.coarse_scroll {
+                let mut coarse_scroll = coarse_scroll.borrow_mut();
+                let delta = if cx.reduce_motion() {
+                    coarse_scroll.finish()
+                } else {
+                    coarse_scroll.advance_at(cx.background_executor().now())
+                };
+                if coarse_scroll.is_animating() {
+                    window.request_animation_frame();
+                }
+                drop(coarse_scroll);
+                *scroll_offset.borrow_mut() += delta;
+            }
+
             let scroll_to_bottom = if let Some(scroll_handle) = &self.tracked_scroll_handle {
                 let mut scroll_handle_state = scroll_handle.0.borrow_mut();
                 scroll_handle_state.overflow = style.overflow;
@@ -2593,12 +2617,19 @@ impl Interactivity {
             // Clamp scroll offset in case scroll max is smaller now (e.g., if children
             // were removed or the bounds became larger).
             let mut scroll_offset = scroll_offset.borrow_mut();
+            let unclamped = *scroll_offset;
 
             scroll_offset.x = scroll_offset.x.clamp(-scroll_max.x, px(0.));
             if scroll_to_bottom {
                 scroll_offset.y = -scroll_max.y;
             } else {
                 scroll_offset.y = scroll_offset.y.clamp(-scroll_max.y, px(0.));
+            }
+            if let Some(coarse_scroll) = &self.coarse_scroll {
+                coarse_scroll.borrow_mut().cancel_axes(
+                    scroll_offset.x != unclamped.x,
+                    scroll_offset.y != unclamped.y,
+                );
             }
 
             *scroll_offset
@@ -3454,6 +3485,7 @@ impl Interactivity {
         if let Some(scroll_offset) = self.scroll_offset.clone() {
             let scroll_max = self.scroll_max(bounds, style, window);
             let ongoing_scroll = self.ongoing_scroll.clone();
+            let coarse_scroll = self.coarse_scroll.clone();
             let overflow = style.overflow;
             let allow_concurrent_scroll = style.allow_concurrent_scroll;
             let restrict_scroll_to_axis = style.restrict_scroll_to_axis;
@@ -3463,7 +3495,6 @@ impl Interactivity {
             window.on_mouse_event(move |event: &ScrollWheelEvent, phase, window, cx| {
                 if phase == DispatchPhase::Bubble && hitbox.should_handle_scroll(window) {
                     let mut scroll_offset = scroll_offset.borrow_mut();
-                    let old_scroll_offset = *scroll_offset;
                     let mut delta = event.delta.pixel_delta(line_height);
 
                     if restrict_scroll_to_axis
@@ -3500,21 +3531,60 @@ impl Interactivity {
                             delta_x = Pixels::ZERO;
                         }
                     }
-                    scroll_offset.y = (scroll_offset.y + delta_y).clamp(-scroll_max.y, px(0.));
-                    scroll_offset.x = (scroll_offset.x + delta_x).clamp(-scroll_max.x, px(0.));
-                    if *scroll_offset != old_scroll_offset {
-                        let moved = *scroll_offset - old_scroll_offset;
-                        // Single-axis fallback maps the input axis; report
-                        // consumption in that original coordinate system.
+
+                    let requested = point(delta_x, delta_y);
+                    let mut moved_immediately = false;
+                    let accepted = if event.delta.precise() || cx.reduce_motion() {
+                        if let Some(coarse_scroll) = &coarse_scroll {
+                            coarse_scroll.borrow_mut().cancel();
+                        }
+                        let next = point(
+                            (scroll_offset.x + requested.x).clamp(-scroll_max.x, px(0.)),
+                            (scroll_offset.y + requested.y).clamp(-scroll_max.y, px(0.)),
+                        );
+                        let accepted = next - *scroll_offset;
+                        *scroll_offset = next;
+                        moved_immediately = !accepted.is_zero();
+                        accepted
+                    } else if let Some(coarse_scroll) = &coarse_scroll {
+                        let mut coarse_scroll = coarse_scroll.borrow_mut();
+                        let projected = *scroll_offset + coarse_scroll.pending_delta();
+                        let target = point(
+                            (projected.x + requested.x).clamp(-scroll_max.x, px(0.)),
+                            (projected.y + requested.y).clamp(-scroll_max.y, px(0.)),
+                        );
+                        let accepted = target - projected;
+                        if !accepted.is_zero() {
+                            coarse_scroll.push_at(accepted, cx.background_executor().now());
+                            window.on_next_frame(move |_, cx| cx.notify(current_view));
+                        }
+                        accepted
+                    } else {
+                        let next = point(
+                            (scroll_offset.x + requested.x).clamp(-scroll_max.x, px(0.)),
+                            (scroll_offset.y + requested.y).clamp(-scroll_max.y, px(0.)),
+                        );
+                        let accepted = next - *scroll_offset;
+                        *scroll_offset = next;
+                        moved_immediately = !accepted.is_zero();
+                        accepted
+                    };
+
+                    if !accepted.is_zero() {
+                        // Single-axis fallback maps the accepted movement back
+                        // to the physical wheel axis before ancestors inspect
+                        // the residual.
                         let mut consumed = point(px(0.), px(0.));
                         if delta.x.is_zero() && !delta_x.is_zero() {
-                            consumed.y += moved.x;
+                            consumed.y += accepted.x;
                         } else {
-                            consumed.x += moved.x;
+                            consumed.x += accepted.x;
                         }
-                        consumed.y += moved.y;
+                        consumed.y += accepted.y;
                         window.consume_scroll_delta(consumed, line_height, cx);
-                        cx.notify(current_view);
+                        if moved_immediately {
+                            cx.notify(current_view);
+                        }
                     }
                 }
             });
@@ -3778,6 +3848,7 @@ pub struct InteractiveElementState {
     pub(crate) pending_keyboard_down: Option<Rc<RefCell<Option<u64>>>>,
     pub(crate) scroll_offset: Option<Rc<RefCell<Point<Pixels>>>>,
     ongoing_scroll: Option<Rc<RefCell<OngoingScroll>>>,
+    coarse_scroll: Option<Rc<RefCell<CoarseScrollTransition>>>,
     pub(crate) active_tooltip: Option<Rc<RefCell<Option<ActiveTooltip>>>>,
 }
 
@@ -4342,6 +4413,7 @@ impl ScrollAnchor {
 struct ScrollHandleState {
     offset: Rc<RefCell<Point<Pixels>>>,
     ongoing_scroll: Rc<RefCell<OngoingScroll>>,
+    coarse_scroll: Rc<RefCell<CoarseScrollTransition>>,
     bounds: Bounds<Pixels>,
     max_offset: Point<Pixels>,
     child_bounds: Vec<Bounds<Pixels>>,
@@ -4437,6 +4509,7 @@ impl ScrollHandle {
         }
         let changed = next != *state.offset.borrow();
         if changed {
+            state.coarse_scroll.borrow_mut().cancel();
             *state.offset.borrow_mut() = next;
         }
         changed
@@ -4527,6 +4600,7 @@ impl ScrollHandle {
         let Some(active_item) = state.active_item else {
             return;
         };
+        state.coarse_scroll.borrow_mut().cancel();
 
         let active_item = match state.child_bounds.get(active_item.index) {
             Some(bounds) => {
@@ -4572,15 +4646,21 @@ impl ScrollHandle {
     /// Scrolls to the bottom.
     pub fn scroll_to_bottom(&self) {
         let mut state = self.0.borrow_mut();
+        state.coarse_scroll.borrow_mut().cancel();
         state.scroll_to_bottom = true;
     }
 
     /// Set the offset explicitly. The offset is the distance from the top left of the
     /// parent container to the top left of the first child.
     /// As you scroll further down the offset becomes more negative.
-    pub fn set_offset(&self, mut position: Point<Pixels>) {
+    pub fn set_offset(&self, position: Point<Pixels>) {
         let state = self.0.borrow();
+        state.coarse_scroll.borrow_mut().cancel();
         *state.offset.borrow_mut() = position;
+    }
+
+    pub(crate) fn cancel_coarse_scroll(&self) {
+        self.0.borrow().coarse_scroll.borrow_mut().cancel();
     }
 
     /// Get the logical scroll top, based on a child index and a pixel offset.
@@ -4630,6 +4710,7 @@ mod tests {
     use std::{
         cell::{Cell, RefCell},
         rc::Weak,
+        time::Duration,
     };
 
     struct PointerCaptureTestView {
@@ -5273,6 +5354,86 @@ mod tests {
                     div().h(px(50.)).flex_none(),
                 ])
         }
+    }
+
+    #[gpui::test]
+    fn line_scroll_delta_transitions_while_pixel_delta_remains_immediate(cx: &mut TestAppContext) {
+        struct SmoothScrollView(ScrollHandle);
+        impl Render for SmoothScrollView {
+            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+                div()
+                    .id("smooth-scroll")
+                    .size_full()
+                    .overflow_y_scroll()
+                    .track_scroll(&self.0)
+                    .child(div().h(px(500.)).w_full())
+            }
+        }
+
+        let mut cx = cx.add_empty_window();
+        let handle = ScrollHandle::new();
+        let view = cx.new(|_| SmoothScrollView(handle.clone()));
+        let draw = |cx: &mut crate::VisualTestContext| {
+            cx.draw(point(px(0.), px(0.)), size(px(100.), px(100.)), |_, _| {
+                view.clone().into_any_element()
+            });
+        };
+        draw(cx);
+
+        cx.simulate_event(ScrollWheelEvent {
+            position: point(px(50.), px(50.)),
+            delta: crate::ScrollDelta::Lines(point(0., -3.)),
+            ..Default::default()
+        });
+        assert_eq!(handle.offset().y, px(0.));
+
+        cx.executor().advance_clock(Duration::from_millis(40));
+        draw(cx);
+        let halfway = handle.offset().y;
+        assert!(halfway < px(0.));
+
+        cx.simulate_event(ScrollWheelEvent {
+            position: point(px(50.), px(50.)),
+            delta: crate::ScrollDelta::Pixels(point(px(0.), px(-10.))),
+            ..Default::default()
+        });
+        let after_precise = halfway - px(10.);
+        assert_eq!(handle.offset().y, after_precise);
+
+        cx.executor().advance_clock(Duration::from_millis(40));
+        draw(cx);
+        assert_eq!(handle.offset().y, after_precise);
+    }
+
+    #[gpui::test]
+    fn line_scroll_delta_is_immediate_with_reduced_motion(cx: &mut TestAppContext) {
+        struct ReducedMotionScrollView(ScrollHandle);
+        impl Render for ReducedMotionScrollView {
+            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+                div()
+                    .id("reduced-motion-scroll")
+                    .size_full()
+                    .overflow_y_scroll()
+                    .track_scroll(&self.0)
+                    .child(div().h(px(500.)).w_full())
+            }
+        }
+
+        cx.update(|cx| cx.set_reduce_motion(true));
+        let mut cx = cx.add_empty_window();
+        let handle = ScrollHandle::new();
+        let view = cx.new(|_| ReducedMotionScrollView(handle.clone()));
+        cx.draw(point(px(0.), px(0.)), size(px(100.), px(100.)), |_, _| {
+            view.into_any_element()
+        });
+        let line_height = cx.update(|window, _| window.line_height());
+
+        cx.simulate_event(ScrollWheelEvent {
+            position: point(px(50.), px(50.)),
+            delta: crate::ScrollDelta::Lines(point(0., -2.)),
+            ..Default::default()
+        });
+        assert_eq!(handle.offset().y, line_height * -2.);
     }
 
     #[gpui::test]

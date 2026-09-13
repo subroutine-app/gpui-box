@@ -21,7 +21,7 @@
 //! dimming layer behind it. Adaptive appearance is a small-control policy;
 //! large reading surfaces retain the window appearance.
 //!
-//! `docs/coverage.md` records which renderer does which of these today.
+//! `crates/docs/coverage.md` records which renderer does which of these today.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;

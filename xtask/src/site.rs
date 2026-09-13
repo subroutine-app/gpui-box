@@ -1,8 +1,8 @@
 //! The catalog as a site.
 //!
 //! Everything here is a rendering of things this repository already generates
-//! and already checks: `docs/api-index.json` for what exists and what it is
-//! called, `snapshots/headless/linux/scenes` for what it looks like, and `docs/*.md`
+//! and already checks: `crates/docs/api-index.json` for what exists and what it is
+//! called, `snapshots/headless/linux/scenes` for what it looks like, and `crates/docs/*.md`
 //! for the prose. Nothing is authored twice, so the site cannot disagree with
 //! the library — it can only be regenerated.
 //!
@@ -69,15 +69,15 @@ pub fn generate(root: &Path, out: Option<&str>, browser_gallery: &Path) -> Resul
     write(&out.join("image-source.json"), IMAGE_SOURCE)?;
     write(
         &out.join("llms.txt"),
-        &fs::read_to_string(root.join("docs/llms.txt"))?,
+        &fs::read_to_string(root.join("crates/docs/llms.txt"))?,
     )?;
     write(
         &out.join("api-index.json"),
-        &fs::read_to_string(root.join("docs/api-index.json"))?,
+        &fs::read_to_string(root.join("crates/docs/api-index.json"))?,
     )?;
     write(
         &out.join("developer-index.json"),
-        &fs::read_to_string(root.join("docs/developer-index.json"))?,
+        &fs::read_to_string(root.join("crates/docs/developer-index.json"))?,
     )?;
 
     let pages = doc_pages(root)?;
@@ -112,7 +112,7 @@ pub fn generate(root: &Path, out: Option<&str>, browser_gallery: &Path) -> Resul
     }
 
     for page in &pages {
-        let body = fs::read_to_string(root.join("docs").join(format!("{page}.md")))?;
+        let body = fs::read_to_string(root.join("crates/docs").join(format!("{page}.md")))?;
         write(&out.join(format!("resources/guides/{page}.md")), &body)?;
         write(
             &out.join(format!("docs/{page}.html")),
@@ -198,7 +198,7 @@ pub fn check_with_browser(root: &Path, browser_gallery: &Path) -> Result<()> {
 }
 
 fn index(root: &Path) -> Result<Value> {
-    let path = root.join("docs").join("api-index.json");
+    let path = root.join("crates/docs").join("api-index.json");
     let body = fs::read_to_string(&path).with_context(|| {
         format!(
             "{} is missing. Run `cargo run -p xtask -- api generate`.",
@@ -978,7 +978,7 @@ fn live_embed(scene: &str, theme: &str, image_root: &str, detail: bool) -> Strin
 
 fn doc_pages(root: &Path) -> Result<Vec<String>> {
     let mut pages = Vec::new();
-    for entry in fs::read_dir(root.join("docs"))? {
+    for entry in fs::read_dir(root.join("crates/docs"))? {
         let path = entry?.path();
         let file = path
             .file_name()
@@ -1003,8 +1003,9 @@ fn mcp_page(
     let tools = fs::read_to_string(root.join("tools/mcp/tools.json"))
         .context("tools/mcp/tools.json is missing")?;
     let tools: Value = serde_json::from_str(&tools)?;
-    let developer: Value =
-        serde_json::from_str(&fs::read_to_string(root.join("docs/developer-index.json"))?)?;
+    let developer: Value = serde_json::from_str(&fs::read_to_string(
+        root.join("crates/docs/developer-index.json"),
+    )?)?;
     let items = tools
         .as_array()
         .into_iter()

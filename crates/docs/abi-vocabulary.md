@@ -489,7 +489,7 @@ snapshots, and close cleanup cannot cross windows. `NodeSpec` contains
 `SharedString` and optional `FocusHandle`; the `Semantic` trait records actual
 bounds during GPUI prepaint. Those remain renderer-side. A GPUI-free
 namespace/action envelope remains committed foundation work in
-`docs/foundation-roadmap.md`.
+`crates/docs/foundation-roadmap.md`.
 
 `gpui-box-kit-testkit` now provides `present`, `visible`, `actionable`, and `text`
 in `crates/gpui-kit-testkit/src/lib.rs`; `Finding`, `Problem`, and `audit` in

@@ -8,10 +8,10 @@
 //! If all of your elements are the same height, see [`crate::UniformList`] for a simpler API
 
 use crate::{
-    AnyElement, App, AvailableSpace, Bounds, ContentMask, DispatchPhase, Edges, Element, EntityId,
-    FocusHandle, GlobalElementId, Hitbox, HitboxBehavior, InspectorElementId, IntoElement,
-    Overflow, Pixels, Point, ScrollWheelEvent, Size, Style, StyleRefinement, Styled, Window, point,
-    px, size,
+    AnyElement, App, AvailableSpace, Bounds, CoarseScrollTransition, ContentMask, DispatchPhase,
+    Edges, Element, EntityId, FocusHandle, GlobalElementId, Hitbox, HitboxBehavior,
+    InspectorElementId, IntoElement, Overflow, Pixels, Point, ScrollWheelEvent, Size, Style,
+    StyleRefinement, Styled, Window, point, px, size,
 };
 use collections::VecDeque;
 use refineable::Refineable as _;
@@ -74,6 +74,7 @@ struct StateInner {
     measuring_behavior: ListMeasuringBehavior,
     pending_scroll: Option<PendingScroll>,
     follow_state: FollowState,
+    coarse_scroll: CoarseScrollTransition,
 }
 
 /// Deferred scroll adjustment applied after the scroll-top item has been remeasured.
@@ -330,6 +331,7 @@ impl ListState {
             measuring_behavior: ListMeasuringBehavior::default(),
             pending_scroll: None,
             follow_state: FollowState::default(),
+            coarse_scroll: CoarseScrollTransition::default(),
         })));
         this.splice(0..0, item_count);
         this
@@ -361,6 +363,7 @@ impl ListState {
         let old_count = {
             let state = &mut *self.0.borrow_mut();
             state.reset = true;
+            state.coarse_scroll.cancel();
             state.measuring_behavior.reset();
             state.logical_scroll_top = None;
             state.pending_scroll = None;
@@ -616,6 +619,7 @@ impl ListState {
 
         let current_offset = self.logical_scroll_top();
         let state = &mut *self.0.borrow_mut();
+        state.coarse_scroll.cancel();
 
         if distance < px(0.) {
             state.follow_state.stop_following();
@@ -649,6 +653,7 @@ impl ListState {
     /// still growing (e.g. during streaming).
     pub fn scroll_to_end(&self) {
         let state = &mut *self.0.borrow_mut();
+        state.coarse_scroll.cancel();
         let item_count = state.items.summary().count;
         state.pending_scroll = None;
         state.logical_scroll_top = Some(ListOffset {
@@ -663,6 +668,7 @@ impl ListState {
     /// following occurs.
     pub fn set_follow_mode(&self, mode: FollowMode) {
         let state = &mut *self.0.borrow_mut();
+        state.coarse_scroll.cancel();
 
         match mode {
             FollowMode::Normal => {
@@ -693,6 +699,7 @@ impl ListState {
     /// Scroll the list to the given offset
     pub fn scroll_to(&self, mut scroll_top: ListOffset) {
         let state = &mut *self.0.borrow_mut();
+        state.coarse_scroll.cancel();
         let item_count = state.items.summary().count;
         if scroll_top.item_ix >= item_count {
             scroll_top.item_ix = item_count;
@@ -710,6 +717,7 @@ impl ListState {
     /// Scroll the list to the given item, such that the item is fully visible.
     pub fn scroll_to_reveal_item(&self, ix: usize) {
         let state = &mut *self.0.borrow_mut();
+        state.coarse_scroll.cancel();
 
         let mut scroll_top = state.logical_scroll_top();
         let height = state
@@ -776,6 +784,7 @@ impl ListState {
     /// as items in the overdraw get measured, and help offset scroll position changes accordingly.
     pub fn scrollbar_drag_started(&self) {
         let mut state = self.0.borrow_mut();
+        state.coarse_scroll.cancel();
         state.scrollbar_drag_start_height = Some(state.items.summary().height);
     }
 
@@ -798,7 +807,9 @@ impl ListState {
 
     /// Set the offset from the scrollbar
     pub fn set_offset_from_scrollbar(&self, point: Point<Pixels>) {
-        self.0.borrow_mut().set_offset_from_scrollbar(point);
+        let mut state = self.0.borrow_mut();
+        state.coarse_scroll.cancel();
+        state.set_offset_from_scrollbar(point);
     }
 
     /// Returns the maximum scroll offset according to the items we have measured.
@@ -947,7 +958,11 @@ impl StateInner {
         let scroll_max =
             (self.items.summary().height + padding.top + padding.bottom - height).max(px(0.));
         let old_scroll_top = self.scroll_top(&self.logical_scroll_top()).min(scroll_max);
-        let new_scroll_top = (old_scroll_top - delta.y).max(px(0.)).min(scroll_max);
+        let requested_scroll_top = old_scroll_top - delta.y;
+        let new_scroll_top = requested_scroll_top.max(px(0.)).min(scroll_max);
+        if new_scroll_top != requested_scroll_top {
+            self.coarse_scroll.cancel_axes(false, true);
+        }
         // Ancestors receive only the unconsumed axes and edge remainder.
         if new_scroll_top == old_scroll_top {
             return;
@@ -1634,6 +1649,26 @@ impl Element for List {
         let state = &mut *self.state.0.borrow_mut();
         state.reset = false;
 
+        let coarse_delta = if cx.reduce_motion() {
+            state.coarse_scroll.finish()
+        } else {
+            state
+                .coarse_scroll
+                .advance_at(cx.background_executor().now())
+        };
+        if state.coarse_scroll.is_animating() {
+            window.request_animation_frame();
+        }
+        if coarse_delta != Point::default() {
+            state.scroll(
+                bounds.size.height,
+                coarse_delta,
+                window.current_view(),
+                window,
+                cx,
+            );
+        }
+
         let mut style = Style::default();
         style.refine(&self.style);
 
@@ -1669,6 +1704,7 @@ impl Element for List {
             match state.prepaint_items(bounds, padding, true, &mut self.render_item, window, cx) {
                 Ok(layout) => layout,
                 Err(autoscroll_request) => {
+                    state.coarse_scroll.cancel();
                     state.logical_scroll_top = Some(autoscroll_request);
                     state
                         .prepaint_items(bounds, padding, false, &mut self.render_item, window, cx)
@@ -1723,13 +1759,41 @@ impl Element for List {
         let height = bounds.size.height;
         let hitbox_id = prepaint.hitbox.id;
         window.on_mouse_event(move |event: &ScrollWheelEvent, phase, window, cx| {
-            if phase == DispatchPhase::Bubble && hitbox_id.should_handle_scroll(window) {
-                let pixel_delta = event.delta.pixel_delta(px(20.));
-                list_state
-                    .0
-                    .borrow_mut()
-                    .scroll(height, pixel_delta, current_view, window, cx)
+            if phase != DispatchPhase::Bubble || !hitbox_id.should_handle_scroll(window) {
+                return;
             }
+
+            let pixel_delta = event.delta.pixel_delta(px(20.));
+            let mut state = list_state.0.borrow_mut();
+            if event.delta.precise() || cx.reduce_motion() {
+                state.coarse_scroll.cancel();
+                state.scroll(height, pixel_delta, current_view, window, cx);
+                return;
+            }
+            if state.reset || pixel_delta.y == Pixels::ZERO {
+                return;
+            }
+
+            let padding = state.last_padding.unwrap_or_default();
+            let scroll_max =
+                (state.items.summary().height + padding.top + padding.bottom - height).max(px(0.));
+            let current = state
+                .scroll_top(&state.logical_scroll_top())
+                .min(scroll_max);
+            let projected = current - state.coarse_scroll.pending_delta().y;
+            let target = (projected - pixel_delta.y).max(px(0.)).min(scroll_max);
+            let accepted_y = projected - target;
+            if accepted_y == Pixels::ZERO {
+                return;
+            }
+
+            state.coarse_scroll.push_at(
+                point(Pixels::ZERO, accepted_y),
+                cx.background_executor().now(),
+            );
+            drop(state);
+            window.consume_scroll_delta(point(Pixels::ZERO, accepted_y), px(20.), cx);
+            window.on_next_frame(move |_, cx| cx.notify(current_view));
         });
         // Bubble dispatch reverses registration order: descendants must get
         // first refusal before their list's default scroll listener.
@@ -1846,6 +1910,7 @@ mod test {
     use gpui::{ScrollDelta, ScrollWheelEvent};
     use std::cell::Cell;
     use std::rc::Rc;
+    use std::time::Duration;
 
     use crate::{
         self as gpui, AppContext, Bounds, Context, Element, FollowMode, IntoElement, ListState,
@@ -2117,6 +2182,94 @@ mod test {
     }
 
     #[gpui::test]
+    fn line_scroll_delta_transitions_in_variable_height_list(cx: &mut TestAppContext) {
+        struct TestView(ListState);
+        impl Render for TestView {
+            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+                list(self.0.clone(), |_, _, _| {
+                    div().h(px(20.)).w_full().into_any()
+                })
+                .w_full()
+                .h_full()
+            }
+        }
+
+        let mut cx = cx.add_empty_window();
+        let state = ListState::new(50, crate::ListAlignment::Top, px(40.))
+            .with_uniform_item_height(px(20.));
+        let view = cx.new(|_| TestView(state.clone()));
+        let draw = |cx: &mut crate::VisualTestContext| {
+            cx.draw(point(px(0.), px(0.)), size(px(100.), px(100.)), |_, _| {
+                view.clone().into_any_element()
+            });
+        };
+        draw(cx);
+
+        cx.simulate_event(ScrollWheelEvent {
+            position: point(px(50.), px(50.)),
+            delta: ScrollDelta::Lines(point(0., -1.)),
+            ..Default::default()
+        });
+        assert_eq!(state.scroll_px_offset_for_scrollbar().y, px(0.));
+
+        cx.executor().advance_clock(Duration::from_millis(40));
+        draw(cx);
+        let halfway = state.scroll_px_offset_for_scrollbar().y;
+        assert!(halfway < px(0.));
+
+        cx.executor().advance_clock(Duration::from_millis(40));
+        draw(cx);
+        let settled = state.scroll_px_offset_for_scrollbar().y;
+        assert!(
+            settled < halfway,
+            "halfway={halfway:?}, settled={settled:?}"
+        );
+    }
+
+    #[gpui::test]
+    fn reversing_a_coarse_scroll_at_the_boundary_has_no_scroll_debt(cx: &mut TestAppContext) {
+        struct TestView(ListState);
+        impl Render for TestView {
+            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+                list(self.0.clone(), |_, _, _| {
+                    div().h(px(20.)).w_full().into_any()
+                })
+                .w_full()
+                .h_full()
+            }
+        }
+
+        let mut cx = cx.add_empty_window();
+        let state = ListState::new(50, crate::ListAlignment::Top, px(40.))
+            .with_uniform_item_height(px(20.));
+        let view = cx.new(|_| TestView(state.clone()));
+        let draw = |cx: &mut crate::VisualTestContext| {
+            cx.draw(point(px(0.), px(0.)), size(px(100.), px(100.)), |_, _| {
+                view.clone().into_any_element()
+            });
+        };
+        draw(cx);
+
+        cx.simulate_event(ScrollWheelEvent {
+            position: point(px(50.), px(50.)),
+            delta: ScrollDelta::Lines(point(0., 3.)),
+            ..Default::default()
+        });
+        cx.executor().advance_clock(Duration::from_millis(40));
+        draw(cx);
+        assert_eq!(state.scroll_px_offset_for_scrollbar().y, px(0.));
+
+        cx.simulate_event(ScrollWheelEvent {
+            position: point(px(50.), px(50.)),
+            delta: ScrollDelta::Lines(point(0., -3.)),
+            ..Default::default()
+        });
+        cx.executor().advance_clock(Duration::from_millis(40));
+        draw(cx);
+        assert!(state.scroll_px_offset_for_scrollbar().y < px(0.));
+    }
+
+    #[gpui::test]
     fn test_reset_after_paint_before_scroll(cx: &mut TestAppContext) {
         let cx = cx.add_empty_window();
 
@@ -2153,8 +2306,17 @@ mod test {
             delta: ScrollDelta::Pixels(point(px(0.), px(-500.))),
             ..Default::default()
         });
+        cx.simulate_event(ScrollWheelEvent {
+            position: point(px(1.), px(1.)),
+            delta: ScrollDelta::Lines(point(0., -3.)),
+            ..Default::default()
+        });
+        cx.executor().advance_clock(Duration::from_millis(80));
+        cx.draw(point(px(0.), px(0.)), size(px(100.), px(20.)), |_, cx| {
+            cx.new(|_| TestView(state.clone())).into_any_element()
+        });
 
-        // Scroll position should stay at the top of the list
+        // Precise and coarse input between reset and paint are both discarded.
         assert_eq!(state.logical_scroll_top().item_ix, 0);
         assert_eq!(state.logical_scroll_top().offset_in_item, px(0.));
     }

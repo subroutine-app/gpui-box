@@ -205,7 +205,7 @@ cannot carry a title is a container every caller has to escape.
 | `Ghost` | Neither | Structure, padding, identity and interaction without claiming to be a plane |
 
 The colour step is doing the separating in all three cases: a theme that meets
-the surface separation floor in `docs/token-model.md` has already made the
+the surface separation floor in `crates/docs/token-model.md` has already made the
 boundary legible, and a variant chooses the second piece of evidence on top of
 it. This is why a card carries no line by default. The library reserves lines
 for what they alone can say — focus, invalidity, a drop target — and `divided`
@@ -648,7 +648,7 @@ them back, and nothing here ever adds a day to a date. An adapter that answers
 `None` to `today`, to `shift_month`, or to `days_in` is answering, not failing,
 and each of those has a rendered consequence rather than a guess: a calendar
 with no month to show says so instead of opening on one it chose. The trait a
-host implements, method by method, is in `docs/datetime.md`.
+host implements, method by method, is in `crates/docs/datetime.md`.
 
 The reference calendar the scenes and tests run on is behind the `fixtures`
 cargo feature, off by default, so a host cannot reach a half-correct calendar
@@ -700,7 +700,7 @@ drawn as a placeholder naming its alt text and its source and reported once as
 `ImageRequested`, and a host that holds the bytes supplies an element through
 `Markdown::image`. A fenced block publishes its info string exactly as written,
 `plain text` when there is none, and is coloured only from spans the host
-computed. `docs/content.md` is the whole posture.
+computed. `crates/docs/content.md` is the whole posture.
 
 `max_lines` cuts to a line count and says how many lines it left out, offering
 them by name rather than behind a fade: a gradient over the last line says
@@ -750,7 +750,7 @@ that supplies none gets no band and no node. Elapsed and remaining are strings
 the host wrote, the rule `Timeline` and `MessageList` keep, and buffering while
 playing is a state of its own — a stalled transport says it is waiting, and
 still offers the control that would stop it, because nothing has stopped.
-`docs/content.md` states the whole posture.
+`crates/docs/content.md` states the whole posture.
 
 ## Media
 
@@ -830,7 +830,7 @@ purpose instead of guessing.
 `List`, `Tree`, and `Tabs` also take part in drag and drop, through
 `reorderable`, `accepts`, and `on_reorder` or `on_move`. The contract they all
 share — what a drop reports, what a drag publishes, what the host has to do —
-is in `docs/interaction.md`.
+is in `crates/docs/interaction.md`.
 
 ## Overlay
 
@@ -866,7 +866,7 @@ Thickness is a profile height before the refraction multiplier. Set
 bounded bevel. Index 1 removes bending and Fresnel reflection. Background depth
 is distance to a screen-space optical plane, not a physical air gap. Blur still
 controls scattering independently; reduced transparency ignores optical
-overrides. See `docs/compatibility.md` for model limits and backend coverage.
+overrides. See `crates/docs/compatibility.md` for model limits and backend coverage.
 
 ### Glass reports focus inside its material
 
@@ -1357,5 +1357,5 @@ The remaining three are **compositions** — `motion-flip`, `motion-state`, and
 `reading-direction` — built the way a product would build them, because
 components interact in ways none of them shows alone. A composition is nobody's
 coverage: `Shows::Composition` says so, and the `scenes` list on a component in
-`docs/api-index.json` therefore names only the exhibits, which is the honest
+`crates/docs/api-index.json` therefore names only the exhibits, which is the honest
 answer to "where do I go to look at this".

@@ -1422,7 +1422,7 @@
           "features": []
         }
       ],
-      "symbolCount": 4676
+      "symbolCount": 4686
     },
     {
       "name": "gpui-box-kit-assets",
@@ -1822,7 +1822,7 @@
       "license": "MIT",
       "publish": true,
       "description": "Remote and checkout Model Context Protocol server for GPUI Box development",
-      "readme": "../../docs/mcp.md",
+      "readme": "../../crates/docs/mcp.md",
       "features": {},
       "dependencies": [
         {
@@ -16345,7 +16345,7 @@
       "source": "crates/gpui/src/elements/div.rs",
       "summary": "The per-frame state of an interactive element. Used for tracking stateful interactions like clicks and scroll offsets.",
       "documentation": "The per-frame state of an interactive element. Used for tracking stateful interactions like clicks\nand scroll offsets.",
-      "signature": "# [doc = \" The per-frame state of an interactive element. Used for tracking stateful interactions like clicks\"] # [doc = \" and scroll offsets.\"] # [derive (Default)] pub struct InteractiveElementState { pub (crate) focus_handle : Option<FocusHandle>, pub (crate) clicked_state : Option<Rc<RefCell<ElementClickedState>>>, pub (crate) hover_state : Option<Rc<RefCell<ElementHoverState>>>, pub (crate) hover_listener_state : Option<Rc<RefCell<bool>>>, pub (crate) pending_mouse_down : Option<Rc<RefCell<Option<MouseDownEvent>>>>, # [doc = \" Set to the window's [`focus_generation`](crate::Window::focus_generation)\"] # [doc = \" when an Enter/Space keydown is received while this element is focused,\"] # [doc = \" recording that we are waiting for the matching keyup to fire a keyboard\"] # [doc = \" click. On keyup the click only fires if the stored generation still\"] # [doc = \" matches the window's current one, i.e. focus never moved during the\"] # [doc = \" press (mirroring the browser clearing a control's pressed state on\"] # [doc = \" blur). `None` means no activation key is pending.\"] pub (crate) pending_keyboard_down : Option<Rc<RefCell<Option<u64>>>>, pub (crate) scroll_offset : Option<Rc<RefCell<Point<Pixels>>>>, ongoing_scroll : Option<Rc<RefCell<OngoingScroll>>>, pub (crate) active_tooltip : Option<Rc<RefCell<Option<ActiveTooltip>>>>, }",
+      "signature": "# [doc = \" The per-frame state of an interactive element. Used for tracking stateful interactions like clicks\"] # [doc = \" and scroll offsets.\"] # [derive (Default)] pub struct InteractiveElementState { pub (crate) focus_handle : Option<FocusHandle>, pub (crate) clicked_state : Option<Rc<RefCell<ElementClickedState>>>, pub (crate) hover_state : Option<Rc<RefCell<ElementHoverState>>>, pub (crate) hover_listener_state : Option<Rc<RefCell<bool>>>, pub (crate) pending_mouse_down : Option<Rc<RefCell<Option<MouseDownEvent>>>>, # [doc = \" Set to the window's [`focus_generation`](crate::Window::focus_generation)\"] # [doc = \" when an Enter/Space keydown is received while this element is focused,\"] # [doc = \" recording that we are waiting for the matching keyup to fire a keyboard\"] # [doc = \" click. On keyup the click only fires if the stored generation still\"] # [doc = \" matches the window's current one, i.e. focus never moved during the\"] # [doc = \" press (mirroring the browser clearing a control's pressed state on\"] # [doc = \" blur). `None` means no activation key is pending.\"] pub (crate) pending_keyboard_down : Option<Rc<RefCell<Option<u64>>>>, pub (crate) scroll_offset : Option<Rc<RefCell<Point<Pixels>>>>, ongoing_scroll : Option<Rc<RefCell<OngoingScroll>>>, coarse_scroll : Option<Rc<RefCell<CoarseScrollTransition>>>, pub (crate) active_tooltip : Option<Rc<RefCell<Option<ActiveTooltip>>>>, }",
       "cfg": []
     },
     {
@@ -16359,7 +16359,7 @@
       "source": "crates/gpui/src/elements/div.rs",
       "summary": "The interactivity struct. Powers all of the general-purpose interactivity in the `Div` element.",
       "documentation": "The interactivity struct. Powers all of the general-purpose\ninteractivity in the `Div` element.",
-      "signature": "# [doc = \" The interactivity struct. Powers all of the general-purpose\"] # [doc = \" interactivity in the `Div` element.\"] # [derive (Default)] pub struct Interactivity { # [doc = \" The element ID of the element. In id is required to support a stateful subset of the interactivity such as on_click.\"] pub element_id : Option<ElementId>, # [doc = \" Whether the element was clicked. This will only be present after layout.\"] pub active : Option<bool>, # [doc = \" Whether the element was hovered. This will only be present after paint if an hitbox\"] # [doc = \" was created for the interactive element.\"] pub hovered : Option<bool>, pub (crate) tooltip_id : Option<TooltipId>, pub (crate) content_size : Size<Pixels>, pub (crate) key_context : Option<KeyContext>, pub (crate) focusable : bool, pub (crate) tracked_focus_handle : Option<FocusHandle>, pub (crate) focus_resolved_listener : Option<FocusResolvedListener>, pub (crate) focus_reveal : Option<(ScrollHandle, Edges<Pixels>)>, pub (crate) tracked_scroll_handle : Option<ScrollHandle>, pub (crate) scroll_anchor : Option<ScrollAnchor>, pub (crate) scroll_offset : Option<Rc<RefCell<Point<Pixels>>>>, pub (crate) ongoing_scroll : Option<Rc<RefCell<OngoingScroll>>>, pub (crate) group : Option<SharedString>, # [doc = \" The base style of the element, before any modifications are applied\"] # [doc = \" by focus, active, etc.\"] pub base_style : Box<StyleRefinement>, pub (crate) focus_style : Option<Box<StyleRefinement>>, pub (crate) in_focus_style : Option<Box<StyleRefinement>>, pub (crate) focus_visible_style : Option<Box<StyleRefinement>>, pub (crate) hover_style : Option<Box<StyleRefinement>>, pub (crate) group_hover_style : Option<GroupStyle>, pub (crate) active_style : Option<Box<StyleRefinement>>, pub (crate) group_active_style : Option<GroupStyle>, pub (crate) drag_over_styles : Vec<(TypeId, Box<dyn Fn (& dyn Any, & mut Window, & mut App) -> StyleRefinement>,)>, pub (crate) group_drag_over_styles : Vec<(TypeId, GroupStyle)>, pub (crate) mouse_down_listeners : Vec<MouseDownListener>, pub (crate) mouse_up_listeners : Vec<MouseUpListener>, pub (crate) mouse_pressure_listeners : Vec<MousePressureListener>, pub (crate) mouse_move_listeners : Vec<MouseMoveListener>, pub (crate) mouse_exit_listeners : Vec<MouseExitListener>, pub (crate) scroll_wheel_listeners : Vec<ScrollWheelListener>, pub (crate) pinch_listeners : Vec<PinchListener>, pub (crate) key_down_listeners : Vec<KeyDownListener>, pub (crate) key_up_listeners : Vec<KeyUpListener>, pub (crate) modifiers_changed_listeners : Vec<ModifiersChangedListener>, pub (crate) action_listeners : Vec<(TypeId, ActionListener)>, pub (crate) drop_listeners : Vec<(TypeId, DropListener)>, pub (crate) can_drop_predicate : Option<CanDropPredicate>, pub (crate) click_listeners : Vec<ClickListener>, pub (crate) aux_click_listeners : Vec<ClickListener>, pub (crate) drag_listener : Option<DragListener>, pub (crate) hover_listener : Option<Box<dyn Fn (& bool, & mut Window, & mut App)>>, pub (crate) tooltip_builder : Option<TooltipBuilder>, pub (crate) tooltip_show_delay : Option<Duration>, pub (crate) window_control : Option<WindowControlArea>, pub (crate) hitbox_behavior : HitboxBehavior, pub (crate) tab_index : Option<isize>, pub (crate) tab_group : bool, pub (crate) tab_stop : bool, pub (crate) a11y_action_listeners : Vec<(accesskit::Action, crate::window::a11y::A11yActionListener)>, pub (crate) a11y_synthetic_children : Option<Box<dyn FnOnce (& mut crate::A11ySubtreeBuilder)>>, pub (crate) report_active_descendant_focus : bool, pub (crate) override_role : Option<accesskit::Role>, pub (crate) aria : AriaProperties, # [cfg (any (feature = \"inspector\", debug_assertions))] pub (crate) source_location : Option<& 'static core::panic::Location<'static>>, # [cfg (any (test, feature = \"test-support\"))] pub (crate) debug_selector : Option<String>, }",
+      "signature": "# [doc = \" The interactivity struct. Powers all of the general-purpose\"] # [doc = \" interactivity in the `Div` element.\"] # [derive (Default)] pub struct Interactivity { # [doc = \" The element ID of the element. In id is required to support a stateful subset of the interactivity such as on_click.\"] pub element_id : Option<ElementId>, # [doc = \" Whether the element was clicked. This will only be present after layout.\"] pub active : Option<bool>, # [doc = \" Whether the element was hovered. This will only be present after paint if an hitbox\"] # [doc = \" was created for the interactive element.\"] pub hovered : Option<bool>, pub (crate) tooltip_id : Option<TooltipId>, pub (crate) content_size : Size<Pixels>, pub (crate) key_context : Option<KeyContext>, pub (crate) focusable : bool, pub (crate) tracked_focus_handle : Option<FocusHandle>, pub (crate) focus_resolved_listener : Option<FocusResolvedListener>, pub (crate) focus_reveal : Option<(ScrollHandle, Edges<Pixels>)>, pub (crate) tracked_scroll_handle : Option<ScrollHandle>, pub (crate) scroll_anchor : Option<ScrollAnchor>, pub (crate) scroll_offset : Option<Rc<RefCell<Point<Pixels>>>>, pub (crate) ongoing_scroll : Option<Rc<RefCell<OngoingScroll>>>, pub (crate) coarse_scroll : Option<Rc<RefCell<CoarseScrollTransition>>>, pub (crate) group : Option<SharedString>, # [doc = \" The base style of the element, before any modifications are applied\"] # [doc = \" by focus, active, etc.\"] pub base_style : Box<StyleRefinement>, pub (crate) focus_style : Option<Box<StyleRefinement>>, pub (crate) in_focus_style : Option<Box<StyleRefinement>>, pub (crate) focus_visible_style : Option<Box<StyleRefinement>>, pub (crate) hover_style : Option<Box<StyleRefinement>>, pub (crate) group_hover_style : Option<GroupStyle>, pub (crate) active_style : Option<Box<StyleRefinement>>, pub (crate) group_active_style : Option<GroupStyle>, pub (crate) drag_over_styles : Vec<(TypeId, Box<dyn Fn (& dyn Any, & mut Window, & mut App) -> StyleRefinement>,)>, pub (crate) group_drag_over_styles : Vec<(TypeId, GroupStyle)>, pub (crate) mouse_down_listeners : Vec<MouseDownListener>, pub (crate) mouse_up_listeners : Vec<MouseUpListener>, pub (crate) mouse_pressure_listeners : Vec<MousePressureListener>, pub (crate) mouse_move_listeners : Vec<MouseMoveListener>, pub (crate) mouse_exit_listeners : Vec<MouseExitListener>, pub (crate) scroll_wheel_listeners : Vec<ScrollWheelListener>, pub (crate) pinch_listeners : Vec<PinchListener>, pub (crate) key_down_listeners : Vec<KeyDownListener>, pub (crate) key_up_listeners : Vec<KeyUpListener>, pub (crate) modifiers_changed_listeners : Vec<ModifiersChangedListener>, pub (crate) action_listeners : Vec<(TypeId, ActionListener)>, pub (crate) drop_listeners : Vec<(TypeId, DropListener)>, pub (crate) can_drop_predicate : Option<CanDropPredicate>, pub (crate) click_listeners : Vec<ClickListener>, pub (crate) aux_click_listeners : Vec<ClickListener>, pub (crate) drag_listener : Option<DragListener>, pub (crate) hover_listener : Option<Box<dyn Fn (& bool, & mut Window, & mut App)>>, pub (crate) tooltip_builder : Option<TooltipBuilder>, pub (crate) tooltip_show_delay : Option<Duration>, pub (crate) window_control : Option<WindowControlArea>, pub (crate) hitbox_behavior : HitboxBehavior, pub (crate) tab_index : Option<isize>, pub (crate) tab_group : bool, pub (crate) tab_stop : bool, pub (crate) a11y_action_listeners : Vec<(accesskit::Action, crate::window::a11y::A11yActionListener)>, pub (crate) a11y_synthetic_children : Option<Box<dyn FnOnce (& mut crate::A11ySubtreeBuilder)>>, pub (crate) report_active_descendant_focus : bool, pub (crate) override_role : Option<accesskit::Role>, pub (crate) aria : AriaProperties, # [cfg (any (feature = \"inspector\", debug_assertions))] pub (crate) source_location : Option<& 'static core::panic::Location<'static>>, # [cfg (any (test, feature = \"test-support\"))] pub (crate) debug_selector : Option<String>, }",
       "cfg": []
     },
     {
@@ -17333,7 +17333,7 @@
       "source": "crates/gpui/src/elements/div.rs",
       "summary": "Set the offset explicitly. The offset is the distance from the top left of the parent container to the top left of the first child. As you scroll further down the offset becomes more negative.",
       "documentation": "Set the offset explicitly. The offset is the distance from the top left of the\nparent container to the top left of the first child.\nAs you scroll further down the offset becomes more negative.",
-      "signature": "pub fn set_offset (& self, mut position : Point<Pixels>)",
+      "signature": "pub fn set_offset (& self, position : Point<Pixels>)",
       "cfg": [],
       "target": "ScrollHandle"
     },
@@ -98906,6 +98906,20 @@
       "cfg": []
     },
     {
+      "id": "gpui_kit::motion::interpolate::ScaleAxes",
+      "name": "ScaleAxes",
+      "kind": "trait",
+      "package": "gpui-box-kit",
+      "crate": "gpui_kit",
+      "module": "motion::interpolate",
+      "path": "gpui_kit::motion::interpolate",
+      "source": "crates/gpui-kit/src/motion/interpolate.rs",
+      "summary": "A compound value whose horizontal and vertical coordinates can be rebased independently when its coordinate space changes.",
+      "documentation": "A compound value whose horizontal and vertical coordinates can be rebased\nindependently when its coordinate space changes.",
+      "signature": "# [doc = \" A compound value whose horizontal and vertical coordinates can be rebased\"] # [doc = \" independently when its coordinate space changes.\"] pub trait ScaleAxes : Sized { fn scale_axes (& self, x_ratio : f32, y_ratio : f32) -> Self; }",
+      "cfg": []
+    },
+    {
       "id": "gpui_kit::motion::keyframes::Keyframe",
       "name": "Keyframe",
       "kind": "struct",
@@ -99702,7 +99716,7 @@
     },
     {
       "id": "gpui_kit::motion::reexport-10",
-      "name": "interpolate :: Interpolate",
+      "name": "interpolate :: { Interpolate , ScaleAxes }",
       "kind": "reexport",
       "package": "gpui-box-kit",
       "crate": "gpui_kit",
@@ -99711,7 +99725,7 @@
       "source": "crates/gpui-kit/src/motion/mod.rs",
       "summary": "",
       "documentation": "",
-      "signature": "pub use interpolate::Interpolate;",
+      "signature": "pub use interpolate::{ Interpolate, ScaleAxes };",
       "cfg": []
     },
     {
@@ -101155,6 +101169,21 @@
       "target": "Transition<T>"
     },
     {
+      "id": "gpui_kit::motion::transition::Transition::offset_by",
+      "name": "offset_by",
+      "kind": "method",
+      "package": "gpui-box-kit",
+      "crate": "gpui_kit",
+      "module": "motion::transition",
+      "path": "gpui_kit::motion::transition",
+      "source": "crates/gpui-kit/src/motion/transition.rs",
+      "summary": "Translates both ends of the current run without restarting its clock.",
+      "documentation": "Translates both ends of the current run without restarting its clock.",
+      "signature": "pub fn offset_by (& mut self, delta : T) where T : Add<T, Output = T>,",
+      "cfg": [],
+      "target": "Transition<T>"
+    },
+    {
       "id": "gpui_kit::motion::transition::Transition::release",
       "name": "release",
       "kind": "method",
@@ -101166,6 +101195,36 @@
       "summary": "Aims at a new target with a speed the value did not get from an animation, which is what a value let go of by the hand has.",
       "documentation": "Aims at a new target with a speed the value did not get from an\nanimation, which is what a value let go of by the hand has.\n\nThis is inertia. The gesture reports its speed — see\n[`VelocityTracker`](super::VelocityTracker) — and the spring is\nreleased with it rather than from a standstill, so a flicked thing\ncarries on and settles instead of stopping dead the instant the finger\nleaves it. It is the same handover a retarget performs, with the speed\ncoming from outside instead of from the motion being interrupted.\n\n`velocity` is in value units a second and positive toward `target`. A\nrelease always restarts the motion, including at the current target: a\nvalue thrown at where it already is has somewhere to go and come back\nfrom.\n\nOnly a sprung specification can carry it. A curve has no momentum, so a\nreleased curve is an ordinary [`Transition::set`].",
       "signature": "pub fn release (& mut self, target : T, velocity : f32)",
+      "cfg": [],
+      "target": "Transition<T>"
+    },
+    {
+      "id": "gpui_kit::motion::transition::Transition::scale_by",
+      "name": "scale_by",
+      "kind": "method",
+      "package": "gpui-box-kit",
+      "crate": "gpui_kit",
+      "module": "motion::transition",
+      "path": "gpui_kit::motion::transition",
+      "source": "crates/gpui-kit/src/motion/transition.rs",
+      "summary": "Uniformly rescales both where the transition came from and where it is going without restarting its clock.",
+      "documentation": "Uniformly rescales both where the transition came from and where it is\ngoing without restarting its clock.",
+      "signature": "pub fn scale_by (& mut self, ratio : f32) where T : Mul<f32, Output = T>,",
+      "cfg": [],
+      "target": "Transition<T>"
+    },
+    {
+      "id": "gpui_kit::motion::transition::Transition::scale_by_axes",
+      "name": "scale_by_axes",
+      "kind": "method",
+      "package": "gpui-box-kit",
+      "crate": "gpui_kit",
+      "module": "motion::transition",
+      "path": "gpui_kit::motion::transition",
+      "source": "crates/gpui-kit/src/motion/transition.rs",
+      "summary": "Rescales horizontal and vertical coordinates independently without restarting the transition.",
+      "documentation": "Rescales horizontal and vertical coordinates independently without\nrestarting the transition.",
+      "signature": "pub fn scale_by_axes (& mut self, x_ratio : f32, y_ratio : f32) where T : ScaleAxes,",
       "cfg": [],
       "target": "Transition<T>"
     },
@@ -101226,6 +101285,21 @@
       "summary": "",
       "documentation": "",
       "signature": "pub fn target (& self) -> T",
+      "cfg": [],
+      "target": "Transition<T>"
+    },
+    {
+      "id": "gpui_kit::motion::transition::Transition::transform",
+      "name": "transform",
+      "kind": "method",
+      "package": "gpui-box-kit",
+      "crate": "gpui_kit",
+      "module": "motion::transition",
+      "path": "gpui_kit::motion::transition",
+      "source": "crates/gpui-kit/src/motion/transition.rs",
+      "summary": "Re-expresses both ends of the current run in a changed coordinate space.",
+      "documentation": "Re-expresses both ends of the current run in a changed coordinate space.\n\nThe playhead, carried progress velocity, and frame clock are preserved.\nThis is for affine changes to the meaning of a value — zooming or moving\nan origin — rather than for choosing a new destination, which remains\n[`Transition::set`]'s job.",
+      "signature": "pub fn transform (& mut self, mut transform : impl FnMut (T) -> T)",
       "cfg": [],
       "target": "Transition<T>"
     },
@@ -106479,10 +106553,55 @@
       "module": "overlay::kbd",
       "path": "gpui_kit::overlay::kbd",
       "source": "crates/gpui-kit/src/overlay/kbd.rs",
-      "summary": "A keyboard shortcut, written the way the current platform writes it.",
-      "documentation": "A keyboard shortcut, written the way the current platform writes it.\n\nmacOS composes modifiers into one glyph run, while other platforms spell\nthem out and join with `+`, matching what users read elsewhere in their\nsystem.",
-      "signature": "# [doc = \" A keyboard shortcut, written the way the current platform writes it.\"] # [doc = \"\"] # [doc = \" macOS composes modifiers into one glyph run, while other platforms spell\"] # [doc = \" them out and join with `+`, matching what users read elsewhere in their\"] # [doc = \" system.\"] # [derive (Debug, Clone, IntoElement)] pub struct Kbd { keystroke : SharedString, ident : Option<Ident>, }",
+      "summary": "A compact tag that displays a platform-formatted keyboard shortcut.",
+      "documentation": "A compact tag that displays a platform-formatted keyboard shortcut.\n\nThe shortcut is rendered in one pill. macOS uses its conventional modifier\nglyphs, while other platforms spell modifiers out and join them with `+`.",
+      "signature": "# [doc = \" A compact tag that displays a platform-formatted keyboard shortcut.\"] # [doc = \"\"] # [doc = \" The shortcut is rendered in one pill. macOS uses its conventional modifier\"] # [doc = \" glyphs, while other platforms spell modifiers out and join them with `+`.\"] # [derive (Debug, Clone, IntoElement)] pub struct Kbd { keystroke : SharedString, ident : Option<Ident>, appearance : bool, outline : bool, }",
       "cfg": []
+    },
+    {
+      "id": "gpui_kit::overlay::kbd::Kbd::appearance",
+      "name": "appearance",
+      "kind": "method",
+      "package": "gpui-box-kit",
+      "crate": "gpui_kit",
+      "module": "overlay::kbd",
+      "path": "gpui_kit::overlay::kbd",
+      "source": "crates/gpui-kit/src/overlay/kbd.rs",
+      "summary": "Controls whether the shortcut has its compact key-cap appearance.",
+      "documentation": "Controls whether the shortcut has its compact key-cap appearance.",
+      "signature": "pub fn appearance (mut self, appearance : bool) -> Self",
+      "cfg": [],
+      "target": "Kbd"
+    },
+    {
+      "id": "gpui_kit::overlay::kbd::Kbd::binding_for_action",
+      "name": "binding_for_action",
+      "kind": "method",
+      "package": "gpui-box-kit",
+      "crate": "gpui_kit",
+      "module": "overlay::kbd",
+      "path": "gpui_kit::overlay::kbd",
+      "source": "crates/gpui-kit/src/overlay/kbd.rs",
+      "summary": "Returns the first binding for an action in the current focus context.",
+      "documentation": "Returns the first binding for an action in the current focus context.",
+      "signature": "pub fn binding_for_action (action : & dyn Action, context : Option<& str>, window : & Window,) -> Option<Self>",
+      "cfg": [],
+      "target": "Kbd"
+    },
+    {
+      "id": "gpui_kit::overlay::kbd::Kbd::binding_for_action_in",
+      "name": "binding_for_action_in",
+      "kind": "method",
+      "package": "gpui-box-kit",
+      "crate": "gpui_kit",
+      "module": "overlay::kbd",
+      "path": "gpui_kit::overlay::kbd",
+      "source": "crates/gpui-kit/src/overlay/kbd.rs",
+      "summary": "Returns the first binding for an action as if `focus_handle` were focused.",
+      "documentation": "Returns the first binding for an action as if `focus_handle` were focused.",
+      "signature": "pub fn binding_for_action_in (action : & dyn Action, focus_handle : & FocusHandle, window : & Window,) -> Option<Self>",
+      "cfg": [],
+      "target": "Kbd"
     },
     {
       "id": "gpui_kit::overlay::kbd::Kbd::caps",
@@ -106493,9 +106612,24 @@
       "module": "overlay::kbd",
       "path": "gpui_kit::overlay::kbd",
       "source": "crates/gpui-kit/src/overlay/kbd.rs",
-      "summary": "",
-      "documentation": "",
+      "summary": "Returns the one compact label drawn by this component.",
+      "documentation": "Returns the one compact label drawn by this component.\n\nThis retains the former `caps` query for source compatibility even\nthough the component no longer draws one cap per modifier.",
       "signature": "pub fn caps (& self, cx : & App) -> Vec<SharedString>",
+      "cfg": [],
+      "target": "Kbd"
+    },
+    {
+      "id": "gpui_kit::overlay::kbd::Kbd::format",
+      "name": "format",
+      "kind": "method",
+      "package": "gpui-box-kit",
+      "crate": "gpui_kit",
+      "module": "overlay::kbd",
+      "path": "gpui_kit::overlay::kbd",
+      "source": "crates/gpui-kit/src/overlay/kbd.rs",
+      "summary": "Formats a parsed keystroke for the current platform.",
+      "documentation": "Formats a parsed keystroke for the current platform.",
+      "signature": "pub fn format (keystroke : & Keystroke) -> String",
       "cfg": [],
       "target": "Kbd"
     },
@@ -106530,6 +106664,21 @@
       "target": "Kbd"
     },
     {
+      "id": "gpui_kit::overlay::kbd::Kbd::outline",
+      "name": "outline",
+      "kind": "method",
+      "package": "gpui-box-kit",
+      "crate": "gpui_kit",
+      "module": "overlay::kbd",
+      "path": "gpui_kit::overlay::kbd",
+      "source": "crates/gpui-kit/src/overlay/kbd.rs",
+      "summary": "Draws the key cap with a quiet outline instead of a filled background.",
+      "documentation": "Draws the key cap with a quiet outline instead of a filled background.",
+      "signature": "pub fn outline (mut self) -> Self",
+      "cfg": [],
+      "target": "Kbd"
+    },
+    {
       "id": "gpui_kit::overlay::kbd::caps",
       "name": "caps",
       "kind": "function",
@@ -106538,8 +106687,8 @@
       "module": "overlay::kbd",
       "path": "gpui_kit::overlay::kbd",
       "source": "crates/gpui-kit/src/overlay/kbd.rs",
-      "summary": "Splits a keystroke into the caps to draw.",
-      "documentation": "Splits a keystroke into the caps to draw.\n\nWritten as a free function so the platform choice can be tested on any host.",
+      "summary": "Formats one GPUI keystroke as the single label drawn by [`Kbd`].",
+      "documentation": "Formats one GPUI keystroke as the single label drawn by [`Kbd`].\n\nInvalid input remains visible rather than being silently converted into an\nempty shortcut. The `macos` argument keeps platform formatting testable on\nevery host.",
       "signature": "pub fn caps (keystroke : & str, macos : bool, strings : & Strings) -> Vec<SharedString>",
       "cfg": []
     },
@@ -133695,12 +133844,17 @@
       "kind": "builder",
       "path": "gpui_kit::overlay::Kbd",
       "source": "crates/gpui-kit/src/overlay/kbd.rs",
-      "summary": "A keyboard shortcut, written the way the current platform writes it.",
+      "summary": "A compact tag that displays a platform-formatted keyboard shortcut.",
       "construct": [
-        "new(keystroke: impl Into<SharedString>) -> Self"
+        "new(keystroke: impl Into<SharedString>) -> Self",
+        "binding_for_action(action: &dyn Action, context: Option<&str>, window: &Window) -> Option<Self>",
+        "binding_for_action_in(action: &dyn Action, focus_handle: &FocusHandle, window: &Window) -> Option<Self>",
+        "format(keystroke: &Keystroke) -> String"
       ],
       "options": [
-        "id(ident: impl Into<Ident>) -> Self"
+        "id(ident: impl Into<Ident>) -> Self",
+        "appearance(appearance: bool) -> Self",
+        "outline() -> Self"
       ],
       "commands": [],
       "queries": [
@@ -146544,6 +146698,10 @@
         "set(target: T) where T: PartialEq,",
         "release(target: T, velocity: f32)",
         "snap(target: T)",
+        "transform(mut transform: impl FnMut(T) -> T)",
+        "scale_by(ratio: f32) where T: Mul<f32, Output = T>,",
+        "scale_by_axes(x_ratio: f32, y_ratio: f32) where T: ScaleAxes,",
+        "offset_by(delta: T) where T: Add<T, Output = T>,",
         "advance(delta: Duration)",
         "animate(window: &mut Window, cx: &mut App) -> T"
       ],
@@ -154981,163 +155139,163 @@
     {
       "slug": "abi-vocabulary",
       "title": "ABI vocabulary feasibility",
-      "path": "docs/abi-vocabulary.md",
+      "path": "crates/docs/abi-vocabulary.md",
       "summary": "GPUI Box Kit can be the public visual vocabulary of a host-rendered plugin ABI. It cannot become that vocabulary by serializing its current public API. The components are renderer contracts: they take GPUI elements, entities, focus handles, and callbacks, while the wire needs stable data and typed intent."
     },
     {
       "slug": "accessibility",
       "title": "Accessibility",
-      "path": "docs/accessibility.md",
+      "path": "crates/docs/accessibility.md",
       "summary": "Every pointer action has a keyboard path. Menus support Up, Down, Enter, and Escape. Modified Enter is modeled separately when an application assigns it a distinct action."
     },
     {
       "slug": "compatibility",
       "title": "GPUI Box compatibility",
-      "path": "docs/compatibility.md",
+      "path": "crates/docs/compatibility.md",
       "summary": "GPUI Box owns its framework and package compatibility. There is one package and type universe: applications use Cargo package `gpui-box` as Rust crate `gpui`, and `gpui-box-kit` as `gpui_kit`. Zed crates must not be mixed into that graph."
     },
     {
       "slug": "component-contracts",
       "title": "Component contracts",
-      "path": "docs/component-contracts.md",
+      "path": "crates/docs/component-contracts.md",
       "summary": "Every component:"
     },
     {
       "slug": "components",
       "title": "Components",
-      "path": "docs/components.md",
+      "path": "crates/docs/components.md",
       "summary": "Every component derives its GPUI element id and its semantic assertion id from one caller-supplied `Ident`, reads the theme from the application context, and publishes a semantic node during prepaint. Builders are `RenderOnce`; anything that must survive a frame is a view."
     },
     {
       "slug": "content",
       "title": "Content",
-      "path": "docs/content.md",
+      "path": "crates/docs/content.md",
       "summary": "`Markdown`, `AgentDocument`, and `MessageList` are the surfaces in this library that draw text nobody in the application wrote. A button's label is authored; a document's contents, a typed model result, and a message's body are not. They arrive from a file, a model, or another person, and they may contain a tag, a destination, or an image reference that would act on the reader if anything here acted on it."
     },
     {
       "slug": "coverage",
       "title": "Coverage",
-      "path": "docs/coverage.md",
-      "summary": "What a general-purpose desktop UI library is expected to provide, what this one provides, and what is deliberately out of scope. GPUI Box is the application substrate: if a downstream desktop or browser-hosted product needs a surface to exist, the surface belongs here unless it is a host fact, a locale fact, a transport, or a platform chrome the OS already owns. `docs/components.md` describes the components themselves; this file exists so a gap is a recorded decision rather than an oversight."
+      "path": "crates/docs/coverage.md",
+      "summary": "What a general-purpose desktop UI library is expected to provide, what this one provides, and what is deliberately out of scope. GPUI Box is the application substrate: if a downstream desktop or browser-hosted product needs a surface to exist, the surface belongs here unless it is a host fact, a locale fact, a transport, or a platform chrome the OS already owns. `crates/docs/components.md` describes the components themselves; this file exists so a gap is a recorded decision rather than an oversight."
     },
     {
       "slug": "datetime",
       "title": "Date and time",
-      "path": "docs/datetime.md",
+      "path": "crates/docs/datetime.md",
       "summary": "This crate has no calendar system, no time-zone database, no locale, and no notion of what day it is. `Calendar`, `DateInput`, `RangePicker`, and `TimeInput` draw dates and read them, and every fact they draw arrives through one trait the host implements: `gpui_kit::datetime::DateAdapter`."
     },
     {
       "slug": "deploying",
       "title": "Deploying the GPUI Box catalog",
-      "path": "docs/deploying.md",
+      "path": "crates/docs/deploying.md",
       "summary": "The production service is owned entirely by this repository and runs on BWG. Nginx serves the generated site and terminates TLS; a dedicated unprivileged systemd service listens on `127.0.0.1:9350` for stateless MCP requests. `gpui-box.origingame.dev` is canonical and `gpui-kit.origingame.dev` remains an alias to the same release. There is no Cloudflare Worker or Pages runtime and no OriginGame repository dependency."
     },
     {
       "slug": "design-principles",
       "title": "Design principles",
-      "path": "docs/design-principles.md",
+      "path": "crates/docs/design-principles.md",
       "summary": "This is application chrome, not a marketing page. Controls are compact, information remains scannable, and vertical rhythm favors work over spectacle."
     },
     {
       "slug": "foundation-roadmap",
       "title": "Product foundation roadmap",
-      "path": "docs/foundation-roadmap.md",
+      "path": "crates/docs/foundation-roadmap.md",
       "summary": "This roadmap closes five substrate gaps that otherwise force every host to invent a private UI framework beside GPUI Box: basic rich-text editing, Linux/Web media, real platform accessibility, enforceable performance budgets, and window-safe plugin mounting. They are in scope. The work is staged because they share framework primitives and must not become five unrelated component implementations."
     },
     {
       "slug": "gpui-recipes",
       "title": "GPUI recipes",
-      "path": "docs/gpui-recipes.md",
+      "path": "crates/docs/gpui-recipes.md",
       "summary": "```rust let app = gpui_platform::application() .with_assets(gpui_kit::assets::Assets);"
     },
     {
       "slug": "host-view-boundary",
       "title": "Host/view boundary",
-      "path": "docs/host-view-boundary.md",
+      "path": "crates/docs/host-view-boundary.md",
       "summary": "A GPUI view may:"
     },
     {
       "slug": "interaction",
       "title": "Drag and drop",
-      "path": "docs/interaction.md",
+      "path": "crates/docs/interaction.md",
       "summary": "A drag starts in one component and finishes in another, so the rules cannot live inside either of them. They live in `gpui_kit::interaction::dnd`, and every surface that can be dragged from or dropped on implements the same contract: `List`, `Tree`, `Tabs`, and `Dropzone`."
     },
     {
       "slug": "mcp",
       "title": "GPUI Box Developer MCP",
-      "path": "docs/mcp.md",
+      "path": "crates/docs/mcp.md",
       "summary": "The MCP is the generated developer surface of this repository, not a wrapper around the last crates.io cohort. It covers the complete package authority, public Rust source declarations and methods, Kit's compiler-checked component API, themes and token documents, guides and guide-section recipes, assets, compatibility data, scenes, committed captures, and redacted semantic trees."
     },
     {
       "slug": "migration-guide",
       "title": "Migration guide",
-      "path": "docs/migration-guide.md",
+      "path": "crates/docs/migration-guide.md",
       "summary": "This guide moves an existing GPUI application onto the `gpui-box` framework and `gpui-box-kit` component library without a big-bang shell rewrite."
     },
     {
       "slug": "motion",
       "title": "Motion",
-      "path": "docs/motion.md",
+      "path": "crates/docs/motion.md",
       "summary": "Motion in this library is layered, and every layer is pure enough to test without a window."
     },
     {
       "slug": "performance-testing",
       "title": "Deterministic performance testing",
-      "path": "docs/performance-testing.md",
+      "path": "crates/docs/performance-testing.md",
       "summary": "GPUI Box treats performance shape as a compatibility contract. A large data set must not make a bounded viewport mount, lay out, paint, or publish every item. The authority check is:"
     },
     {
       "slug": "reactive",
       "title": "Reactive state",
-      "path": "docs/reactive.md",
+      "path": "crates/docs/reactive.md",
       "summary": "`gpui_kit::reactive` is caller-owned state and the wiring that connects it to a control. Nothing in it renders, and no component owns any of it."
     },
     {
       "slug": "releasing",
       "title": "Releasing GPUI Box",
-      "path": "docs/releasing.md",
+      "path": "crates/docs/releasing.md",
       "summary": "This is the runbook for GPUI Box source releases and crates.io publication. Source releases do not imply that a version exists on crates.io."
     },
     {
       "slug": "screenshot-testing",
       "title": "Screenshot testing",
-      "path": "docs/screenshot-testing.md",
+      "path": "crates/docs/screenshot-testing.md",
       "summary": "The `gpui_kit_testkit::capture` module from Cargo package `gpui-box-kit-testkit` answers two different questions with two functions."
     },
     {
       "slug": "semantic-automation",
       "title": "Semantic automation",
-      "path": "docs/semantic-automation.md",
+      "path": "crates/docs/semantic-automation.md",
       "summary": "GPUI renders native windows without a browser DOM. `gpui-box-kit-semantics` provides a small, transport-independent semantic tree."
     },
     {
       "slug": "token-model",
       "title": "Token model",
-      "path": "docs/token-model.md",
+      "path": "crates/docs/token-model.md",
       "summary": "The documents under `crates/gpui-kit-tokens/tokens/` are the authority, and they sit inside the crate that embeds them so that crate can be packaged on its own. `schema.json` is the single current portable schema; documents and nested objects reject unknown or legacy fields rather than carrying compatibility readers. Cargo package `gpui-box-kit-tokens` embeds and validates every bundled theme; `gpui-box-kit-theme` is the only GPUI adapter. `studio-dark` is the default and `studio-light` is its light counterpart."
     },
     {
       "slug": "token-reference",
       "title": "Token reference",
-      "path": "docs/token-reference.md",
+      "path": "crates/docs/token-reference.md",
       "summary": "<!-- @generated by `cargo xtask tokens generate`; do not edit. --> # Token reference"
     },
     {
       "slug": "truthful-ui",
       "title": "Truthful UI",
-      "path": "docs/truthful-ui.md",
+      "path": "crates/docs/truthful-ui.md",
       "summary": "Truthful UI means the display does not claim more than the owning application layer knows."
     },
     {
       "slug": "upstream-resync-assessment",
       "title": "Upstream resynchronization assessment",
-      "path": "docs/upstream-resync-assessment.md",
+      "path": "crates/docs/upstream-resync-assessment.md",
       "summary": "This is a cost assessment, not an import plan or an update receipt. GPUI Box remains the development authority, no upstream tree was merged, and the frozen vendor refs were not advanced."
     },
     {
       "slug": "webview",
       "title": "Native browser host",
-      "path": "docs/webview.md",
+      "path": "crates/docs/webview.md",
       "summary": "`gpui-box-webview` is an independent caller-owned host, not a Kit transport or the application/plugin JavaScript runtime. `BrowserHost` owns Wry 0.57.0 and the operating-system browser: WKWebView on macOS, WebView2 on Windows, WebKitGTK 4.1 on Linux X11/XWayland. These engines supply full HTML, CSS, JavaScript, DOM, text selection and native keyboard/IME behavior. Their web standards/codec coverage follows the installed engine, not a GPUI HTML subset."
     }
   ],
@@ -157032,7 +157190,7 @@
       "uses": [
         "Kbd"
       ],
-      "example": "fn kbd(_window: &mut Window, cx: &mut App) -> AnyElement {\n    let theme = cx.theme().clone();\n    // A keystroke is only ever read beside the thing it performs, so the\n    // exhibit shows it where it is used: at the end of a menu row, at the end\n    // of a sentence, and in the run of special keys whose glyphs are the part\n    // that goes wrong.\n    let named = |label: &'static str, keystroke: &'static str, id: &'static str| {\n        div()\n            .row()\n            .w_full()\n            .items_center()\n            .justify_between()\n            .gap_token(&theme, Space::Md)\n            .py_token(&theme, Space::Xs)\n            .child(crate::foundation::text(&theme, TypeScale::Body, label))\n            .child(Kbd::new(keystroke).id(id))\n    };\n\n    stack(&theme)\n        .w(px(420.0))\n        .child(caption(&theme, \"the shortcut sits with the thing it does\"))\n        .child(\n            div()\n                .column()\n                .w_full()\n                .card_surface(&theme, CardVariant::Elevated)\n                .px_token(&theme, Space::Md)\n                .py_token(&theme, Space::Sm)\n                .child(named(\n                    \"Open the command palette\",\n                    \"cmd-shift-p\",\n                    \"scene.kbd.palette\",\n                ))\n                .child(div().w_full().h(px(theme.space(Space::Sm))))\n                .child(named(\"Copy the selection\", \"ctrl-c\", \"scene.kbd.copy\"))\n                .child(div().w_full().h(px(theme.space(Space::Sm))))\n                .child(named(\"Rename in place\", \"cmd-alt-r\", \"scene.kbd.rename\")),\n        )\n        .child(caption(\n            &theme,\n            \"the keys that need the bundled symbol face\",\n        ))\n        .child(\n            row(&theme)\n                .gap_token(&theme, Space::Sm)\n                .child(Kbd::new(\"enter\").id(\"scene.kbd.confirm\"))\n                .child(Kbd::new(\"escape\").id(\"scene.kbd.dismiss\"))\n                .child(Kbd::new(\"backspace\").id(\"scene.kbd.erase\"))\n                .child(Kbd::new(\"delete\").id(\"scene.kbd.delete\"))\n                .child(Kbd::new(\"tab\").id(\"scene.kbd.advance\"))\n                .child(Kbd::new(\"space\").id(\"scene.kbd.space\"))\n                .child(Kbd::new(\"up\").id(\"scene.kbd.up\"))\n                .child(Kbd::new(\"down\").id(\"scene.kbd.down\")),\n        )\n        .child(\n            div()\n                .row()\n                .items_center()\n                .gap_token(&theme, Space::Xs)\n                .child(crate::foundation::text(&theme, TypeScale::Body, \"Press\"))\n                .child(Kbd::new(\"cmd-enter\").id(\"scene.kbd.inline\"))\n                .child(crate::foundation::text(\n                    &theme,\n                    TypeScale::Body,\n                    \"to send the message.\",\n                ))\n                .text_color(theme.colors.text_muted),\n        )\n        .into_any_element()\n}"
+      "example": "fn kbd(_window: &mut Window, cx: &mut App) -> AnyElement {\n    let theme = cx.theme().clone();\n    // A keystroke is only ever read beside the thing it performs, so the\n    // exhibit shows the compact single-pill treatment where it is used: at\n    // the end of a menu row, inline with prose, and in the run of special keys\n    // whose platform notation is the part that goes wrong.\n    let named = |label: &'static str, keystroke: &'static str, id: &'static str| {\n        div()\n            .row()\n            .w_full()\n            .items_center()\n            .justify_between()\n            .gap_token(&theme, Space::Md)\n            .py_token(&theme, Space::Xs)\n            .child(crate::foundation::text(&theme, TypeScale::Body, label))\n            .child(Kbd::new(keystroke).id(id))\n    };\n\n    stack(&theme)\n        .w(px(420.0))\n        .child(caption(&theme, \"the shortcut sits with the thing it does\"))\n        .child(\n            div()\n                .column()\n                .w_full()\n                .card_surface(&theme, CardVariant::Elevated)\n                .px_token(&theme, Space::Md)\n                .py_token(&theme, Space::Sm)\n                .child(named(\n                    \"Open the command palette\",\n                    \"cmd-shift-p\",\n                    \"scene.kbd.palette\",\n                ))\n                .child(div().w_full().h(px(theme.space(Space::Sm))))\n                .child(named(\"Copy the selection\", \"ctrl-c\", \"scene.kbd.copy\"))\n                .child(div().w_full().h(px(theme.space(Space::Sm))))\n                .child(named(\"Rename in place\", \"cmd-alt-r\", \"scene.kbd.rename\")),\n        )\n        .child(caption(&theme, \"filled, outlined, and plain notation\"))\n        .child(\n            row(&theme)\n                .gap_token(&theme, Space::Sm)\n                .child(Kbd::new(\"cmd-shift-p\").id(\"scene.kbd.filled\"))\n                .child(Kbd::new(\"cmd-ctrl-t\").outline().id(\"scene.kbd.outline\"))\n                .child(Kbd::new(\"cmd--\").id(\"scene.kbd.minus\"))\n                .child(Kbd::new(\"cmd-+\").id(\"scene.kbd.plus\"))\n                .child(Kbd::new(\"escape\").appearance(false).id(\"scene.kbd.plain\")),\n        )\n        .child(caption(&theme, \"platform notation for named keys\"))\n        .child(\n            row(&theme)\n                .gap_token(&theme, Space::Sm)\n                .child(Kbd::new(\"enter\").id(\"scene.kbd.confirm\"))\n                .child(Kbd::new(\"escape\").id(\"scene.kbd.dismiss\"))\n                .child(Kbd::new(\"backspace\").id(\"scene.kbd.erase\"))\n                .child(Kbd::new(\"delete\").id(\"scene.kbd.delete\"))\n                .child(Kbd::new(\"tab\").id(\"scene.kbd.advance\"))\n                .child(Kbd::new(\"space\").id(\"scene.kbd.space\"))\n                .child(Kbd::new(\"up\").id(\"scene.kbd.up\"))\n                .child(Kbd::new(\"down\").id(\"scene.kbd.down\")),\n        )\n        .child(\n            div()\n                .row()\n                .items_center()\n                .gap_token(&theme, Space::Xs)\n                .child(crate::foundation::text(&theme, TypeScale::Body, \"Press\"))\n                .child(Kbd::new(\"cmd-enter\").id(\"scene.kbd.inline\"))\n                .child(crate::foundation::text(\n                    &theme,\n                    TypeScale::Body,\n                    \"to send the message.\",\n                ))\n                .text_color(theme.colors.text_muted),\n        )\n        .into_any_element()\n}"
     },
     {
       "name": "overlay",
@@ -158880,6 +159038,7 @@
       ]
     },
     "framework_gestures": {
+      "coarse_wheel": "Overflowing elements and variable-height lists ease line-based wheel notches over 80 ms while preserving their full distance; precise pixel input, direct offsets, and reduced-motion input remain immediate.",
       "handoff": "After live scroll consumes movement, a TouchPanEvent may acquire only its residual; touch_start_position retains the hit anchor and start_position rebases to current minus residual. Captured ownership lasts through reversal and one terminal phase. Prediction is disabled in frames with arbitration listeners.",
       "interruption": "Inactive platform status invokes Window::cancel_touch_input before suspension, cancelling pending recognition, owned gestures and released momentum. Per-contact cancellation never cancels an unrelated owner.",
       "limitations": [
@@ -158969,7 +159128,8 @@
       "text": "InputHandler, EntityInputHandler and PlatformInputHandler forward keyboard/autofill hints, fallible editor actions and UTF-16 native geometry queries. Focus/options notifications follow the installed accepting handler; backend callbacks must defer reentrant queries."
     },
     "framework_motion": {
-      "spring": "SpringConfig analytically advances position and velocity for fixed or steadily moving targets; with_spring retains per-element state across retargeting, supports pause, stop, complete, and cancel, and resolves finite overshoot without clamping. Reduced motion snaps a running spring to its target."
+      "spring": "SpringConfig analytically advances position and velocity for fixed or steadily moving targets; with_spring retains per-element state across retargeting, supports pause, stop, complete, and cancel, and resolves finite overshoot without clamping. Reduced motion snaps a running spring to its target.",
+      "transition_rebasing": "Kit Transition can uniformly scale, independently scale compound x/y geometry, translate, or otherwise transform both endpoints of an in-flight run without restarting its playhead; Point, Size, and Bounds implement the per-axis contract."
     },
     "framework_native_editable_geometry": {
       "commands": [
@@ -159125,6 +159285,18 @@
       ],
       "validation": "Actual software-WGPU and native Metal headless down/up tests cover intermediate/settled frames, independent pixel boundaries, single/group centers, glyph changes, release and reduced motion. Native evidence is the exact e6ad41ee source named above; optical fixture frames were inspected. These tests are not physical pointer delivery or a real-window motion recording.",
       "window_limitations": "The current gallery and an origin/main control build both created decorated but blank client windows in the same Xvfb/Openbox setup. Their common cause is not established; this is not successful Linux real-window motion evidence. Linux offscreen coverage is independent."
+    },
+    "kit_kbd": {
+      "contract": "One compact pill displays one parsed GPUI keystroke. macOS uses ordered modifier glyphs; other platforms use localized modifier and named-key labels joined by plus signs. Filled, outline and plain appearances share the same formatted value and optional semantic id.",
+      "platform_validation": "Pure formatting tests simulate both notation families on every host. The kbd headless exhibit is renderer evidence for the executing platform, not native keyboard-layout discovery.",
+      "source_compatibility": "Kbd::new continues to accept the existing GPUI syntax string; From<Keystroke> and binding lookup helpers admit parsed framework values without introducing a second GPUI package. Invalid non-empty source remains visible.",
+      "tests": [
+        "macos_uses_one_compact_label_in_platform_order",
+        "other_platforms_use_one_plus_separated_label",
+        "named_keys_follow_gpui_component_notation",
+        "parser_handles_literal_separator_keys",
+        "invalid_source_stays_visible_and_empty_source_draws_nothing"
+      ]
     },
     "kit_owner_keyed_state": {
       "contract": "All typed keyed registries partition by exact EffectOwner, window and key. Hosts explicitly register_owner_state on minting a mount; ambient scopes never register. release_owner_state drops only that owner's registry entries synchronously and removes registration. Unknown/retired tokens cannot recache. Unowned native state retains prior behavior.",

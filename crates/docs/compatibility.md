@@ -220,6 +220,20 @@ Backends defer input-handler queries until these notifications return to avoid
 reentering a borrowed core window. Autofill hints do not promise SMS access,
 validation, or successful autofill.
 
+Scrollable overflowing elements and variable-height lists distinguish coarse
+`ScrollDelta::Lines` wheel input from precise pixel input. Coarse notches retain
+their full converted distance but ease it over 80 ms, retargeting from the
+undelivered remainder when another notch arrives. Precise trackpad/touch deltas,
+scrollbar drags, and programmatic offsets remain immediate. Reduced-motion mode
+also applies a coarse notch immediately.
+
+Scrollable overflowing elements and variable-height lists distinguish coarse
+`ScrollDelta::Lines` wheel input from precise pixel input. Coarse notches retain
+their full converted distance but ease it over 80 ms, retargeting from the
+undelivered remainder when another notch arrives. Precise trackpad/touch deltas,
+scrollbar drags, and programmatic offsets remain immediate. Reduced-motion mode
+also applies a coarse notch immediately.
+
 Application-provided native context menus use the framework's existing
 `Menu`/`MenuItem` action tree rather than a platform-specific component model.
 macOS maps it to `NSMenu`; Windows maps it to `HMENU` and
@@ -704,7 +718,7 @@ lines. `shaping_work` counts actual submitted UTF-8 bytes and hard lines.
 TextArea's new `document()` returns a persistent indexed snapshot;
 `snapshot()` and `value()` retain their contiguous compatibility contracts.
 This preserves caller behavior but does not eliminate their document-wide
-cost. See `docs/coverage.md` for the remaining large-file paths.
+cost. See `crates/docs/coverage.md` for the remaining large-file paths.
 
 The optional Kit `syntax` feature adds `Editor::syntax(EditorSyntax::json())`
 or `EditorSyntax::new(language, query)` for caller-selected grammars compatible

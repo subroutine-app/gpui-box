@@ -8,7 +8,7 @@ import { validateValue } from '../kit-schema.mjs';
 import { artifacts, families } from '../../app-host/src/kit_bindings/navigation_extra/fixture/generate.mjs';
 
 test('explicit adapters cover the owned families except documented unbound components', async () => {
-  const index = JSON.parse(await readFile(new URL('../../../docs/api-index.json', import.meta.url)));
+  const index = JSON.parse(await readFile(new URL('../../../crates/docs/api-index.json', import.meta.url)));
   const coverage = JSON.parse(await readFile(new URL('../binding-coverage.json', import.meta.url)));
   // These mobile Rust components have no JS adapters; do not imply them from a family.
   const unbound = ['BottomNavigation', 'AppBar', 'PageLayout'];

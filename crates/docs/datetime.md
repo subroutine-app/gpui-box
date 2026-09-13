@@ -21,7 +21,7 @@ them, and hand them back. Nothing in this crate ever adds a day to a date or a
 month to a month — moving to the next month is `shift_month`, an adapter call,
 not an addition. A `Day` from one adapter means nothing to another.
 
-`docs/coverage.md` used to list date pickers as out of scope for exactly this
+`crates/docs/coverage.md` used to list date pickers as out of scope for exactly this
 reason. What changed is not the reasoning; it is that the reasoning has been
 turned into a seam, so the crate can ship the picker without shipping the
 calendar.

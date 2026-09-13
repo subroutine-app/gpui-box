@@ -10,11 +10,11 @@ repository rather than linked as a Git dependency.
 
 ## Read first
 
-1. `docs/api-index.json`: generated exact component signatures and scenes.
-   `docs/developer-index.json`: packages, public source declarations, tokens,
+1. `crates/docs/api-index.json`: generated exact component signatures and scenes.
+   `crates/docs/developer-index.json`: packages, public source declarations, tokens,
    guides, recipes, assets, compatibility, and the same Kit catalog.
 2. `AGENTS.md`: enforced repository rules.
-3. `docs/design-principles.md`, `docs/compatibility.md`, and `PROVENANCE.md`.
+3. `crates/docs/design-principles.md`, `crates/docs/compatibility.md`, and `PROVENANCE.md`.
 
 Prefer generated API facts over prose. Physical paths and internal workspace
 aliases containing `gpui-kit` are implementation details, not public package
@@ -47,12 +47,12 @@ cargo run -p xtask -- package check
 
 Inspect every changed PNG before capture. macOS, Linux, and Windows each have
 active renderer-specific CI evidence; WASM is single-threaded and has explicit
-accessibility limits. See `docs/compatibility.md`.
+accessibility limits. See `crates/docs/compatibility.md`.
 
 ## Generated artifacts
 
-Do not hand-edit `docs/api-index.json`, `docs/developer-index.json`,
-`docs/token-reference.md`, `docs/strings-allowlist.txt`, or headless PNGs.
+Do not hand-edit `crates/docs/api-index.json`, `crates/docs/developer-index.json`,
+`crates/docs/token-reference.md`, `crates/docs/strings-allowlist.txt`, or headless PNGs.
 Their `xtask` generate/capture commands own them.
 
 The checkout-backed `gpui-box-mcp` (`tools/mcp/run.sh`) reads `GPUI_BOX_ROOT`
@@ -66,8 +66,8 @@ checkout-only sessions are absent rather than remotely emulated. It is not a
 crates.io install. crates.io `gpui-box-mcp` without a git revision is still the
 last published cohort (`0.1.1`).
 
-References: `docs/components.md`, `docs/component-contracts.md`,
-`docs/coverage.md`, `docs/truthful-ui.md`, `docs/token-model.md`,
-`docs/semantic-automation.md`, `docs/accessibility.md`,
-`docs/performance-testing.md`, `docs/screenshot-testing.md`, `docs/mcp.md`, and
-`docs/releasing.md`.
+References: `crates/docs/components.md`, `crates/docs/component-contracts.md`,
+`crates/docs/coverage.md`, `crates/docs/truthful-ui.md`, `crates/docs/token-model.md`,
+`crates/docs/semantic-automation.md`, `crates/docs/accessibility.md`,
+`crates/docs/performance-testing.md`, `crates/docs/screenshot-testing.md`, `crates/docs/mcp.md`, and
+`crates/docs/releasing.md`.

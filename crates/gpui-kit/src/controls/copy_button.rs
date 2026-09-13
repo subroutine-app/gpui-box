@@ -28,7 +28,7 @@
 //!
 //! A confirmation is transient: it says "that went through" and there is no
 //! reason for it to stay. A failure is not, for the reason
-//! `docs/components.md` gives for notifications — a failure nobody saw is a
+//! `crates/docs/components.md` gives for notifications — a failure nobody saw is a
 //! failure that was never reported. So the tick fades on a timer and the
 //! refusal stays until the next attempt replaces it.
 

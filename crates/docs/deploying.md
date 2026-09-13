@@ -73,7 +73,7 @@ uses `cargo-zigbuild` instead.
 `tools/site/verify-deployment.sh [revision]` is the proof, and it is the same
 proof whichever lane deployed: both hostnames serve `/build-info.json` naming
 the revision with the package, symbol, component, type, theme, guide, recipe,
-and scene counts of the committed `docs/developer-index.json`; `POST /mcp`
+and scene counts of the committed `crates/docs/developer-index.json`; `POST /mcp`
 `tools/list` matches every tool name and full schema in `tools/mcp/tools.json`;
 and paginated `search_components` with an empty query matches the structured
 component ID multiset (including duplicate detection). Both hostnames receive

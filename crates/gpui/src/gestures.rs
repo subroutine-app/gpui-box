@@ -24,6 +24,7 @@ use crate::{
 };
 
 const SCROLL_EVENT_SEPARATION: Duration = Duration::from_millis(28);
+const COARSE_SCROLL_DURATION: Duration = Duration::from_millis(80);
 
 fn dominant_axis(delta: Point<Pixels>) -> Axis {
     if delta.x.abs() <= delta.y.abs() {
@@ -104,6 +105,99 @@ impl OngoingScroll {
         if let Some(axis) = axis {
             lock_delta_to_axis(delta, axis);
         }
+    }
+}
+
+/// A short, interruptible transition for line-based wheel input.
+///
+/// Pixel deltas already carry the high-resolution motion supplied by a trackpad
+/// or touch gesture. Line deltas arrive as coarse wheel notches, so scrollable
+/// elements feed those through this transition and consume one incremental
+/// pixel delta per frame.
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct CoarseScrollTransition {
+    distance: Point<Pixels>,
+    delivered: Point<Pixels>,
+    ready: Point<Pixels>,
+    started_at: Option<Instant>,
+}
+
+impl CoarseScrollTransition {
+    /// Adds another wheel notch without dropping the unfinished distance from
+    /// the previous one. Any progress accrued since the last frame is retained
+    /// in `ready` and delivered by the next call to [`Self::advance_at`].
+    pub(crate) fn push_at(&mut self, delta: Point<Pixels>, now: Instant) {
+        let accrued = self.sample_at(now);
+        self.ready += accrued;
+        if delta == Point::default() {
+            return;
+        }
+        let remaining = self.distance - self.delivered;
+        self.distance = remaining + delta;
+        self.delivered = Point::default();
+        self.started_at = Some(now);
+    }
+
+    /// Returns the distance accepted from input but not yet delivered.
+    pub(crate) fn pending_delta(&self) -> Point<Pixels> {
+        self.ready + self.distance - self.delivered
+    }
+
+    /// Returns the incremental distance due at `now`.
+    pub(crate) fn advance_at(&mut self, now: Instant) -> Point<Pixels> {
+        let ready = mem::take(&mut self.ready);
+        ready + self.sample_at(now)
+    }
+
+    /// Returns all remaining distance immediately and settles the transition.
+    pub(crate) fn finish(&mut self) -> Point<Pixels> {
+        let remaining = self.ready + self.distance - self.delivered;
+        *self = Self::default();
+        remaining
+    }
+
+    /// Stops the transition without delivering its remaining distance.
+    pub(crate) fn cancel(&mut self) {
+        *self = Self::default();
+    }
+
+    /// Stops one or both axes without disturbing motion that can still be
+    /// consumed on the other axis.
+    pub(crate) fn cancel_axes(&mut self, x: bool, y: bool) {
+        if x {
+            self.distance.x = Pixels::ZERO;
+            self.delivered.x = Pixels::ZERO;
+            self.ready.x = Pixels::ZERO;
+        }
+        if y {
+            self.distance.y = Pixels::ZERO;
+            self.delivered.y = Pixels::ZERO;
+            self.ready.y = Pixels::ZERO;
+        }
+        if self.distance == self.delivered && self.ready == Point::default() {
+            self.started_at = None;
+        }
+    }
+
+    pub(crate) fn is_animating(&self) -> bool {
+        self.started_at.is_some()
+    }
+
+    fn sample_at(&mut self, now: Instant) -> Point<Pixels> {
+        let Some(started_at) = self.started_at else {
+            return Point::default();
+        };
+        let elapsed = now.saturating_duration_since(started_at);
+        let progress = (elapsed.as_secs_f32() / COARSE_SCROLL_DURATION.as_secs_f32()).min(1.0);
+        let inverse = 1.0 - progress;
+        let eased = 1.0 - inverse * inverse * inverse;
+        let next = self.distance * eased;
+        let delta = next - self.delivered;
+        self.delivered = next;
+        if progress >= 1.0 {
+            *self = Self::default();
+        }
+        delta
     }
 }
 
@@ -1477,6 +1571,50 @@ fn quadratic_velocity_at_newest(times: &[f64], values: &[f64]) -> Option<f64> {
 mod tests {
     use super::*;
     use crate::point;
+
+    #[test]
+    fn coarse_scroll_transition_eases_a_wheel_notch_without_losing_distance() {
+        let now = Instant::now();
+        let mut transition = CoarseScrollTransition::default();
+        transition.push_at(point(px(0.), px(-80.)), now);
+
+        assert_eq!(transition.advance_at(now), Point::default());
+        let first = transition.advance_at(now + Duration::from_millis(40));
+        assert!(first.y < px(0.));
+        assert!(first.y > px(-80.));
+        let last = transition.advance_at(now + COARSE_SCROLL_DURATION);
+        assert_eq!(first + last, point(px(0.), px(-80.)));
+        assert!(!transition.is_animating());
+    }
+
+    #[test]
+    fn coarse_scroll_transition_retargets_from_its_undelivered_distance() {
+        let now = Instant::now();
+        let mut transition = CoarseScrollTransition::default();
+        transition.push_at(point(px(0.), px(-80.)), now);
+        transition.push_at(point(px(0.), px(-80.)), now + Duration::from_millis(40));
+
+        assert_eq!(transition.pending_delta(), point(px(0.), px(-160.)));
+        let accrued = transition.advance_at(now + Duration::from_millis(40));
+        let remainder = transition.advance_at(now + Duration::from_millis(120));
+        assert_eq!(accrued + remainder, point(px(0.), px(-160.)));
+        assert!(!transition.is_animating());
+    }
+
+    #[test]
+    fn coarse_scroll_transition_can_stop_one_clamped_axis() {
+        let now = Instant::now();
+        let mut transition = CoarseScrollTransition::default();
+        transition.push_at(point(px(-80.), px(80.)), now);
+        let first = transition.advance_at(now + Duration::from_millis(40));
+        transition.cancel_axes(false, true);
+        let middle = transition.advance_at(now + Duration::from_millis(60));
+        let last = transition.advance_at(now + COARSE_SCROLL_DURATION);
+
+        assert_eq!(first.x + middle.x + last.x, px(-80.));
+        assert_eq!(middle.y, px(0.));
+        assert_eq!(last.y, px(0.));
+    }
 
     #[test]
     fn ongoing_scroll_locks_to_dominant_axis() {

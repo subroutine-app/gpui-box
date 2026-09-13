@@ -3,7 +3,7 @@
 //! There is no calendar system, no time zone database, no locale, and no
 //! notion of today anywhere in this module. All of it arrives through
 //! [`DateAdapter`], which the host implements over whatever date library it
-//! already depends on. `docs/datetime.md` says what a host has to supply and
+//! already depends on. `crates/docs/datetime.md` says what a host has to supply and
 //! why the seam is here rather than lower down.
 //!
 //! - [`Calendar`] — a month grid, keyboard navigation, blocked days with the

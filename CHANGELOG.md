@@ -4,7 +4,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Entries say what the library now does and what it refuses to do, because a
 refusal is the part a caller has to plan around.
 
-See `docs/releasing.md` for the protected publication and verification runbook.
+See `crates/docs/releasing.md` for the protected publication and verification runbook.
 
 ## [Unreleased]
 
@@ -41,6 +41,12 @@ resolve; publication does not upgrade their documented native acceptance.
 
 ### Added
 
+**Transitions can follow a changing coordinate space without lag.**
+`motion::Transition` can now transform both endpoints of an in-flight run while
+preserving its playhead and carried velocity. `scale_by`, `scale_by_axes`, and
+`offset_by` cover zoom and origin changes directly; `ScaleAxes` supports
+`Point`, `Size`, and `Bounds` values.
+
 **Compact glass keeps a face.** `Glass::grounded` and `GlassGroup::grounded`
 give Liquid and Lens the theme's `glassAlpha` wash while keeping refraction,
 lift, and the hairline. Large plates stay clear by default so a fill cannot
@@ -52,6 +58,12 @@ overlays — a titlebar, a side lens — do not share pixels with Fit. Overflow,
 scrolling, reorder and the keyboard stay what they were.
 
 ### Changed
+
+**Coarse wheel scrolling now eases over 80 ms.** Overflowing elements and
+variable-height lists transition line-based mouse-wheel notches instead of
+jumping by a full line packet. Pixel-precise trackpad and touch deltas remain
+immediate, repeated notches retarget the short transition, and reduced-motion
+mode applies the complete delta without animation.
 
 **Settings groups sit on the page plane.** `SettingsSection` no longer wraps
 its rows in a raised card. The heading and the rows' own padding carry the
@@ -827,7 +839,7 @@ breaking change to the portable schema and to `ElevationTokens`.
 
 **The catalog tools follow this repository, not the crates.io cohort.**
 `search_components` and `component` now answer supporting types from
-`docs/api-index.json` (`CardHeader`, `CardVariant`, `AsyncValue`, and the
+`crates/docs/api-index.json` (`CardHeader`, `CardVariant`, `AsyncValue`, and the
 rest) as well as mountable components. The hosted Worker states that it
 serves the current deploy of this tree rather than a published crate.
 `tools/mcp/run.sh` starts the checkout stdio server. The product-UI skill
@@ -840,7 +852,7 @@ registration. `Shows::Subjects` names the components a rendering is the review
 of; `Shows::Composition` marks the three arrangements (`motion-flip`,
 `motion-state`, `reading-direction`) that are built the way a product would
 build them and are nobody's coverage. The `scenes` list on a component in
-`docs/api-index.json` therefore answers "where do I go to look at this"
+`crates/docs/api-index.json` therefore answers "where do I go to look at this"
 instead of "what code path touches this type": it used to be inferred by
 following every helper a scene called, so `hover-card`, `menubar`, and
 `copy-button` all reported the same seven components because they share one
@@ -923,7 +935,7 @@ canvas, so one rule holds in both appearances. Both bundled Studio themes were
 retuned to pass: dark had been drawing three of those four tones as the same
 grey, and light had `placeholder` stronger than `faint`. `xtask tokens
 generate` prints both tables, the contrast gate reports both sets of failures,
-and `docs/token-model.md` states the contract. Every macOS baseline was
+and `crates/docs/token-model.md` states the contract. Every macOS baseline was
 re-rendered; the Windows set still has to be accepted on Windows.
 
 **A card component family, and one definition of the card shell.** `Card`
@@ -1384,7 +1396,7 @@ installs no handler.
 
 **Tooling.** `xtask tokens generate|check`, `xtask scenes list|render`,
 `xtask headless capture|check`, and `xtask gate [full]`. The headless check is
-the renderer-specific visual regression gate; see `docs/screenshot-testing.md`
+the renderer-specific visual regression gate; see `crates/docs/screenshot-testing.md`
 for where it can and cannot run.
 
 ### Changed
@@ -1417,7 +1429,7 @@ threading limits.
   embedded below a host-owned text style must render identically to the same
   component in the gallery, so inheritance is the defect rather than its fix.
   The pre-change review of all 196 Linux theme/scene images is recorded in
-  `docs/coverage.md` before the component-family sweep changes any baseline.
+  `crates/docs/coverage.md` before the component-family sweep changes any baseline.
 - The visual gate is `xtask headless check` on every platform, and the macOS
   baseline moved from `snapshots/macos/scenes` to
   `snapshots/headless/macos/scenes`. It used to open a real 920×1000 window and
@@ -1517,13 +1529,13 @@ threading limits.
   settled one says "Reasoning", so reduced motion loses the movement and keeps
   the state.
 
-- The catalog is readable by a program. `docs/api-index.json` carries all 122
+- The catalog is readable by a program. `crates/docs/api-index.json` carries all 122
   components, the exact signature of every public method sorted by what the
   caller has to hold, the events each one reports, and the scenes that render
   it — generated from the source by `xtask api generate` and checked by `gate`,
   so a signature it states is one a compiler agreed to. Each of the 99 scenes
   carries its own source as an example, which is worth more than a written one
-  because the gate compiles it and `headless check` renders it. `docs/llms.txt`
+  because the gate compiles it and `headless check` renders it. `crates/docs/llms.txt`
   is the entry point, and `tools/mcp` serves the same catalog as Model Context
   Protocol tools, one of which renders a scene and returns the image so a
   caller can look at a component rather than read a description of it.
@@ -1540,7 +1552,7 @@ threading limits.
   only carry files under its own directory, so `include_str!` reaching up to a
   repository-root `tokens/` meant the one crate in this workspace that does not
   depend on GPUI — and could therefore be published — could not even be
-  packaged. It packages now. `docs/releasing.md` records what a release is
+  packaged. It packages now. `crates/docs/releasing.md` records what a release is
   here: one protected, verified, registry-only-tested cohort from an immutable
   tag, rather than an isolated package upload.
 
@@ -1607,7 +1619,7 @@ threading limits.
 
 ### Not provided
 
-`docs/coverage.md` states what this library refuses to invent — calendar
+`crates/docs/coverage.md` states what this library refuses to invent — calendar
 arithmetic, time wording, grammars, transports, platform window chrome —
 and, separately, the application surfaces that are still missing. Charts
 and the remaining form shapes are gaps, not refusals. Read it before

@@ -1,7 +1,7 @@
 # Content and media native adapter audit
 
 The catalog contains **11 content and 4 media components**. Membership is checked
-against `docs/api-index.json` by the family JS tests. These are native component
+against `crates/docs/api-index.json` by the family JS tests. These are native component
 builders, not pictures or catalog metadata. This delivery does **not** claim that
 every arbitrary Rust callback can execute in a JS worker, or that a poster is
 playback. Closed schemas and generated family declarations describe the supported

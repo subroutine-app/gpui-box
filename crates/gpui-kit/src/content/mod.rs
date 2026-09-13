@@ -9,7 +9,7 @@
 //!
 //! So nothing here acts. Raw HTML is shown as the characters it is, links
 //! report rather than open, images are named rather than fetched, and code
-//! changes colour but never shape. `docs/content.md` states the
+//! changes colour but never shape. `crates/docs/content.md` states the
 //! whole posture, and the delivery vocabulary a conversation speaks.
 //!
 //! The two media surfaces keep the same posture from the other side. Nothing

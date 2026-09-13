@@ -1,6 +1,8 @@
 //! Values that can be sampled part way between two states.
 
-use gpui::{Hsla, Pixels, Point, Rems, Size, px, rems};
+use std::{fmt::Debug, ops::Mul};
+
+use gpui::{Bounds, Hsla, Pixels, Point, Rems, Size, px, rems};
 
 /// A value an animation can move through.
 ///
@@ -13,6 +15,12 @@ pub trait Interpolate: Copy {
     /// How far apart two values are, in one number, so a retarget can rescale
     /// a velocity it is carrying into the new distance.
     fn distance(self, other: Self) -> f32;
+}
+
+/// A compound value whose horizontal and vertical coordinates can be rebased
+/// independently when its coordinate space changes.
+pub trait ScaleAxes: Sized {
+    fn scale_axes(&self, x_ratio: f32, y_ratio: f32) -> Self;
 }
 
 impl Interpolate for f32 {
@@ -80,7 +88,7 @@ fn hue_delta(from: f32, to: f32) -> f32 {
     }
 }
 
-impl<T: Interpolate + Clone + std::fmt::Debug + Default + PartialEq> Interpolate for Point<T> {
+impl<T: Interpolate + Clone + Debug + Default + PartialEq> Interpolate for Point<T> {
     fn lerp(self, other: Self, t: f32) -> Self {
         Point {
             x: self.x.lerp(other.x, t),
@@ -95,7 +103,7 @@ impl<T: Interpolate + Clone + std::fmt::Debug + Default + PartialEq> Interpolate
     }
 }
 
-impl<T: Interpolate + Clone + std::fmt::Debug + Default + PartialEq> Interpolate for Size<T> {
+impl<T: Interpolate + Clone + Debug + Default + PartialEq> Interpolate for Size<T> {
     fn lerp(self, other: Self, t: f32) -> Self {
         Size {
             width: self.width.lerp(other.width, t),
@@ -107,6 +115,57 @@ impl<T: Interpolate + Clone + std::fmt::Debug + Default + PartialEq> Interpolate
         let width = self.width.distance(other.width);
         let height = self.height.distance(other.height);
         (width * width + height * height).sqrt()
+    }
+}
+
+impl<T: Interpolate + Clone + Debug + Default + PartialEq> Interpolate for Bounds<T> {
+    fn lerp(self, other: Self, t: f32) -> Self {
+        Bounds {
+            origin: self.origin.lerp(other.origin, t),
+            size: self.size.lerp(other.size, t),
+        }
+    }
+
+    fn distance(self, other: Self) -> f32 {
+        let origin = self.origin.distance(other.origin);
+        let size = self.size.distance(other.size);
+        (origin * origin + size * size).sqrt()
+    }
+}
+
+impl<T> ScaleAxes for Point<T>
+where
+    T: Copy + Debug + Default + Mul<f32, Output = T> + PartialEq,
+{
+    fn scale_axes(&self, x_ratio: f32, y_ratio: f32) -> Self {
+        Point {
+            x: self.x * x_ratio,
+            y: self.y * y_ratio,
+        }
+    }
+}
+
+impl<T> ScaleAxes for Size<T>
+where
+    T: Copy + Debug + Default + Mul<f32, Output = T> + PartialEq,
+{
+    fn scale_axes(&self, x_ratio: f32, y_ratio: f32) -> Self {
+        Size {
+            width: self.width * x_ratio,
+            height: self.height * y_ratio,
+        }
+    }
+}
+
+impl<T> ScaleAxes for Bounds<T>
+where
+    T: Copy + Debug + Default + Mul<f32, Output = T> + PartialEq,
+{
+    fn scale_axes(&self, x_ratio: f32, y_ratio: f32) -> Self {
+        Bounds {
+            origin: self.origin.scale_axes(x_ratio, y_ratio),
+            size: self.size.scale_axes(x_ratio, y_ratio),
+        }
     }
 }
 
@@ -183,5 +242,16 @@ mod tests {
         assert_eq!(moved, point(px(5.0), px(5.0)));
         let grown = size(px(0.0), px(0.0)).lerp(size(px(4.0), px(8.0)), 0.5);
         assert_eq!(grown, size(px(2.0), px(4.0)));
+
+        let from = Bounds::new(point(px(0.0), px(10.0)), size(px(20.0), px(30.0)));
+        let to = Bounds::new(point(px(10.0), px(30.0)), size(px(40.0), px(70.0)));
+        assert_eq!(
+            from.lerp(to, 0.5),
+            Bounds::new(point(px(5.0), px(20.0)), size(px(30.0), px(50.0)))
+        );
+        assert_eq!(
+            from.scale_axes(2.0, 3.0),
+            Bounds::new(point(px(0.0), px(30.0)), size(px(40.0), px(90.0)))
+        );
     }
 }

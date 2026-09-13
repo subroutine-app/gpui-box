@@ -31,9 +31,10 @@ imported and the historical receipts remain frozen.
 Shared mouse cancellation, button-bound capture and text/click cleanup,
 browser chord reconciliation, and Windows chord capture lifetime are also
 original GPUI Box work without additional imports.
-Opt-in inline deferred accessibility ancestry, ordered child reservations, and
-active-accessibility cache rebuilding are original GPUI Box work; no new
-third-party source or licenses are involved.
+Opt-in inline deferred accessibility ancestry, ordered child reservations,
+active-accessibility cache rebuilding, and the shared coarse-wheel scroll
+transition are original GPUI Box work; no new third-party source or licenses
+are involved.
 
 GPUI / Zed
 --------------------------------------------------------------------------------
@@ -151,6 +152,20 @@ product, or third-party source.
 The AVFoundation and Media Foundation playback services are GPUI Box work and
 use operating-system frameworks; they import no additional third-party source
 or media assets.
+
+GPUI CE transition coordinate rebasing
+--------------------------------------------------------------------------------
+Source: https://github.com/brendon-felix/gpui-ce
+Reviewed revision: da19cf4da4a9177f5202bc22ed77b4bbf0a28c9d
+Source commits: cfec5ff014f43c19ff0e35a2fbd18e225a92ab3e,
+edd2ee5634b4e1ad751f47960f0c46de9d153597
+License: Apache-2.0
+Copyright 2026 Brendon Felix
+Scope: the uniform scale, independent-axis scale, and translation operations
+adapted into `gpui_kit::motion::Transition`, plus the compound geometry scaling
+contract. GPUI Box retains its own transition clock, spring handoff, and
+reduced-motion behavior.
+
 License text: licenses/ZED-APACHE-2.0.txt
 
 Ropey 1.6.1
@@ -467,6 +482,20 @@ in-window fallback. GPUI Box places the contract in its framework/platform
 boundary and reuses its existing Kit menu. No upstream component menu model,
 root overlay, icon pipeline, source file, or Cargo dependency is included; see
 PROVENANCE.md P17.
+License text: LICENSE-APACHE
+
+Longbridge GPUI Component Kbd source port
+--------------------------------------------------------------------------------
+Source: https://github.com/longbridge/gpui-component
+Reviewed revision: b885b07c981ebc488e1c9e564bae170d6fb2d6e3
+Latest source-file revision: 49b4ad411e1494037743d1326a8084367373d6ac
+License: Apache-2.0
+Copyright 2024–2025 Longbridge
+Scope: compact single-pill keybinding presentation, platform notation,
+appearance variants, and action-binding lookup adapted into
+crates/gpui-kit/src/overlay/kbd.rs. GPUI Box retains its own tokens, strings,
+semantics, and existing string constructor; no package dependency is included.
+See PROVENANCE.md P22.
 License text: LICENSE-APACHE
 
 Zed GPUI spring, gesture, and profiler source ports

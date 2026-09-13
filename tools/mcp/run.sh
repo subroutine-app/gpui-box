@@ -11,8 +11,8 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export GPUI_BOX_ROOT="${GPUI_BOX_ROOT:-$root}"
 
 if [[ ! -f "$GPUI_BOX_ROOT/package-authority.toml" \
-  || ! -f "$GPUI_BOX_ROOT/docs/api-index.json" \
-  || ! -f "$GPUI_BOX_ROOT/docs/developer-index.json" ]]; then
+  || ! -f "$GPUI_BOX_ROOT/crates/docs/api-index.json" \
+  || ! -f "$GPUI_BOX_ROOT/crates/docs/developer-index.json" ]]; then
   echo "gpui-box-mcp: GPUI_BOX_ROOT=$GPUI_BOX_ROOT is not a GPUI Box checkout" >&2
   exit 1
 fi

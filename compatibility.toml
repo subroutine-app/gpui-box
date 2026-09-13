@@ -148,10 +148,12 @@ measured_reveal = "A stable-id Reveal measures its subtree at an unconstrained p
 
 [framework_motion]
 spring = "SpringConfig analytically advances position and velocity for fixed or steadily moving targets; with_spring retains per-element state across retargeting, supports pause, stop, complete, and cancel, and resolves finite overshoot without clamping. Reduced motion snaps a running spring to its target."
+transition_rebasing = "Kit Transition can uniformly scale, independently scale compound x/y geometry, translate, or otherwise transform both endpoints of an in-flight run without restarting its playhead; Point, Size, and Bounds implement the per-axis contract."
 
 [framework_gestures]
 portable_touch = "Stable contact IDs resolve to tap, axis-locked scrolling/fling, claimed drag/long press, captured directional pan or two-contact pinch. Unclaimed pan cancels before pinch; a captured pan promotes only to its same-ID registered pinch. Extra contacts drain without phantom taps."
 scroll_physics = "PlatformGestures selects exponential or Android friction-spline deceleration without replacing the source-compatible GestureTuning::momentum_decay_per_ms field."
+coarse_wheel = "Overflowing elements and variable-height lists ease line-based wheel notches over 80 ms while preserving their full distance; precise pixel input, direct offsets, and reduced-motion input remain immediate."
 handoff = "After live scroll consumes movement, a TouchPanEvent may acquire only its residual; touch_start_position retains the hit anchor and start_position rebases to current minus residual. Captured ownership lasts through reversal and one terminal phase. Prediction is disabled in frames with arbitration listeners."
 interruption = "Inactive platform status invokes Window::cancel_touch_input before suspension, cancelling pending recognition, owned gestures and released momentum. Per-contact cancellation never cancels an unrelated owner."
 limitations = ["no rotation or arbitrary simultaneous gesture graph", "captured manipulation does not hand back to scrolling on reversal", "owners must cancel before unregistering their captured listener", "shared tests do not establish native device integration"]
@@ -170,6 +172,12 @@ excluded = ["upstream profiler journal", "hang report integration", "debug frame
 ownership = "DockTopology and its stable ids remain caller-owned; DockTree projects them through SplitTree, Tabs, and the shared drag system and emits selection, collapse, resize, move, and split intents without applying them."
 invariants = ["load/dump/load fixpoint", "empty stacks persist", "malformed records reject", "selection and collapse preserve unrelated ratios", "resize reports only the dragged split", "one completed drop emits one move intent", "ratios are dimensionless across container sizes"]
 excluded = ["upstream retained PaneTree reducer", "panel entity registry", "DockArea reconciliation cache", "product persistence transport"]
+
+[kit_kbd]
+contract = "One compact pill displays one parsed GPUI keystroke. macOS uses ordered modifier glyphs; other platforms use localized modifier and named-key labels joined by plus signs. Filled, outline and plain appearances share the same formatted value and optional semantic id."
+source_compatibility = "Kbd::new continues to accept the existing GPUI syntax string; From<Keystroke> and binding lookup helpers admit parsed framework values without introducing a second GPUI package. Invalid non-empty source remains visible."
+tests = ["macos_uses_one_compact_label_in_platform_order", "other_platforms_use_one_plus_separated_label", "named_keys_follow_gpui_component_notation", "parser_handles_literal_separator_keys", "invalid_source_stays_visible_and_empty_source_draws_nothing"]
+platform_validation = "Pure formatting tests simulate both notation families on every host. The kbd headless exhibit is renderer evidence for the executing platform, not native keyboard-layout discovery."
 
 [framework_paint]
 sprite_corner_coverage = "A polychrome sprite's rounded-corner mask sizes its antialiasing ramp from the analytic gradient of its own signed distance field, mapped to device pixels through the sprite's transform, on every renderer; it consumes no screen-space derivative and so does not depend on how a backend fills a helper invocation across a triangle seam."

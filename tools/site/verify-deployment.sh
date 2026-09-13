@@ -9,7 +9,7 @@
 #
 # 1. `/build-info.json` on both hostnames names the revision and carries the
 #    same package, symbol, component, type, theme, guide, recipe, and scene
-#    counts as the committed `docs/developer-index.json`;
+#    counts as the committed `crates/docs/developer-index.json`;
 # 2. `POST /mcp` `tools/list` returns every remote tool in
 #    `tools/mcp/tools.json`;
 # 3. `search_components` with an empty query returns every component.
@@ -20,7 +20,7 @@ revision="${1:-$(git -C "$root" rev-parse HEAD)}"
 origin="${GPUI_BOX_ORIGIN_ADDRESS:-67.230.183.147}"
 hosts=(gpui-box.origingame.dev gpui-kit.origingame.dev)
 
-expected_counts="$(python3 - "$root/docs/developer-index.json" "$root/tools/mcp/tools.json" <<'PY'
+expected_counts="$(python3 - "$root/crates/docs/developer-index.json" "$root/tools/mcp/tools.json" <<'PY'
 import json
 import sys
 
@@ -75,7 +75,7 @@ mcp() {
 }
 
 expected_tools="$(jq -cS 'sort_by(.name)' "$root/tools/mcp/tools.json")"
-expected_components="$(jq -cS '[.components[].name | "component:" + .] | sort' "$root/docs/developer-index.json")"
+expected_components="$(jq -cS '[.components[].name | "component:" + .] | sort' "$root/crates/docs/developer-index.json")"
 for host in "${hosts[@]}"; do
   actual_tools="$(mcp '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | jq -ecS '.result.tools | sort_by(.name)')"
   [[ "$actual_tools" == "$expected_tools" ]] || {

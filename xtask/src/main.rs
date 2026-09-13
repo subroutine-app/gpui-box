@@ -1824,7 +1824,7 @@ fn tokens(check: bool) -> Result<()> {
         theme_section(&mut output, document)?;
     }
 
-    let path = root().join("docs/token-reference.md");
+    let path = root().join("crates/docs/token-reference.md");
     if check {
         let current = fs::read_to_string(&path)
             .with_context(|| format!("read generated {}", path.display()))?;

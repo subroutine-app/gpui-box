@@ -91,7 +91,7 @@ A node reports:
 
 `value` has one meaning across the library — what a control holds, how much a
 container holds, the name of a state, or the reason a row was refused. The
-cases are spelled out in `docs/components.md`; a component that publishes
+cases are spelled out in `crates/docs/components.md`; a component that publishes
 `value` for anything else is a bug in that component, not a new case.
 
 After retaining an arm guard, read a tree with `coordinator.snapshot(window_id)` and wait on

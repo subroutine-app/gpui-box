@@ -33,4 +33,4 @@ cargo run -p xtask -- web visual check button input dialog node-graph
 The checked-in npm lockfile pins Playwright. The smoke covers WebGL2, WebGPU,
 and fallback on the stable single-threaded path. It does not claim threaded
 COOP/COEP operation or screen-reader announcements; see
-[`docs/compatibility.md`](../docs/compatibility.md).
+[`crates/docs/compatibility.md`](../crates/docs/compatibility.md).

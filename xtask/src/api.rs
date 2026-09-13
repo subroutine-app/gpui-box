@@ -1,13 +1,13 @@
 //! The index that stops a reader from inventing an API.
 //!
-//! `docs/components.md` describes the components in prose, which is what a
+//! `crates/docs/components.md` describes the components in prose, which is what a
 //! person wants and what a program cannot use. An agent writing against this
 //! library fails in one particular way: it guesses `Badge::new("Ready")
 //! .tone(Tone::Success)` when the builder is `.success()`, and it guesses
 //! because nothing it can read says otherwise. Prose also drifts, because
 //! nothing fails when a signature changes and a sentence does not.
 //!
-//! So this generates `docs/api-index.json` from the source and `gate` fails
+//! So this generates `crates/docs/api-index.json` from the source and `gate` fails
 //! when the file no longer matches the tree, the same arrangement as
 //! `token-reference.md` and `strings-allowlist.txt`. A signature in the index
 //! is one a compiler agreed to.
@@ -106,11 +106,11 @@ fn same_index(current: &str, expected: &str) -> bool {
 }
 
 fn index_path(root: &Path) -> PathBuf {
-    root.join("docs").join("api-index.json")
+    root.join("crates/docs").join("api-index.json")
 }
 
 fn developer_index_path(root: &Path) -> PathBuf {
-    root.join("docs").join("developer-index.json")
+    root.join("crates/docs").join("developer-index.json")
 }
 
 fn size(index: &str) -> String {

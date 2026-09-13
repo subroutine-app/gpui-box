@@ -44,16 +44,16 @@
 //!
 //! # Documentation
 //!
-//! - `docs/components.md` — every component and the rules it keeps.
-//! - `docs/coverage.md` — what is provided, and what is deliberately not.
-//! - `docs/truthful-ui.md` — why a refusal is never rendered as an absence.
-//! - `docs/semantic-automation.md` — the semantic tree and what a node reports.
-//! - `docs/token-model.md` — where visible values come from.
-//! - `docs/interaction.md` — the drag contract: what a drop reports, what a
+//! - `crates/docs/components.md` — every component and the rules it keeps.
+//! - `crates/docs/coverage.md` — what is provided, and what is deliberately not.
+//! - `crates/docs/truthful-ui.md` — why a refusal is never rendered as an absence.
+//! - `crates/docs/semantic-automation.md` — the semantic tree and what a node reports.
+//! - `crates/docs/token-model.md` — where visible values come from.
+//! - `crates/docs/interaction.md` — the drag contract: what a drop reports, what a
 //!   drag publishes, and what the host has to do with it.
-//! - `docs/content.md` — what a rendered document is not allowed to do, and
+//! - `crates/docs/content.md` — what a rendered document is not allowed to do, and
 //!   what a conversation's five delivery states mean.
-//! - `docs/reactive.md` — the caller-owned signal, the binding a control is
+//! - `crates/docs/reactive.md` — the caller-owned signal, the binding a control is
 //!   handed, and where a form's result lands.
 //!
 //! ```no_run
