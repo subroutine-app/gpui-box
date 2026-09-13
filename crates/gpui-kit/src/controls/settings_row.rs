@@ -116,7 +116,7 @@ impl SettingsRow {
         self
     }
 
-    /// Overrides this row's inherited section label-column width.
+    /// Overrides the minimum width of this row's inherited name/description column.
     pub fn label_width(mut self, width: Pixels) -> Self {
         self.label_width = Some(width.max(px(0.0)));
         self
@@ -207,26 +207,50 @@ impl SettingsRow {
 
         let names = div()
             .column()
-            .flex_none()
-            .w(self
-                .label_width
-                .unwrap_or(px(theme.measures.settings_label)))
-            .min_w_0()
+            .flex_1()
+            .min_w(
+                self.label_width
+                    .unwrap_or(px(theme.measures.settings_label)),
+            )
             .gap(px(theme.space(Space::Xxs)))
             .child(
-                foundation_text(theme, TypeScale::Label, self.label.clone())
+                div()
+                    .row_reading(direction)
                     .w_full()
-                    .semantic_in(
-                        cx,
-                        NodeSpec::new(ident.child("label").semantic_id(), Role::Text)
-                            .parent(ident.semantic_id())
-                            .text(self.label.clone()),
+                    .items_center()
+                    .gap_token(theme, Space::Xs)
+                    .child(
+                        foundation_text(theme, TypeScale::Label, self.label.clone())
+                            .min_w_0()
+                            .semantic_in(
+                                cx,
+                                NodeSpec::new(ident.child("label").semantic_id(), Role::Text)
+                                    .parent(ident.semantic_id())
+                                    .text(self.label.clone()),
+                            ),
+                    )
+                    .children(
+                        self.badge
+                            .clone()
+                            .map(|badge| Badge::new(badge).id(ident.child("badge")).warning()),
                     ),
             )
-            .children(
-                self.badge
-                    .clone()
-                    .map(|badge| Badge::new(badge).id(ident.child("badge")).warning()),
+            .children(self.description.clone().map(|description| {
+                foundation_text(theme, TypeScale::Caption, description.clone())
+                    .w_full()
+                    .min_w_0()
+                    .text_tone(theme, gpui_kit_theme::TextTone::Muted)
+                    .semantic_in(
+                        cx,
+                        NodeSpec::new(ident.child("description").semantic_id(), Role::Text)
+                            .parent(ident.semantic_id())
+                            .text(description),
+                    )
+            }))
+            .semantic_in(
+                cx,
+                NodeSpec::new(ident.child("names").semantic_id(), Role::Group)
+                    .parent(ident.semantic_id()),
             );
 
         // A withheld row shows what is set and who set it. The control never
@@ -263,7 +287,7 @@ impl SettingsRow {
                         ),
                 )
                 .into_any_element(),
-            (None, Some(control)) => div().flex_none().child(control).into_any_element(),
+            (None, Some(control)) => control,
             (None, None) => div()
                 .flex_none()
                 .children(self.value.clone().map(|value| {
@@ -277,22 +301,24 @@ impl SettingsRow {
             .row_reading(direction)
             .w_full()
             .items_center()
+            .justify_between()
             .gap_token(theme, Space::Md)
-            .p_token(theme, Space::Xs)
+            .px_token(theme, Space::Sm)
+            .py_token(theme, Space::Xs)
             .child(names)
             .child(
-                div().flex_1().min_w_0().child(right).semantic_in(
-                    cx,
-                    NodeSpec::new(ident.child("field").semantic_id(), Role::Group)
-                        .parent(ident.semantic_id()),
-                ),
+                div()
+                    .flex()
+                    .flex_none()
+                    .w(px(theme.measures.settings_label * 1.5))
+                    .justify_end()
+                    .child(right)
+                    .semantic_in(
+                        cx,
+                        NodeSpec::new(ident.child("field").semantic_id(), Role::Group)
+                            .parent(ident.semantic_id()),
+                    ),
             )
-            .children(self.description.map(|description| {
-                foundation_text(theme, TypeScale::Caption, description)
-                    .flex_1()
-                    .min_w_0()
-                    .text_tone(theme, gpui_kit_theme::TextTone::Muted)
-            }))
             .semantic_in(cx, spec)
             .into_any_element()
     }
@@ -380,8 +406,9 @@ impl SettingsSection {
         self
     }
 
-    /// The shared label width; rows with an explicit width keep their override.
-    /// Defaults to `measure.settingsLabel`, scaled with density and local zoom.
+    /// The shared minimum width for each name/description column; rows with an
+    /// explicit width keep their override. Defaults to `measure.settingsLabel`,
+    /// scaled with density and local zoom.
     pub fn label_width(mut self, width: Pixels) -> Self {
         self.label_width = Some(width.max(px(0.0)));
         self
@@ -514,7 +541,8 @@ impl RenderOnce for SettingsSection {
                 SectionContent::Block(block) if dimmed.is_none() => div()
                     .w_full()
                     .min_w_0()
-                    .p_token(&theme, Space::Xs)
+                    .px_token(&theme, Space::Sm)
+                    .py_token(&theme, Space::Xs)
                     .child(block)
                     .into_any_element(),
                 SectionContent::Block(_) => continue,
@@ -523,7 +551,7 @@ impl RenderOnce for SettingsSection {
                 content.push(
                     div()
                         .w_full()
-                        .px_token(&theme, Space::Xs)
+                        .px_token(&theme, Space::Sm)
                         .child(crate::foundation::inset_rule(&theme).w_full())
                         .into_any_element(),
                 );

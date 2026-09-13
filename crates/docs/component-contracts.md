@@ -46,7 +46,9 @@ Settings pages use:
 - a centered 768px maximum column;
 - 24px horizontal inset;
 - 32px top rhythm;
-- title, subtitle, section title, card, and optional footnote.
+- title, subtitle, section title, card, and optional footnote;
+- each row’s description directly under its name, with the caller-owned control
+  aligned to the card’s trailing inset.
 
 Product-specific settings models stay in the application.
 

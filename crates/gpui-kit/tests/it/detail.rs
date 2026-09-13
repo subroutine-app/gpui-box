@@ -165,7 +165,7 @@ fn settings_page_chrome_survives_no_matches_and_retains_layout(cx: &mut TestAppC
 }
 
 #[gpui::test]
-fn settings_columns_align_and_blocks_keep_their_place(cx: &mut TestAppContext) {
+fn settings_rows_stack_descriptions_align_controls_and_keep_blocks(cx: &mut TestAppContext) {
     let mut harness = Harness::new(cx, gpui_kit::install, |_, cx| {
         div()
             .w(px(640.0))
@@ -176,7 +176,7 @@ fn settings_columns_align_and_blocks_keep_their_place(cx: &mut TestAppContext) {
                         SettingsRow::new("short", "Name")
                             .control(
                                 div()
-                                    .w_full()
+                                    .w(px(180.0))
                                     .h(px(20.0))
                                     .semantic_in(cx, NodeSpec::new("editor", Role::Input)),
                             )
@@ -189,7 +189,12 @@ fn settings_columns_align_and_blocks_keep_their_place(cx: &mut TestAppContext) {
                     )
                     .row(
                         SettingsRow::new("long", "A much longer label")
-                            .value("B")
+                            .control(
+                                div()
+                                    .w(px(80.0))
+                                    .h(px(20.0))
+                                    .semantic_in(cx, NodeSpec::new("second-control", Role::Input)),
+                            )
                             .description("Second annotation"),
                     )
                     .row(
@@ -200,27 +205,37 @@ fn settings_columns_align_and_blocks_keep_their_place(cx: &mut TestAppContext) {
             )
             .into_any_element()
     });
+    let first_row = harness.node("short").expect("first row").bounds;
+    let second_row = harness.node("long").expect("second row").bounds;
     let first = harness.node("short.field").expect("first field").bounds;
     let second = harness.node("long.field").expect("second field").bounds;
-    let overridden = harness
-        .node("override.field")
-        .expect("override field")
+    let first_label = harness.node("short.label").expect("first label").bounds;
+    let first_description = harness
+        .node("short.description")
+        .expect("first description")
         .bounds;
-    assert_eq!(first.x, second.x);
-    assert_eq!(first.width, second.width);
-    assert_eq!(
-        harness.node("editor").expect("editor").bounds.width,
-        first.width
-    );
+    assert_eq!(first_description.x, first_label.x);
     assert!(
-        first.width > 100.0,
-        "field column must flex into remaining space"
+        first_description.y >= first_label.y + first_label.height,
+        "description must sit below its setting name"
     );
-    assert_eq!(first.x - overridden.x, 40.0);
+    assert_eq!(first.width, 180.0);
+    assert_eq!(second.width, 180.0);
+    assert_eq!(first.x + first.width, first_row.x + first_row.width - 8.0);
     assert_eq!(
-        harness.node("short.label").expect("label").bounds.width,
-        120.0
+        second.x + second.width,
+        second_row.x + second_row.width - 8.0
     );
+    assert_eq!(harness.node("editor").expect("editor").bounds.width, 180.0);
+    assert_eq!(
+        harness
+            .node("second-control")
+            .expect("second control")
+            .bounds
+            .width,
+        80.0
+    );
+    assert_eq!(first_label.x - first_row.x, 8.0);
     let block = harness.node("block").expect("interleaved block").bounds;
     assert!(
         block.y > first.y && block.y < second.y,
