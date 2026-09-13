@@ -1528,6 +1528,7 @@ struct SurfaceParams {
     bounds: Bounds,
     content_mask: Bounds,
     clip_id: vec2<u32>,
+    _pad: vec2<u32>,
 }
 
 @group(1) @binding(1) var<uniform> surface_locals: SurfaceParams;

@@ -150,6 +150,7 @@ struct SurfaceParams {
     bounds: PodBounds,
     content_mask: PodBounds,
     clip_id: [u32; 2],
+    _pad: [u32; 2],
 }
 
 #[repr(C)]
@@ -4341,6 +4342,22 @@ mod tests {
     #[test]
     fn the_uniform_block_matches_the_layout_the_shader_declares() {
         use std::mem::size_of;
+
+        // Uniform bindings must have a size divisible by 16 on downlevel
+        // adapters. The surface block is validated even though WGPU does not
+        // currently draw platform video surfaces.
+        assert_eq!(size_of::<SurfaceParams>(), 48);
+        assert_eq!(size_of::<SurfaceParams>() % 16, 0);
+        let module =
+            naga::front::wgsl::parse_str(STORAGE_BUFFER_SHADERS).expect("renderer shader parses");
+        let surface_params = module
+            .types
+            .iter()
+            .find_map(|(_, ty)| (ty.name.as_deref() == Some("SurfaceParams")).then_some(&ty.inner));
+        let Some(naga::TypeInner::Struct { span, .. }) = surface_params else {
+            panic!("missing surface parameter struct");
+        };
+        assert_eq!(*span as usize, size_of::<SurfaceParams>());
 
         // The uniform address space rounds an array element's stride up to 16
         // bytes. A lobe is exactly two of those, so the array the shader

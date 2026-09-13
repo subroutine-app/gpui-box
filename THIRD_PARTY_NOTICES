@@ -24,8 +24,8 @@ the notices below and introduce no additional third-party source or licenses.
 Source-line projection, projected editable geometry, disjoint accessibility
 regions and Kit fold policy are original GPUI Box work without new third-party
 source or licenses. The browser frame-clock correction that avoids submitting
-unchanged scenes is likewise original GPUI Box work. Historical import receipts
-remain frozen.
+unchanged scenes and the portable WebGPU surface-uniform padding are likewise
+original GPUI Box work. Historical import receipts remain frozen.
 
 Windows per-child hosting regions, empty-frame clearing, and retry-safe native
 region ownership are original GPUI Box corrections; no additional source was

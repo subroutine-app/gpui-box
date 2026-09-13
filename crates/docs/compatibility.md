@@ -38,6 +38,9 @@ the shared change does not alter clipping, transforms, hit testing, or paint.
 Browser `requestAnimationFrame` remains the single-threaded frame clock, but an
 idle tick no longer requests presentation: only a dirty view, animation callback,
 high-rate input hold, or explicit presentation request submits the cached scene.
+All eagerly created WebGPU pipelines use portable uniform-binding sizes; the
+unused platform-video surface pipeline cannot reject WebGPU initialization and
+silently move an otherwise capable browser onto the slower WebGL2 fallback.
 
 Windows native-view clips are independent child-local regions as well as a
 host union; clipping never changes full layout dimensions. Empty frames hide

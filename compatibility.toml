@@ -39,7 +39,7 @@ limitations = ["application context menus use the in-window fallback", "native m
 
 [[platform]]
 name = "wasm32-unknown-unknown"
-contract = "single-threaded browser gallery; idle RAF ticks do not present unchanged scenes"
+contract = "single-threaded browser gallery; idle RAF ticks do not present unchanged scenes; eager WebGPU pipelines use portable uniform binding sizes"
 commands = ["cargo run -p xtask -- web check", "cargo run -p xtask -- web build", "cargo run -p xtask -- web smoke", "cargo run -p xtask -- web visual check button input dialog node-graph"]
 ci_gated = true
 gate_lane = "authority"
