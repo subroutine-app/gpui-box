@@ -277,6 +277,9 @@ pub(super) fn scene_commands() -> Vec<Command> {
             .section("Workspace")
             .shortcut("cmd-o"),
         Command::new("workspace.close", "Close workspace").section("Workspace"),
+        Command::new("workspace.archive", "Archive workspace")
+            .section("Workspace")
+            .disabled(),
         Command::new("workspace.publish", "Publish workspace")
             .section("Workspace")
             .unavailable("Approval is required"),

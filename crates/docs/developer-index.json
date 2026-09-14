@@ -1422,7 +1422,7 @@
           "features": []
         }
       ],
-      "symbolCount": 4686
+      "symbolCount": 4687
     },
     {
       "name": "gpui-box-kit-assets",
@@ -108666,6 +108666,21 @@
       "cfg": []
     },
     {
+      "id": "gpui_kit::overlay::palette::Command::disabled",
+      "name": "disabled",
+      "kind": "method",
+      "package": "gpui-box-kit",
+      "crate": "gpui_kit",
+      "module": "overlay::palette",
+      "path": "gpui_kit::overlay::palette",
+      "source": "crates/gpui-kit/src/overlay/palette.rs",
+      "summary": "Marks the command as one the host will not run now, without adding explanatory copy to the row.",
+      "documentation": "Marks the command as one the host will not run now, without adding\nexplanatory copy to the row.",
+      "signature": "pub fn disabled (mut self) -> Self",
+      "cfg": [],
+      "target": "Command"
+    },
+    {
       "id": "gpui_kit::overlay::palette::Command::id",
       "name": "id",
       "kind": "method",
@@ -108796,7 +108811,7 @@
       "source": "crates/gpui-kit/src/overlay/palette.rs",
       "summary": "A query field over a list of commands.",
       "documentation": "A query field over a list of commands.\n\nThe palette owns the query and where the keyboard is; the command list and\nwhether the palette is on screen at all belong to the host.",
-      "signature": "# [doc = \" A query field over a list of commands.\"] # [doc = \"\"] # [doc = \" The palette owns the query and where the keyboard is; the command list and\"] # [doc = \" whether the palette is on screen at all belong to the host.\"] pub struct CommandPalette { ident : Ident, focus_handle : FocusHandle, query : Entity<TextInput>, commands : Vec<Command>, # [doc = \" The highlighted command, by identity, so filtering does not move the\"] # [doc = \" highlight onto whatever happens to sit at the same position.\"] active : Option<SharedString>, slots : Slots, # [doc = \" Held so the query subscription lives as long as the palette does.\"] _subscriptions : Vec<Subscription>, }",
+      "signature": "# [doc = \" A query field over a list of commands.\"] # [doc = \"\"] # [doc = \" The palette owns the query and where the keyboard is; the command list and\"] # [doc = \" whether the palette is on screen at all belong to the host.\"] pub struct CommandPalette { ident : Ident, focus_handle : FocusHandle, query : Entity<TextInput>, commands : Vec<Command>, # [doc = \" The highlighted command, by identity, so filtering does not move the\"] # [doc = \" highlight onto whatever happens to sit at the same position.\"] active : Option<SharedString>, reveal_active : bool, slots : Slots, # [doc = \" Held so the query subscription lives as long as the palette does.\"] _subscriptions : Vec<Subscription>, }",
       "cfg": []
     },
     {
@@ -138977,6 +138992,7 @@
       "options": [
         "section(section: impl Into<SharedString>) -> Self",
         "shortcut(keystroke: impl Into<SharedString>) -> Self",
+        "disabled() -> Self",
         "unavailable(reason: impl Into<SharedString>) -> Self"
       ],
       "commands": [],

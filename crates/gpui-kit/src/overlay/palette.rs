@@ -19,6 +19,7 @@ use crate::controls::input::{TextInput, TextInputEvent};
 use crate::display::empty::{EmptyKind, EmptyState};
 use crate::foundation::slot::{self, Slots, Slotted};
 use crate::foundation::{Ident, Pressable, StyledExt};
+
 use crate::layout::scroll::scroll_handle;
 use crate::motion;
 use crate::overlay::kbd::Kbd;
@@ -65,6 +66,13 @@ impl Command {
         self
     }
 
+    /// Marks the command as one the host will not run now, without adding
+    /// explanatory copy to the row.
+    pub fn disabled(mut self) -> Self {
+        self.unavailable = Some(SharedString::default());
+        self
+    }
+
     /// Marks the command as one the host will not run now, in the host's own
     /// words. It is still listed: hiding a command a typist knows exists is a
     /// lie about the application.
@@ -82,7 +90,9 @@ impl Command {
     }
 
     pub fn reason(&self) -> Option<&SharedString> {
-        self.unavailable.as_ref()
+        self.unavailable
+            .as_ref()
+            .filter(|reason| !reason.is_empty())
     }
 
     pub fn is_available(&self) -> bool {
@@ -163,6 +173,7 @@ pub struct CommandPalette {
     /// The highlighted command, by identity, so filtering does not move the
     /// highlight onto whatever happens to sit at the same position.
     active: Option<SharedString>,
+    reveal_active: bool,
     slots: Slots,
     /// Held so the query subscription lives as long as the palette does.
     _subscriptions: Vec<Subscription>,
@@ -191,6 +202,7 @@ impl CommandPalette {
                 // A new query is a new list, so the highlight goes back to the
                 // best answer rather than staying on a row that may be gone.
                 palette.active = None;
+                palette.reveal_active = true;
                 cx.emit(CommandPaletteEvent::QueryChanged(text.clone()));
                 cx.notify();
             }
@@ -205,6 +217,7 @@ impl CommandPalette {
             query,
             commands: Vec::new(),
             active: None,
+            reveal_active: false,
             slots: Slots::default(),
             _subscriptions: vec![subscription],
         }
@@ -218,6 +231,7 @@ impl CommandPalette {
     pub fn set_commands(&mut self, commands: Vec<Command>, cx: &mut Context<Self>) {
         self.commands = commands;
         self.active = None;
+        self.reveal_active = true;
         cx.notify();
     }
 
@@ -291,6 +305,7 @@ impl CommandPalette {
             return;
         };
         self.active = Some(self.commands[choosable[next]].id.clone());
+        self.reveal_active = true;
         cx.notify();
     }
 
@@ -331,13 +346,14 @@ impl CommandPalette {
         }
     }
 
-    fn results(&self, cx: &mut Context<Self>) -> Vec<gpui::AnyElement> {
+    fn results(&mut self, window: &mut Window, cx: &mut Context<Self>) -> Vec<gpui::AnyElement> {
         let theme = cx.theme().clone();
         let ordered = self.ordered(cx);
         let highlighted = self.resolved(&ordered);
         let results_id = self.ident.child("results").semantic_id();
         let mut section: Option<SharedString> = None;
         let mut rows: Vec<gpui::AnyElement> = Vec::with_capacity(ordered.len());
+        let mut highlighted_row = None;
         let count = ordered.len();
 
         for (position, index) in ordered.into_iter().enumerate() {
@@ -367,6 +383,9 @@ impl CommandPalette {
 
             let row_ident = self.ident.child(command.id.as_ref());
             let active = highlighted == Some(index);
+            if active {
+                highlighted_row = Some(rows.len());
+            }
             let available = command.is_available();
             let id = command.id.clone();
             let mut spec = NodeSpec::new(row_ident.semantic_id(), Role::MenuItem)
@@ -419,6 +438,13 @@ impl CommandPalette {
             );
         }
 
+        if self.reveal_active {
+            if let Some(row) = highlighted_row {
+                scroll_handle(&self.ident.child("results"), window, cx).scroll_to_item(row);
+            }
+            self.reveal_active = false;
+        }
+
         rows
     }
 }
@@ -441,7 +467,7 @@ impl Render for CommandPalette {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.theme().clone();
         let query = self.query.read(cx).value().clone();
-        let rows = self.results(cx);
+        let rows = self.results(window, cx);
         let empty = rows.is_empty();
         let results_id = self.ident.child("results").semantic_id();
 
@@ -495,6 +521,9 @@ impl Render for CommandPalette {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use gpui::TestAppContext;
+    use gpui_kit_testkit::harness::Harness;
+    use std::{cell::RefCell, rc::Rc};
 
     fn commands() -> Vec<Command> {
         vec![
@@ -526,6 +555,65 @@ mod tests {
         let ordered = order_matches(&commands(), "publish");
         assert_eq!(ordered, vec![3]);
         assert!(!commands()[3].is_available());
+    }
+
+    #[test]
+    fn a_disabled_command_has_no_warning_copy() {
+        let command = Command::new("workspace.publish", "Publish workspace").disabled();
+
+        assert!(!command.is_available());
+        assert_eq!(command.reason(), None);
+    }
+
+    #[gpui::test]
+    fn arrow_navigation_reveals_the_active_command(cx: &mut TestAppContext) {
+        let slot = Rc::new(RefCell::new(None));
+        let build = slot.clone();
+        let mut harness = Harness::new(
+            cx,
+            |cx| {
+                crate::install(cx);
+                cx.set_reduce_motion(true);
+            },
+            move |window, cx| {
+                let palette =
+                    build
+                        .borrow_mut()
+                        .get_or_insert_with(|| {
+                            cx.new(|cx| {
+                                CommandPalette::new("test.palette", window, cx).commands(
+                                    (0..20).map(|index| {
+                                        Command::new(
+                                            format!("command-{index}"),
+                                            format!("Command {index}"),
+                                        )
+                                        .section(if index < 10 { "First" } else { "Second" })
+                                    }),
+                                )
+                            })
+                        })
+                        .clone();
+                palette.update(cx, |palette, cx| palette.focus_query(window, cx));
+                palette.into_any_element()
+            },
+        );
+        let palette = slot.borrow().clone().expect("palette mounted");
+
+        harness.keystrokes(
+            "down down down down down down down down down down down down down down down",
+        );
+        harness.frame();
+
+        harness.update(|window, cx| {
+            let palette = palette.read(cx);
+            assert_eq!(palette.active_id(cx).as_deref(), Some("command-15"));
+            assert!(
+                scroll_handle(&palette.ident.child("results"), window, cx)
+                    .offset()
+                    .y
+                    < px(0.0)
+            );
+        });
     }
 
     #[test]

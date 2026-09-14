@@ -7951,6 +7951,7 @@
       "options": [
         "section(section: impl Into<SharedString>) -> Self",
         "shortcut(keystroke: impl Into<SharedString>) -> Self",
+        "disabled() -> Self",
         "unavailable(reason: impl Into<SharedString>) -> Self"
       ],
       "commands": [],
