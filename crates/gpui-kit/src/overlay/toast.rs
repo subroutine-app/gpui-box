@@ -542,6 +542,9 @@ impl ToastLayer {
 
         let card = surface(toast.ident.clone(), theme, OverlaySurface::FLOATING)
             .id(toast.ident.element_id())
+            // A toast is a real floating surface: pointer input inside its
+            // bounds belongs to it, even where there is no button.
+            .occlude()
             .row()
             .items_start()
             .w(px(theme.measures.compact_overlay_width))
@@ -733,7 +736,7 @@ pub fn clear(window: &Window, cx: &mut App) {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::RefCell;
+    use std::cell::{Cell, RefCell};
     use std::rc::Rc;
 
     use gpui::{AppContext, TestAppContext};
@@ -795,6 +798,111 @@ mod tests {
                     .len(),
                 0
             )
+        });
+    }
+
+    #[gpui::test]
+    fn toast_surface_occludes_content_beneath_it(cx: &mut TestAppContext) {
+        let slot = Rc::new(RefCell::new(None));
+        let mounted = slot.clone();
+        let clicks = Rc::new(Cell::new(0));
+        let received = clicks.clone();
+        let mut harness = gpui_kit_testkit::harness::Harness::new(
+            cx,
+            |cx| {
+                crate::install(cx);
+                cx.set_reduce_motion(true);
+            },
+            move |window, cx| {
+                let layer = mounted
+                    .borrow_mut()
+                    .get_or_insert_with(|| cx.new(|cx| ToastLayer::new(window, cx)))
+                    .clone();
+                let received = received.clone();
+                div()
+                    .size_full()
+                    .child(div().absolute().inset_0().on_mouse_down(
+                        gpui::MouseButton::Left,
+                        move |_, _, _| {
+                            received.set(received.get() + 1);
+                        },
+                    ))
+                    .child(layer)
+                    .into_any_element()
+            },
+        );
+        harness.update(|window, cx| {
+            assert!(push(
+                window,
+                cx,
+                Toast::new("occluding.toast", "Saved").persistent()
+            ));
+        });
+        harness.frame();
+        let bounds = harness.bounds("occluding.toast").expect("toast bounds");
+        harness
+            .context()
+            .simulate_click(bounds.center(), gpui::Modifiers::none());
+        assert_eq!(clicks.get(), 0, "toast body must block content beneath it");
+    }
+
+    #[gpui::test]
+    fn timed_toast_fades_then_leaves_the_tree(cx: &mut TestAppContext) {
+        let enter = enter_spec(&theme()).total();
+        let exit = exit_spec(&theme()).total();
+        let timeout = enter + Duration::from_millis(100);
+        let slot = Rc::new(RefCell::new(None));
+        let mounted = slot.clone();
+        let mut harness =
+            gpui_kit_testkit::harness::Harness::new(cx, crate::install, move |window, cx| {
+                let layer = mounted
+                    .borrow_mut()
+                    .get_or_insert_with(|| cx.new(|cx| ToastLayer::new(window, cx)))
+                    .clone();
+                layer.into_any_element()
+            });
+        harness.update(|window, cx| {
+            assert!(push(
+                window,
+                cx,
+                Toast::new("timed.toast", "Saved").timeout(timeout)
+            ));
+        });
+        harness.frame();
+
+        harness.advance(enter);
+        harness.update(|_, cx| {
+            assert_eq!(
+                slot.borrow()
+                    .as_ref()
+                    .expect("mounted layer")
+                    .read(cx)
+                    .phase("timed.toast"),
+                Some(Phase::Present)
+            );
+        });
+
+        harness.advance(Duration::from_millis(100));
+        harness.update(|_, cx| {
+            assert_eq!(
+                slot.borrow()
+                    .as_ref()
+                    .expect("mounted layer")
+                    .read(cx)
+                    .phase("timed.toast"),
+                Some(Phase::Exiting)
+            );
+        });
+
+        harness.advance(exit);
+        harness.update(|_, cx| {
+            assert!(
+                slot.borrow()
+                    .as_ref()
+                    .expect("mounted layer")
+                    .read(cx)
+                    .is_empty()
+            );
         });
     }
 
