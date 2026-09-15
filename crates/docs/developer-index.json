@@ -573,7 +573,7 @@
           "features": []
         }
       ],
-      "symbolCount": 2745
+      "symbolCount": 2747
     },
     {
       "name": "gpui-box-android",
@@ -1422,7 +1422,7 @@
           "features": []
         }
       ],
-      "symbolCount": 4687
+      "symbolCount": 4688
     },
     {
       "name": "gpui-box-kit-assets",
@@ -39547,9 +39547,23 @@
       "module": "window",
       "path": "gpui::window",
       "source": "crates/gpui/src/window.rs",
-      "summary": "A scoped vertical edge fade (see [`Window::with_edge_fade`]): primitives painted inside the scope get their opacity multiplied by a ramp that runs from 0 at an active edge of `bounds` to 1 a `band` further in. Built for scroll-edge fades over translucent/blurred window backgrounds, where a backdrop-colored gradient overlay cannot exist (there is no paintable color equal to \"what is behind the window\").",
-      "documentation": "A scoped vertical edge fade (see [`Window::with_edge_fade`]): primitives\npainted inside the scope get their opacity multiplied by a ramp that runs\nfrom 0 at an active edge of `bounds` to 1 a `band` further in. Built for\nscroll-edge fades over translucent/blurred window backgrounds, where a\nbackdrop-colored gradient overlay cannot exist (there is no paintable\ncolor equal to \"what is behind the window\").",
-      "signature": "# [doc = \" A scoped vertical edge fade (see [`Window::with_edge_fade`]): primitives\"] # [doc = \" painted inside the scope get their opacity multiplied by a ramp that runs\"] # [doc = \" from 0 at an active edge of `bounds` to 1 a `band` further in. Built for\"] # [doc = \" scroll-edge fades over translucent/blurred window backgrounds, where a\"] # [doc = \" backdrop-colored gradient overlay cannot exist (there is no paintable\"] # [doc = \" color equal to \\\"what is behind the window\\\").\"] # [derive (Clone, Copy, Debug, PartialEq)] pub struct EdgeFade { # [doc = \" The faded region, in window coordinates.\"] pub bounds : Bounds<Pixels>, # [doc = \" Ramp height inside each active edge.\"] pub band : Pixels, # [doc = \" Fade primitives approaching the region's top edge.\"] pub top : bool, # [doc = \" Fade primitives approaching the region's bottom edge.\"] pub bottom : bool, # [doc = \" Fade primitives approaching the region's left edge.\"] pub left : bool, # [doc = \" Fade primitives approaching the region's right edge.\"] pub right : bool, }",
+      "summary": "A scoped edge fade (see [`Window::with_edge_fade`]): selected content painted inside the scope gets its opacity multiplied by a ramp that runs from 0 at an active edge of `bounds` to 1 a `band` further in. Built for scroll-edge fades over translucent/blurred window backgrounds, where a backdrop-colored gradient overlay cannot exist (there is no paintable color equal to \"what is behind the window\").",
+      "documentation": "A scoped edge fade (see [`Window::with_edge_fade`]): selected content painted\ninside the scope gets its opacity multiplied by a ramp that runs from 0 at\nan active edge of `bounds` to 1 a `band` further in. Built for scroll-edge\nfades over translucent/blurred window backgrounds, where a backdrop-colored\ngradient overlay cannot exist (there is no paintable color equal to \"what is\nbehind the window\").",
+      "signature": "# [doc = \" A scoped edge fade (see [`Window::with_edge_fade`]): selected content painted\"] # [doc = \" inside the scope gets its opacity multiplied by a ramp that runs from 0 at\"] # [doc = \" an active edge of `bounds` to 1 a `band` further in. Built for scroll-edge\"] # [doc = \" fades over translucent/blurred window backgrounds, where a backdrop-colored\"] # [doc = \" gradient overlay cannot exist (there is no paintable color equal to \\\"what is\"] # [doc = \" behind the window\\\").\"] # [derive (Clone, Copy, Debug, PartialEq)] pub struct EdgeFade { # [doc = \" The faded region, in window coordinates.\"] pub bounds : Bounds<Pixels>, # [doc = \" Ramp height inside each active edge.\"] pub band : Pixels, # [doc = \" Fade primitives approaching the region's top edge.\"] pub top : bool, # [doc = \" Fade primitives approaching the region's bottom edge.\"] pub bottom : bool, # [doc = \" Fade primitives approaching the region's left edge.\"] pub left : bool, # [doc = \" Fade primitives approaching the region's right edge.\"] pub right : bool, }",
+      "cfg": []
+    },
+    {
+      "id": "gpui::window::EdgeFadeTarget",
+      "name": "EdgeFadeTarget",
+      "kind": "enum",
+      "package": "gpui-box",
+      "crate": "gpui",
+      "module": "window",
+      "path": "gpui::window",
+      "source": "crates/gpui/src/window.rs",
+      "summary": "Which painted content an [`EdgeFade`] attenuates.",
+      "documentation": "Which painted content an [`EdgeFade`] attenuates.",
+      "signature": "# [doc = \" Which painted content an [`EdgeFade`] attenuates.\"] # [derive (Clone, Copy, Debug, Default, PartialEq, Eq)] pub enum EdgeFadeTarget { # [doc = \" Fade every primitive painted in the scope.\"] # [default] All, # [doc = \" Fade glyphs, emoji and their decorations without changing surfaces,\"] # [doc = \" borders, paths, images, SVG icons, shadows, sprites or glass.\"] Text, }",
       "cfg": []
     },
     {
@@ -40153,7 +40167,7 @@
       "source": "crates/gpui/src/window.rs",
       "summary": "Holds the state for a specific window.",
       "documentation": "Holds the state for a specific window.",
-      "signature": "# [doc = \" Holds the state for a specific window.\"] pub struct Window { pub (crate) handle : AnyWindowHandle, pub (crate) invalidator : WindowInvalidator, pub (crate) removed : bool, pub (crate) platform_window : Box<dyn PlatformWindow>, native_context_menu : Option<(crate::NativeMenuSessionId, bool)>, # [doc = \" Whether the platform accepted a transparent scene plane above native\"] # [doc = \" child views. This is window state rather than frame state: once native\"] # [doc = \" hosting creates the plane, every later deferred overlay uses it.\"] scene_overlay_enabled : Cell<bool>, # [doc = \" True only while painting primitives that will land on that transparent\"] # [doc = \" plane. Subpixel glyphs require a known opaque destination, so text in\"] # [doc = \" this phase must use grayscale antialiasing.\"] painting_transparent_overlay : bool, display_id : Option<DisplayId>, is_resizable : bool, is_minimizable : bool, sprite_atlas : Arc<dyn PlatformAtlas>, text_system : Arc<WindowTextSystem>, text_rendering_mode : Rc<Cell<TextRenderingMode>>, rem_size : Pixels, # [doc = \" The stack of override values for the window's rem size.\"] # [doc = \"\"] # [doc = \" This is used by `with_rem_size` to allow rendering an element tree with\"] # [doc = \" a given rem size.\"] rem_size_override_stack : SmallVec<[Pixels; 8]>, pub (crate) viewport_size : Size<Pixels>, layout_engine : Option<TaffyLayoutEngine>, pub (crate) root : Option<AnyView>, pub (crate) element_id_stack : SmallVec<[ElementId; 32]>, pub (crate) text_style_stack : Vec<TextStyleRefinement>, pub (crate) rendered_entity_stack : Vec<EntityId>, pub (crate) element_offset_stack : Vec<Point<Pixels>>, pub (crate) element_opacity : f32, pub (crate) edge_fade : Option<EdgeFade>, pub (crate) content_mask_stack : Vec<ContentMask<Pixels>>, pub (crate) clip_chain : crate::ClipChain, pub (crate) visual_transform : crate::VisualTransform, pub (crate) selection_scope_stack : Vec<crate::SelectionScopeId>, # [doc = \" One selection that may span separately mounted text elements. It\"] # [doc = \" belongs to the window rather than to a global, so a closed window\"] # [doc = \" leaves nothing behind.\"] pub (crate) document_selection : crate::DocumentSelectionState, pub (crate) requested_autoscroll : Option<Bounds<Pixels>>, pub (crate) image_cache_stack : Vec<AnyImageCache>, pub (crate) rendered_frame : Frame, pub (crate) next_frame : Frame, platform_view_registry : PlatformViewRegistry, next_hitbox_id : HitboxId, pub (crate) next_tooltip_id : TooltipId, pub (crate) tooltip_bounds : Option<TooltipBounds>, next_frame_callbacks : Rc<RefCell<Vec<FrameCallback>>>, pub (crate) dirty_views : FxHashSet<EntityId>, focus_listeners : SubscriberSet<(), AnyWindowFocusListener>, pub (crate) focus_lost_listeners : SubscriberSet<(), AnyObserver>, default_prevented : bool, effect_owner : Rc<Cell<Option<crate::EffectOwner>>>, remaining_scroll_delta : Option<crate::ScrollDelta>, mouse_position : Point<Pixels>, mouse_hit_test : HitTest, modifiers : Modifiers, capslock : Capslock, scale_factor : f32, pub (crate) bounds_observers : SubscriberSet<(), AnyObserver>, appearance : WindowAppearance, pub (crate) appearance_observers : SubscriberSet<(), AnyObserver>, pub (crate) button_layout_observers : SubscriberSet<(), AnyObserver>, active : Rc<Cell<bool>>, hovered : Rc<Cell<bool>>, pub (crate) needs_present : Rc<Cell<bool>>, # [doc = \" Tracks recent input event timestamps to determine if input is arriving at a high rate.\"] # [doc = \" Used to selectively enable VRR optimization only when input rate exceeds 60fps.\"] pub (crate) input_rate_tracker : Rc<RefCell<InputRateTracker>>, frame_inputs : FrameInputAccumulator, pending_frame_timing : Option<PendingFrameTiming>, # [cfg (feature = \"input-latency-histogram\")] input_latency_tracker : InputLatencyTracker, last_input_modality : InputModality, touch_gestures : TouchGestureRecognizer, touch_prediction_enabled : bool, long_press_timer : Option<Task<()>>, long_press_capture : Option<EntityId>, touch_pan_capture : Option<ElementId>, touch_pinch_capture : Option<ElementId>, touch_pinch_target : Option<ElementId>, touch_pinch_anchor : Option<Point<Pixels>>, last_pinch_event : Option<crate::PinchEvent>, text_input_state : Option<(FocusId, crate::TextInputOptions)>, pub (crate) refreshing : bool, pub (crate) activation_observers : SubscriberSet<(), AnyObserver>, pub (crate) focus : Option<FocusId>, focus_enabled : bool, # [doc = \" Whether a pointer press put focus where it currently is, rather than a\"] # [doc = \" tab stop, an action, or the application moving it. Read by\"] # [doc = \" focus-visible styling; see [`Window::focus_is_visible`].\"] focus_placed_by_pointer : bool, # [doc = \" Incremented every time focus moves. Used to invalidate a\"] # [doc = \" pending keyboard activation state when focus changes.\"] pub (crate) focus_generation : u64, pending_input : Option<PendingInput>, pending_modifier : ModifierState, pub (crate) pending_input_observers : SubscriberSet<(), AnyObserver>, prompt : Option<RenderablePromptHandle>, pub (crate) client_inset : Option<Pixels>, # [doc = \" The hitbox that has captured the pointer, if any.\"] # [doc = \" While captured, mouse events route to this hitbox regardless of hit testing.\"] captured_hitbox : Option<HitboxId>, # [doc = \" The stable identity behind `captured_hitbox`, when the capturing\"] # [doc = \" element has an id. This remaps capture to its replacement hitbox after\"] # [doc = \" a redraw.\"] captured_pointer_element : Option<GlobalElementId>, captured_pointer_button : Option<MouseButton>, # [cfg (any (feature = \"inspector\", debug_assertions))] inspector : Option<Entity<Inspector>>, pub (crate) a11y : A11y, current_frame_stats : profiler::FrameStats, completed_frame_stats : profiler::FrameStats, }",
+      "signature": "# [doc = \" Holds the state for a specific window.\"] pub struct Window { pub (crate) handle : AnyWindowHandle, pub (crate) invalidator : WindowInvalidator, pub (crate) removed : bool, pub (crate) platform_window : Box<dyn PlatformWindow>, native_context_menu : Option<(crate::NativeMenuSessionId, bool)>, # [doc = \" Whether the platform accepted a transparent scene plane above native\"] # [doc = \" child views. This is window state rather than frame state: once native\"] # [doc = \" hosting creates the plane, every later deferred overlay uses it.\"] scene_overlay_enabled : Cell<bool>, # [doc = \" True only while painting primitives that will land on that transparent\"] # [doc = \" plane. Subpixel glyphs require a known opaque destination, so text in\"] # [doc = \" this phase must use grayscale antialiasing.\"] painting_transparent_overlay : bool, display_id : Option<DisplayId>, is_resizable : bool, is_minimizable : bool, sprite_atlas : Arc<dyn PlatformAtlas>, text_system : Arc<WindowTextSystem>, text_rendering_mode : Rc<Cell<TextRenderingMode>>, rem_size : Pixels, # [doc = \" The stack of override values for the window's rem size.\"] # [doc = \"\"] # [doc = \" This is used by `with_rem_size` to allow rendering an element tree with\"] # [doc = \" a given rem size.\"] rem_size_override_stack : SmallVec<[Pixels; 8]>, pub (crate) viewport_size : Size<Pixels>, layout_engine : Option<TaffyLayoutEngine>, pub (crate) root : Option<AnyView>, pub (crate) element_id_stack : SmallVec<[ElementId; 32]>, pub (crate) text_style_stack : Vec<TextStyleRefinement>, pub (crate) rendered_entity_stack : Vec<EntityId>, pub (crate) element_offset_stack : Vec<Point<Pixels>>, pub (crate) element_opacity : f32, pub (crate) edge_fade : Option<EdgeFade>, edge_fade_target : EdgeFadeTarget, pub (crate) content_mask_stack : Vec<ContentMask<Pixels>>, pub (crate) clip_chain : crate::ClipChain, pub (crate) visual_transform : crate::VisualTransform, pub (crate) selection_scope_stack : Vec<crate::SelectionScopeId>, # [doc = \" One selection that may span separately mounted text elements. It\"] # [doc = \" belongs to the window rather than to a global, so a closed window\"] # [doc = \" leaves nothing behind.\"] pub (crate) document_selection : crate::DocumentSelectionState, pub (crate) requested_autoscroll : Option<Bounds<Pixels>>, pub (crate) image_cache_stack : Vec<AnyImageCache>, pub (crate) rendered_frame : Frame, pub (crate) next_frame : Frame, platform_view_registry : PlatformViewRegistry, next_hitbox_id : HitboxId, pub (crate) next_tooltip_id : TooltipId, pub (crate) tooltip_bounds : Option<TooltipBounds>, next_frame_callbacks : Rc<RefCell<Vec<FrameCallback>>>, pub (crate) dirty_views : FxHashSet<EntityId>, focus_listeners : SubscriberSet<(), AnyWindowFocusListener>, pub (crate) focus_lost_listeners : SubscriberSet<(), AnyObserver>, default_prevented : bool, effect_owner : Rc<Cell<Option<crate::EffectOwner>>>, remaining_scroll_delta : Option<crate::ScrollDelta>, mouse_position : Point<Pixels>, mouse_hit_test : HitTest, modifiers : Modifiers, capslock : Capslock, scale_factor : f32, pub (crate) bounds_observers : SubscriberSet<(), AnyObserver>, appearance : WindowAppearance, pub (crate) appearance_observers : SubscriberSet<(), AnyObserver>, pub (crate) button_layout_observers : SubscriberSet<(), AnyObserver>, active : Rc<Cell<bool>>, hovered : Rc<Cell<bool>>, pub (crate) needs_present : Rc<Cell<bool>>, # [doc = \" Tracks recent input event timestamps to determine if input is arriving at a high rate.\"] # [doc = \" Used to selectively enable VRR optimization only when input rate exceeds 60fps.\"] pub (crate) input_rate_tracker : Rc<RefCell<InputRateTracker>>, frame_inputs : FrameInputAccumulator, pending_frame_timing : Option<PendingFrameTiming>, # [cfg (feature = \"input-latency-histogram\")] input_latency_tracker : InputLatencyTracker, last_input_modality : InputModality, touch_gestures : TouchGestureRecognizer, touch_prediction_enabled : bool, long_press_timer : Option<Task<()>>, long_press_capture : Option<EntityId>, touch_pan_capture : Option<ElementId>, touch_pinch_capture : Option<ElementId>, touch_pinch_target : Option<ElementId>, touch_pinch_anchor : Option<Point<Pixels>>, last_pinch_event : Option<crate::PinchEvent>, text_input_state : Option<(FocusId, crate::TextInputOptions)>, pub (crate) refreshing : bool, pub (crate) activation_observers : SubscriberSet<(), AnyObserver>, pub (crate) focus : Option<FocusId>, focus_enabled : bool, # [doc = \" Whether a pointer press put focus where it currently is, rather than a\"] # [doc = \" tab stop, an action, or the application moving it. Read by\"] # [doc = \" focus-visible styling; see [`Window::focus_is_visible`].\"] focus_placed_by_pointer : bool, # [doc = \" Incremented every time focus moves. Used to invalidate a\"] # [doc = \" pending keyboard activation state when focus changes.\"] pub (crate) focus_generation : u64, pending_input : Option<PendingInput>, pending_modifier : ModifierState, pub (crate) pending_input_observers : SubscriberSet<(), AnyObserver>, prompt : Option<RenderablePromptHandle>, pub (crate) client_inset : Option<Pixels>, # [doc = \" The hitbox that has captured the pointer, if any.\"] # [doc = \" While captured, mouse events route to this hitbox regardless of hit testing.\"] captured_hitbox : Option<HitboxId>, # [doc = \" The stable identity behind `captured_hitbox`, when the capturing\"] # [doc = \" element has an id. This remaps capture to its replacement hitbox after\"] # [doc = \" a redraw.\"] captured_pointer_element : Option<GlobalElementId>, captured_pointer_button : Option<MouseButton>, # [cfg (any (feature = \"inspector\", debug_assertions))] inspector : Option<Entity<Inspector>>, pub (crate) a11y : A11y, current_frame_stats : profiler::FrameStats, completed_frame_stats : profiler::FrameStats, }",
       "cfg": []
     },
     {
@@ -43495,8 +43509,8 @@
       "module": "window",
       "path": "gpui::window",
       "source": "crates/gpui/src/window.rs",
-      "summary": "Executes the provided function with a vertical [`EdgeFade`] applied: every primitive painted inside is additionally faded by its vertical position — full alpha in the region's body, ramping to zero across `fade.band` at each active edge. Granularity is per-primitive (each quad/glyph/sprite takes the ramp value at its own position), which reads as a smooth gradient for text and small marks.",
-      "documentation": "Executes the provided function with a vertical [`EdgeFade`] applied:\nevery primitive painted inside is additionally faded by its vertical\nposition — full alpha in the region's body, ramping to zero across\n`fade.band` at each active edge. Granularity is per-primitive (each\nquad/glyph/sprite takes the ramp value at its own position), which\nreads as a smooth gradient for text and small marks.",
+      "summary": "Executes the provided function with an [`EdgeFade`] applied to every primitive painted inside.",
+      "documentation": "Executes the provided function with an [`EdgeFade`] applied to every\nprimitive painted inside.",
       "signature": "pub fn with_edge_fade<R> (& mut self, fade : Option<EdgeFade>, f : impl FnOnce (& mut Self) -> R,) -> R",
       "cfg": [],
       "target": "Window"
@@ -43680,6 +43694,21 @@
       "summary": "Executes the given closure within the context of a tab group.",
       "documentation": "Executes the given closure within the context of a tab group.",
       "signature": "pub fn with_tab_group<R> (& mut self, index : Option<isize>, f : impl FnOnce (& mut Self) -> R) -> R",
+      "cfg": [],
+      "target": "Window"
+    },
+    {
+      "id": "gpui::window::Window::with_text_edge_fade",
+      "name": "with_text_edge_fade",
+      "kind": "method",
+      "package": "gpui-box",
+      "crate": "gpui",
+      "module": "window",
+      "path": "gpui::window",
+      "source": "crates/gpui/src/window.rs",
+      "summary": "Executes the provided function with an [`EdgeFade`] applied only to glyphs, emoji, underlines and strikethroughs. Non-text surfaces and imagery retain their authored opacity.",
+      "documentation": "Executes the provided function with an [`EdgeFade`] applied only to\nglyphs, emoji, underlines and strikethroughs. Non-text surfaces and\nimagery retain their authored opacity.",
+      "signature": "pub fn with_text_edge_fade<R> (& mut self, fade : Option<EdgeFade>, f : impl FnOnce (& mut Self) -> R,) -> R",
       "cfg": [],
       "target": "Window"
     },
@@ -93430,7 +93459,7 @@
       "source": "crates/gpui-kit/src/layout/scroll_fade.rs",
       "summary": "A region whose content fades towards the edges it is scrolled past.",
       "documentation": "A region whose content fades towards the edges it is scrolled past.",
-      "signature": "# [doc = \" A region whose content fades towards the edges it is scrolled past.\"] # [derive (IntoElement)] pub struct ScrollFade { ident : Ident, edges : FadeEdges, band : Option<f32>, # [doc = \" Whether the region is as tall as what it holds instead of as tall as\"] # [doc = \" the space it is offered.\"] fit_height : bool, # [doc = \" Whether this region is one a reader can name. A fade a component draws\"] # [doc = \" inside itself is not: the component is the region, and a second node\"] # [doc = \" under the same identity would answer for it.\"] published : bool, child : Option<AnyElement>, }",
+      "signature": "# [doc = \" A region whose content fades towards the edges it is scrolled past.\"] # [derive (IntoElement)] pub struct ScrollFade { ident : Ident, edges : FadeEdges, band : Option<f32>, target : gpui::EdgeFadeTarget, # [doc = \" Whether the region is as tall as what it holds instead of as tall as\"] # [doc = \" the space it is offered.\"] fit_height : bool, # [doc = \" Whether this region is one a reader can name. A fade a component draws\"] # [doc = \" inside itself is not: the component is the region, and a second node\"] # [doc = \" under the same identity would answer for it.\"] published : bool, child : Option<AnyElement>, }",
       "cfg": []
     },
     {
@@ -93550,6 +93579,21 @@
       "summary": "",
       "documentation": "",
       "signature": "pub fn right (mut self, fade : bool) -> Self",
+      "cfg": [],
+      "target": "ScrollFade"
+    },
+    {
+      "id": "gpui_kit::layout::scroll_fade::ScrollFade::text_only",
+      "name": "text_only",
+      "kind": "method",
+      "package": "gpui-box-kit",
+      "crate": "gpui_kit",
+      "module": "layout::scroll_fade",
+      "path": "gpui_kit::layout::scroll_fade",
+      "source": "crates/gpui-kit/src/layout/scroll_fade.rs",
+      "summary": "Fade text and text decorations while preserving surfaces, borders, paths, images, SVG icons, shadows, sprites and glass.",
+      "documentation": "Fade text and text decorations while preserving surfaces, borders,\npaths, images, SVG icons, shadows, sprites and glass.",
+      "signature": "pub fn text_only (mut self) -> Self",
       "cfg": [],
       "target": "ScrollFade"
     },
@@ -135643,6 +135687,7 @@
         "left(fade: bool) -> Self",
         "right(fade: bool) -> Self",
         "band(band: f32) -> Self",
+        "text_only() -> Self",
         "fit_height() -> Self",
         "child(child: impl IntoElement) -> Self"
       ],
@@ -157544,7 +157589,7 @@
       "uses": [
         "ScrollFade"
       ],
-      "example": "fn scroll_fade(window: &mut Window, cx: &mut App) -> AnyElement {\n    let theme = cx.theme().clone();\n    crate::layout::scroll_to(\n        \"scene.fade.output\",\n        gpui::point(px(0.0), px(120.0)),\n        window,\n        cx,\n    );\n    stack(&theme)\n        .w(px(480.0))\n        .child(caption(&theme, \"Scrolled: content runs past both ends\"))\n        .child(\n            div()\n                .surface(&theme, Surface::Panel)\n                .radius(&theme, Radius::Card)\n                .overflow_hidden()\n                .child(\n                    ScrollFade::new(\"scene.fade.scrolled\")\n                        .edges(FadeEdges::vertical())\n                        .fit_height()\n                        .child(\n                            ScrollArea::new(\"scene.fade.output\")\n                                .label(\"Run output\")\n                                .vertical()\n                                .height(200.0)\n                                .child(filler(&theme, \"Output\", 20)),\n                        ),\n                ),\n        )\n        // Nothing is hidden here, so no edge fades and the caller says so.\n        .child(caption(&theme, \"Nothing hidden: no edge fades\"))\n        .child(\n            div()\n                .surface(&theme, Surface::Panel)\n                .radius(&theme, Radius::Card)\n                .overflow_hidden()\n                .child(\n                    ScrollFade::new(\"scene.fade.settled\").fit_height().child(\n                        ScrollArea::new(\"scene.fade.summary\")\n                            .label(\"Summary\")\n                            .vertical()\n                            .height(200.0)\n                            .child(filler(&theme, \"Summary\", 7)),\n                    ),\n                ),\n        )\n        .into_any_element()\n}"
+      "example": "fn scroll_fade(window: &mut Window, cx: &mut App) -> AnyElement {\n    let theme = cx.theme().clone();\n    crate::layout::scroll_to(\n        \"scene.fade.output\",\n        gpui::point(px(0.0), px(120.0)),\n        window,\n        cx,\n    );\n    stack(&theme)\n        .w(px(480.0))\n        .child(caption(\n            &theme,\n            \"Scrolled: text fades at both ends while surfaces remain intact\",\n        ))\n        .child(\n            div()\n                .surface(&theme, Surface::Panel)\n                .radius(&theme, Radius::Card)\n                .overflow_hidden()\n                .child(\n                    ScrollFade::new(\"scene.fade.scrolled\")\n                        .edges(FadeEdges::vertical())\n                        .text_only()\n                        .fit_height()\n                        .child(\n                            ScrollArea::new(\"scene.fade.output\")\n                                .label(\"Run output\")\n                                .vertical()\n                                .height(200.0)\n                                .child(filler(&theme, \"Output\", 20)),\n                        ),\n                ),\n        )\n        // Nothing is hidden here, so no edge fades and the caller says so.\n        .child(caption(&theme, \"Nothing hidden: no edge fades\"))\n        .child(\n            div()\n                .surface(&theme, Surface::Panel)\n                .radius(&theme, Radius::Card)\n                .overflow_hidden()\n                .child(\n                    ScrollFade::new(\"scene.fade.settled\").fit_height().child(\n                        ScrollArea::new(\"scene.fade.summary\")\n                            .label(\"Summary\")\n                            .vertical()\n                            .height(200.0)\n                            .child(filler(&theme, \"Summary\", 7)),\n                    ),\n                ),\n        )\n        .into_any_element()\n}"
     },
     {
       "name": "scroll-edge-effect",
@@ -159014,6 +159059,14 @@
         "native_context_menu_dispatches_in_the_captured_focus_context"
       ],
       "validation": "Shared lifecycle tests run on Linux; native cancellation/replacement/teardown execution requires the dispatched macOS/Windows lanes and is not established by Linux tests."
+    },
+    "framework_edge_fade": {
+      "contract": "EdgeFadeTarget::All preserves the historical per-primitive fade. EdgeFadeTarget::Text attenuates glyphs, emoji, underlines and strikethroughs while non-text quads, borders, paths, SVGs, images, shadows, sprites and glass retain authored opacity. ScrollFade exposes the target through text_only; edge geometry, clipping, hit testing and accessibility bounds are unchanged.",
+      "tests": [
+        "text_only_edge_fade_preserves_non_text_primitives",
+        "text_only_is_explicit_and_all_content_remains_the_default"
+      ],
+      "validation": "Framework CPU scene inspection and the ScrollFade exhibit cover the shared contract. Native renderer catalogs remain required before claiming fresh Metal or WARP pixels."
     },
     "framework_editable_document": {
       "contract": "EditBuffer uses persistent Ropey storage with LF line indexing; EditSnapshot indexed slices and UTF-16 conversion avoid whole-document materialization. Legacy text() intentionally materializes once per revision. Grapheme clamping traverses borrowed rope chunks; exact history byte deltas are never re-clamped. No-wrap EditableTextLayout shapes visible lines and exact on-demand geometry through WindowTextSystem; selection painting is bounded independently of logical range queries.",

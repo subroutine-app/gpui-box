@@ -21,6 +21,10 @@ The shared mobile reference fixture and its native launch/checkpoint hosts are
 original GPUI Box example code. They reuse existing Kit assets and fonts under
 the notices below and introduce no additional third-party source or licenses.
 
+Text-targeted edge fading and its separation of glyph decoration opacity from
+surfaces, paths, images, icons, shadows, sprites, and glass are original GPUI
+Box work without new third-party source, dependencies, or shader imports.
+
 Source-line projection, projected editable geometry, disjoint accessibility
 regions and Kit fold policy are original GPUI Box work without new third-party
 source or licenses. The browser frame-clock correction that avoids submitting

@@ -353,7 +353,10 @@ pub(super) fn scroll_fade(window: &mut Window, cx: &mut App) -> AnyElement {
     );
     stack(&theme)
         .w(px(480.0))
-        .child(caption(&theme, "Scrolled: content runs past both ends"))
+        .child(caption(
+            &theme,
+            "Scrolled: text fades at both ends while surfaces remain intact",
+        ))
         .child(
             div()
                 .surface(&theme, Surface::Panel)
@@ -362,6 +365,7 @@ pub(super) fn scroll_fade(window: &mut Window, cx: &mut App) -> AnyElement {
                 .child(
                     ScrollFade::new("scene.fade.scrolled")
                         .edges(FadeEdges::vertical())
+                        .text_only()
                         .fit_height()
                         .child(
                             ScrollArea::new("scene.fade.output")

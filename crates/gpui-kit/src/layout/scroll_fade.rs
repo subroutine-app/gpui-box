@@ -4,10 +4,10 @@
 //! [`ScrollArea`](crate::layout::ScrollArea) says — there is more content past
 //! this edge — and says it where a shadow cannot: over a translucent or
 //! frosted surface, where "the colour of what is behind the window" is not a
-//! colour anything can paint. Instead of covering the content with a gradient,
-//! the fade multiplies the opacity of every primitive by how close it is to an
-//! active edge, so a glyph half inside the band is half faded rather than the
-//! whole row dimming at once.
+//! colour anything can paint. Instead of covering content with a gradient, the
+//! fade evaluates painted primitives against the active edge. All primitives
+//! participate by default; [`ScrollFade::text_only`] limits attenuation to glyphs,
+//! emoji and their decorations so a surface does not turn into a vignette.
 //!
 //! The edges are the caller's statement about overflow, not this component's
 //! guess: a region scrolled to its end fades at the start edge only, and one
@@ -82,6 +82,7 @@ pub struct ScrollFade {
     ident: Ident,
     edges: FadeEdges,
     band: Option<f32>,
+    target: gpui::EdgeFadeTarget,
     /// Whether the region is as tall as what it holds instead of as tall as
     /// the space it is offered.
     fit_height: bool,
@@ -112,6 +113,7 @@ impl ScrollFade {
             ident: ident.into(),
             edges: FadeEdges::default(),
             band: None,
+            target: gpui::EdgeFadeTarget::All,
             fit_height: false,
             published: true,
             child: None,
@@ -161,6 +163,13 @@ impl ScrollFade {
         self
     }
 
+    /// Fade text and text decorations while preserving surfaces, borders,
+    /// paths, images, SVG icons, shadows, sprites and glass.
+    pub fn text_only(mut self) -> Self {
+        self.target = gpui::EdgeFadeTarget::Text;
+        self
+    }
+
     /// Makes the region as tall as its content rather than as tall as the
     /// space around it, which is what a caller who already bounded the scroll
     /// area inside wants. This follows
@@ -205,6 +214,7 @@ impl RenderOnce for ScrollFade {
         Faded {
             edges,
             band: px(band),
+            target: self.target,
             child: region,
         }
     }
@@ -214,6 +224,7 @@ impl RenderOnce for ScrollFade {
 struct Faded {
     edges: FadeEdges,
     band: Pixels,
+    target: gpui::EdgeFadeTarget,
     child: AnyElement,
 }
 
@@ -269,7 +280,14 @@ impl Element for Faded {
             left: self.edges.left,
             right: self.edges.right,
         });
-        window.with_edge_fade(fade, |window| self.child.paint(window, cx));
+        match self.target {
+            gpui::EdgeFadeTarget::All => {
+                window.with_edge_fade(fade, |window| self.child.paint(window, cx));
+            }
+            gpui::EdgeFadeTarget::Text => {
+                window.with_text_edge_fade(fade, |window| self.child.paint(window, cx));
+            }
+        }
     }
 }
 
@@ -290,5 +308,14 @@ mod tests {
         assert!(!FadeEdges::default().any());
         assert!(FadeEdges::vertical().any());
         assert_eq!(FadeEdges::horizontal().names(), vec!["left", "right"]);
+    }
+
+    #[test]
+    fn text_only_is_explicit_and_all_content_remains_the_default() {
+        assert_eq!(ScrollFade::new("all").target, gpui::EdgeFadeTarget::All);
+        assert_eq!(
+            ScrollFade::new("text").text_only().target,
+            gpui::EdgeFadeTarget::Text
+        );
     }
 }

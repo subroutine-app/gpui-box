@@ -143,6 +143,11 @@ value_work = "Window::accessibility_value_work reports producer materialized, re
 logical_caches = "TextArea retains no-wrap row arrays by persistent document/projection identity and grapheme representability by immutable source storage. Static and selection-only frames construct zero row entries and check zero grapheme bytes. Edits invalidate both; wrap geometry changes invalidate rows. Native tree metadata remains document-wide."
 wrapped_publication = "TextArea publishes current prepaint wrapped rows with current cell geometry, avoiding a transient hard-row topology on edits. Folded views preserve full-source accessibility rows. A local wrapped edit segments its changed paragraph; subsequent unchanged draws publish no text runs. Complete native Value and document-wide metadata costs remain."
 
+[framework_edge_fade]
+contract = "EdgeFadeTarget::All preserves the historical per-primitive fade. EdgeFadeTarget::Text attenuates glyphs, emoji, underlines and strikethroughs while non-text quads, borders, paths, SVGs, images, shadows, sprites and glass retain authored opacity. ScrollFade exposes the target through text_only; edge geometry, clipping, hit testing and accessibility bounds are unchanged."
+tests = ["text_only_edge_fade_preserves_non_text_primitives", "text_only_is_explicit_and_all_content_remains_the_default"]
+validation = "Framework CPU scene inspection and the ScrollFade exhibit cover the shared contract. Native renderer catalogs remain required before claiming fresh Metal or WARP pixels."
+
 [framework_layout]
 measured_reveal = "A stable-id Reveal measures its subtree at an unconstrained primary extent, contributes caller progress to layout, and shares one clip across paint, hit testing, and accessibility; it owns no motion clock or easing."
 

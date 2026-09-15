@@ -46,6 +46,12 @@ platform examples own private storage. They reuse bundled Kit assets with the
 notices below and add no imported source. Offscreen fixture captures do not
 certify native keyboard, accessibility, persistence or rendering.
 
+Text-targeted edge fading, including the separation between text decorations
+and non-text surfaces, paths, images, icons, shadows, sprites, and glass, is
+original GPUI Box framework and Kit work. It extends the existing local edge
+fade scope without importing renderer code, changing a native shader ABI, or
+altering the frozen historical receipt.
+
 The source-line projection index, projected editable geometry, and disjoint
 painted accessibility regions are original GPUI Box framework work. Editor
 fold identities and transient toggle policy are original Kit work; no new

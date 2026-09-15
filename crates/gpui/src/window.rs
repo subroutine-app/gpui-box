@@ -764,12 +764,23 @@ impl HitboxId {
     }
 }
 
-/// A scoped vertical edge fade (see [`Window::with_edge_fade`]): primitives
-/// painted inside the scope get their opacity multiplied by a ramp that runs
-/// from 0 at an active edge of `bounds` to 1 a `band` further in. Built for
-/// scroll-edge fades over translucent/blurred window backgrounds, where a
-/// backdrop-colored gradient overlay cannot exist (there is no paintable
-/// color equal to "what is behind the window").
+/// Which painted content an [`EdgeFade`] attenuates.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum EdgeFadeTarget {
+    /// Fade every primitive painted in the scope.
+    #[default]
+    All,
+    /// Fade glyphs, emoji and their decorations without changing surfaces,
+    /// borders, paths, images, SVG icons, shadows, sprites or glass.
+    Text,
+}
+
+/// A scoped edge fade (see [`Window::with_edge_fade`]): selected content painted
+/// inside the scope gets its opacity multiplied by a ramp that runs from 0 at
+/// an active edge of `bounds` to 1 a `band` further in. Built for scroll-edge
+/// fades over translucent/blurred window backgrounds, where a backdrop-colored
+/// gradient overlay cannot exist (there is no paintable color equal to "what is
+/// behind the window").
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EdgeFade {
     /// The faded region, in window coordinates.
@@ -1202,6 +1213,7 @@ pub struct Window {
     pub(crate) element_offset_stack: Vec<Point<Pixels>>,
     pub(crate) element_opacity: f32,
     pub(crate) edge_fade: Option<EdgeFade>,
+    edge_fade_target: EdgeFadeTarget,
     pub(crate) content_mask_stack: Vec<ContentMask<Pixels>>,
     pub(crate) clip_chain: crate::ClipChain,
     pub(crate) visual_transform: crate::VisualTransform,
@@ -2130,6 +2142,7 @@ impl Window {
             visual_transform: crate::VisualTransform::default(),
             element_opacity: 1.0,
             edge_fade: None,
+            edge_fade_target: EdgeFadeTarget::All,
             requested_autoscroll: None,
             rendered_frame: Frame::new(DispatchTree::new(cx.keymap.clone(), cx.actions.clone())),
             next_frame: Frame::new(DispatchTree::new(cx.keymap.clone(), cx.actions.clone())),
@@ -4625,15 +4638,31 @@ impl Window {
         result
     }
 
-    /// Executes the provided function with a vertical [`EdgeFade`] applied:
-    /// every primitive painted inside is additionally faded by its vertical
-    /// position — full alpha in the region's body, ramping to zero across
-    /// `fade.band` at each active edge. Granularity is per-primitive (each
-    /// quad/glyph/sprite takes the ramp value at its own position), which
-    /// reads as a smooth gradient for text and small marks.
+    /// Executes the provided function with an [`EdgeFade`] applied to every
+    /// primitive painted inside.
     pub fn with_edge_fade<R>(
         &mut self,
         fade: Option<EdgeFade>,
+        f: impl FnOnce(&mut Self) -> R,
+    ) -> R {
+        self.with_edge_fade_target(fade, EdgeFadeTarget::All, f)
+    }
+
+    /// Executes the provided function with an [`EdgeFade`] applied only to
+    /// glyphs, emoji, underlines and strikethroughs. Non-text surfaces and
+    /// imagery retain their authored opacity.
+    pub fn with_text_edge_fade<R>(
+        &mut self,
+        fade: Option<EdgeFade>,
+        f: impl FnOnce(&mut Self) -> R,
+    ) -> R {
+        self.with_edge_fade_target(fade, EdgeFadeTarget::Text, f)
+    }
+
+    fn with_edge_fade_target<R>(
+        &mut self,
+        fade: Option<EdgeFade>,
+        target: EdgeFadeTarget,
         f: impl FnOnce(&mut Self) -> R,
     ) -> R {
         let Some(fade) = fade else {
@@ -4643,9 +4672,11 @@ impl Window {
             return f(self);
         }
         self.invalidator.debug_assert_paint_or_prepaint();
-        let previous = self.edge_fade.replace(fade);
+        let previous_fade = self.edge_fade.replace(fade);
+        let previous_target = std::mem::replace(&mut self.edge_fade_target, target);
         let result = f(self);
-        self.edge_fade = previous;
+        self.edge_fade = previous_fade;
+        self.edge_fade_target = previous_target;
         result
     }
 
@@ -4860,6 +4891,39 @@ impl Window {
             ramp = ramp.min(((fade.bounds.right().0 - x) / band).clamp(0.0, 1.0));
         }
         opacity * ramp
+    }
+
+    /// Opacity for non-text primitives. Text-only fades leave the visual
+    /// structure behind a label unchanged.
+    #[inline]
+    fn visual_opacity_at(&self, center: Point<Pixels>) -> f32 {
+        if self.edge_fade.is_some() && self.edge_fade_target == EdgeFadeTarget::Text {
+            self.element_opacity()
+        } else {
+            self.element_opacity_at(center)
+        }
+    }
+
+    #[inline]
+    fn visual_opacity_for_visible_bounds(&self, bounds: &Bounds<Pixels>) -> f32 {
+        if self.edge_fade.is_some() && self.edge_fade_target == EdgeFadeTarget::Text {
+            self.element_opacity()
+        } else {
+            self.element_opacity_for_visible_bounds(bounds)
+        }
+    }
+
+    #[inline]
+    fn visual_edge_fade_gradient(
+        &self,
+        bounds: Bounds<Pixels>,
+        background: &Background,
+    ) -> Option<Background> {
+        if self.edge_fade.is_some() && self.edge_fade_target == EdgeFadeTarget::Text {
+            None
+        } else {
+            self.edge_fade_gradient(bounds, background)
+        }
     }
 
     /// Per-pixel [`EdgeFade`] for solid backgrounds: a primitive that crosses
@@ -5260,7 +5324,7 @@ impl Window {
             }
             let shadow_bounds = (bounds + shadow.offset).dilate(shadow.spread_radius);
             let painted_bounds = shadow_bounds.dilate(shadow.blur_radius * 3.0);
-            let opacity = self.element_opacity_for_visible_bounds(&painted_bounds);
+            let opacity = self.visual_opacity_for_visible_bounds(&painted_bounds);
             self.next_frame.scene.insert_primitive(Shadow {
                 clip_id: crate::ClipId::NONE,
                 order: 0,
@@ -5297,7 +5361,7 @@ impl Window {
                 continue;
             }
             let hole = (bounds + shadow.offset).dilate(-shadow.spread_radius);
-            let opacity = self.element_opacity_for_visible_bounds(&bounds);
+            let opacity = self.visual_opacity_for_visible_bounds(&bounds);
             // Clamp at zero so a large spread can't produce negative radii, which would
             // break the SDF in the shader.
             let zero = Pixels::ZERO;
@@ -5488,7 +5552,7 @@ impl Window {
         }
 
         let fallback = fallback
-            .map(|color| color.opacity(self.element_opacity_at(bounds.center())))
+            .map(|color| color.opacity(self.visual_opacity_at(bounds.center())))
             .filter(|color| !color.is_transparent());
         self.next_frame.scene.insert_backdrop_glass_with_fallback(
             BackdropGlass {
@@ -5517,9 +5581,9 @@ impl Window {
     pub fn paint_quad(&mut self, quad: PaintQuad) {
         self.invalidator.debug_assert_paint();
 
-        let opacity = self.element_opacity_at(quad.bounds.center());
+        let opacity = self.visual_opacity_at(quad.bounds.center());
         let background = self
-            .edge_fade_gradient(quad.bounds, &quad.background)
+            .visual_edge_fade_gradient(quad.bounds, &quad.background)
             .unwrap_or_else(|| quad.background.opacity(opacity));
         let snapped_bounds = self.snap_bounds(quad.bounds);
         let snapped_border_widths = self.snap_border_widths(quad.border_widths);
@@ -5598,9 +5662,9 @@ impl Window {
         path.content_mask = content_mask;
         let color: Background = color.into();
         path.color = self
-            .edge_fade_gradient(shader_bounds, &color)
+            .visual_edge_fade_gradient(shader_bounds, &color)
             .unwrap_or_else(|| {
-                color.opacity(self.element_opacity_for_visible_bounds(&shader_bounds))
+                color.opacity(self.visual_opacity_for_visible_bounds(&shader_bounds))
             });
         self.next_frame
             .scene
@@ -5890,7 +5954,7 @@ impl Window {
     ) -> Result<()> {
         self.invalidator.debug_assert_paint();
 
-        let element_opacity = self.element_opacity_for_visible_bounds(&bounds);
+        let element_opacity = self.visual_opacity_for_visible_bounds(&bounds);
         let bounds = self.snap_bounds(bounds);
         let raster_scale = SMOOTH_SVG_SCALE_FACTOR * self.visual_transform.scale();
 
@@ -6097,7 +6161,7 @@ impl Window {
                     .map(|coordinate| px(coordinate.0 / scale_factor))
             });
             let opacity = instance.opacity.clamp(0.0, 1.0)
-                * self.element_opacity_for_visible_bounds(&fade_bounds);
+                * self.visual_opacity_for_visible_bounds(&fade_bounds);
             if opacity <= 0.0 {
                 continue;
             }
@@ -9086,8 +9150,8 @@ mod tests {
         LongPressEvent, MouseButton, MouseDownEvent, MouseMoveEvent, ParentElement, Path, Pixels,
         Point, Render, RequestFrameOptions, StatefulInteractiveElement as _, StyleRefinement,
         Styled, TestAppContext, TextRenderingMode, TouchDragEvent, TouchEvent, TouchId, TouchPhase,
-        Window, WindowAppearance, WindowControlArea, WindowOptions, canvas, deferred, div, point,
-        px, size, white,
+        Window, WindowAppearance, WindowControlArea, WindowOptions, canvas, deferred, div, fill,
+        point, px, size, white,
     };
 
     use super::{DispatchPhase, window_control_at_mouse};
@@ -9243,6 +9307,65 @@ mod tests {
             .expect("pointer test window remains open");
         }
         assert!(platform.checked_operations.borrow().is_empty());
+    }
+
+    #[gpui::test]
+    fn text_only_edge_fade_preserves_non_text_primitives(cx: &mut TestAppContext) {
+        let window = cx.add_empty_window();
+        let samples = std::rc::Rc::new(std::cell::Cell::new((1.0, 0.0)));
+        let recorded = samples.clone();
+        let fade_bounds = Bounds {
+            origin: point(px(0.), px(0.)),
+            size: size(px(100.), px(100.)),
+        };
+        let primitive_bounds = Bounds {
+            origin: point(px(10.), px(0.)),
+            size: size(px(40.), px(10.)),
+        };
+
+        window.draw(
+            point(px(0.), px(0.)),
+            size(px(100.), px(100.)),
+            move |_, _| {
+                canvas(
+                    |_, _, _| (),
+                    move |_, _, window, _| {
+                        window.with_text_edge_fade(
+                            Some(EdgeFade {
+                                bounds: fade_bounds,
+                                band: px(20.),
+                                top: true,
+                                bottom: false,
+                                left: false,
+                                right: false,
+                            }),
+                            |window| {
+                                recorded.set((
+                                    window.element_opacity_for_bounds(&primitive_bounds),
+                                    window.visual_opacity_for_visible_bounds(&primitive_bounds),
+                                ));
+                                window.paint_quad(fill(primitive_bounds, white()));
+                            },
+                        );
+                    },
+                )
+                .size_full()
+                .into_any_element()
+            },
+        );
+
+        window.update(|window, _| {
+            let (text_opacity, visual_opacity) = samples.get();
+            assert_eq!(text_opacity, 0.0, "text still reaches zero at the edge");
+            assert_eq!(visual_opacity, 1.0, "non-text keeps its authored opacity");
+            let quad = window
+                .rendered_frame
+                .scene
+                .quads
+                .last()
+                .expect("the non-text primitive should be painted");
+            assert_eq!(quad.background.solid.a, 1.0);
+        });
     }
 
     #[gpui::test]
