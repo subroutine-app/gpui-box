@@ -2529,6 +2529,7 @@ fn theme_section(output: &mut String, tokens: &TokenDocument) -> Result<()> {
         ("effect.glowBlur", tokens.effect.glow_blur),
         ("effect.glowSpread", tokens.effect.glow_spread),
         ("effect.glassAlpha", tokens.effect.glass_alpha),
+        ("effect.glassLiquidBlur", tokens.effect.glass_liquid_blur),
         ("effect.glassFrostBlur", tokens.effect.glass_frost_blur),
         ("effect.glassSaturation", tokens.effect.glass_saturation),
         ("effect.glassWash", tokens.effect.glass_wash),

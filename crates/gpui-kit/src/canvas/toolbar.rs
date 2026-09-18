@@ -109,27 +109,26 @@ impl CanvasToolbar {
     /// Places this floating chrome on one of the kit's glass materials.
     ///
     /// The preset resolves exclusively through the theme's `effect.glass*`
-    /// tokens and the shared [`Glass`] layer, including its renderer fallback
-    /// and adaptive readability tint. Without this opt-in the toolbar keeps
-    /// its ordinary opaque overlay surface.
+    /// tokens and the shared [`Glass`] layer, including its renderer fallback.
+    /// The toolbar requests adaptive material and content appearance for its
+    /// compact surface. Without this opt-in it keeps its ordinary opaque
+    /// overlay surface.
     ///
     /// # Prefer a preset that scatters
     ///
     /// A canvas is line work — a grid, an axis rule, an edge, a region
     /// boundary — and this toolbar floats over it, so whatever is behind it is
     /// a hairline sooner or later. [`GlassPreset::Liquid`] and
-    /// [`GlassPreset::Lens`] are clear by default: their blur is zero, so a
-    /// line arrives on the far side at full contrast and crosses the
-    /// toolbar's own readout. That is the material behaving as documented,
-    /// and it is still a toolbar whose zoom percentage has a rule through it.
+    /// [`GlassPreset::Frosted`] scatter the backdrop by default. In contrast,
+    /// [`GlassPreset::Lens`] and [`GlassPreset::Clear`] default to zero blur,
+    /// so a line can arrive on the far side at full contrast and cross the
+    /// toolbar's own readout.
     ///
-    /// An adaptive tint cannot answer this. Tint darkens what shows through;
-    /// it does not remove the *structure* of a line crossing a glyph, and a
-    /// tint heavy enough to hide one is no longer glass. Scattering removes
-    /// the structure, which is the thing in the way. Reach for
-    /// [`GlassPreset::Frosted`], or compose blur onto another preset with
-    /// [`Glass::blur`], unless the surface behind this toolbar is known not to
-    /// carry line work.
+    /// Adaptive appearance cannot remove that structure. This builder accepts
+    /// only a preset; it does not expose material overrides such as
+    /// [`Glass::blur`]. Choose Liquid or Frosted when the backdrop can carry
+    /// line work, and reserve Lens or Clear for a backdrop where sharp
+    /// transmission is intentional.
     pub fn glass(mut self, preset: GlassPreset) -> Self {
         self.glass = Some(preset);
         self
@@ -206,7 +205,7 @@ impl RenderOnce for CanvasToolbar {
                 // the card/popover step rather than a tiny-control radius.
                 .radius(Radius::Card)
                 .preset(preset)
-                .adaptive(true)
+                .adaptive_appearance(true)
                 .child(body)
                 .into_any_element()
         } else {

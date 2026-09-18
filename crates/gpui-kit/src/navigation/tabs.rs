@@ -843,7 +843,7 @@ impl Tabs {
             .preset(GlassPreset::Liquid)
             .surface(Surface::Raised)
             .radius(Radius::Pill)
-            .adaptive(true)
+            .adaptive_appearance(true)
             .child(element)
             .into_any_element()
     }

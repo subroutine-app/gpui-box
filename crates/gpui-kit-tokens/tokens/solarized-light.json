@@ -719,6 +719,7 @@
     "glowBlur": 12,
     "glowSpread": -5,
     "glassAlpha": 0.78,
+    "glassLiquidBlur": 8,
     "glassFrostBlur": 24,
     "glassSaturation": 1.5,
     "glassWash": 0.55,

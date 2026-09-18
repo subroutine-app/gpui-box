@@ -407,6 +407,10 @@ mod tests {
         assert!(replayed.is_empty());
     }
 
+    fn glass_shape_coverage(distance: f32, gradient_length: f32) -> f32 {
+        (0.5 - distance / gradient_length.max(1e-4)).clamp(0.0, 1.0)
+    }
+
     /// A lobe with uniform rounding, so the field is easy to reason about.
     fn test_lobe(origin: (f32, f32), size: (f32, f32), radius: f32) -> GlassLobe {
         GlassLobe {
@@ -1170,6 +1174,35 @@ mod tests {
                 field.distance
             );
         }
+    }
+
+    #[test]
+    fn glass_shape_coverage_is_one_device_pixel_at_fractional_straight_and_rounded_edges() {
+        let straight = test_lobe((10.75, 10.75), (20.0, 20.0), 0.0);
+        for (at, expected) in [
+            (point(9.5, 20.5), 0.0),
+            (point(10.5, 20.5), 0.25),
+            (point(11.5, 20.5), 1.0),
+        ] {
+            let coverage = glass_shape_coverage(glass_lobe_sdf(at, &straight), 1.0);
+            assert!((coverage - expected).abs() < 1e-6, "at {at:?}: {coverage}");
+        }
+
+        let rounded = test_lobe((10.75, 10.75), (20.0, 20.0), 5.0);
+        assert_eq!(
+            glass_shape_coverage(glass_lobe_sdf(point(11.5, 11.5), &rounded), 1.0),
+            0.0,
+            "the pixel outside the rounded corner is fully restored"
+        );
+        let rounded_edge = glass_shape_coverage(glass_lobe_sdf(point(12.5, 12.5), &rounded), 1.0);
+        assert!(
+            rounded_edge > 0.0 && rounded_edge < 1.0,
+            "the adjacent rounded-corner pixel is partially covered: {rounded_edge}"
+        );
+
+        assert_eq!(glass_shape_coverage(-0.125, 0.25), 1.0);
+        assert_eq!(glass_shape_coverage(0.0, 0.25), 0.5);
+        assert_eq!(glass_shape_coverage(0.125, 0.25), 0.0);
     }
 
     #[test]
@@ -2043,7 +2076,8 @@ impl GlassLobe<Pixels> {
 /// add refraction, dispersion, transmission, an optical lift, or edge light.
 /// [`GlassMaterial::frosted`] adds only scattering. Refraction samples that
 /// scattered source throughout the surface, including the rim. The retained
-/// sharp snapshot restores the original backdrop only under an explicit edge mask.
+/// sharp snapshot restores the original backdrop under an explicit edge mask,
+/// the shape's one-device-pixel coverage ramp, and inherited rounded clips.
 #[derive(Debug, Copy, Clone, PartialEq)]
 #[repr(C)]
 pub struct GlassMaterial<P = ScaledPixels> {
@@ -2099,8 +2133,9 @@ pub struct GlassMaterial<P = ScaledPixels> {
     pub light_angle: f32,
     /// How tight the specular lobe is. Larger is a smaller, harder highlight.
     pub specular_sharpness: f32,
-    /// How far apart two lobes may be and still join. Zero makes the union a
-    /// plain minimum, so lobes meet at a crease.
+    /// Polynomial smooth-min coefficient for the union of multiple lobes.
+    /// Zero makes the union a plain minimum, so touching lobes meet at a crease.
+    /// This controls bridge width and softness; it is not an exact maximum gap.
     pub smoothing: P,
     /// Opaque [`crate::LuminanceProbeLease::id`], or [`NO_LUMINANCE_PROBE`].
     /// The u32 carries a generation and physical slot; retain its lease and
@@ -2326,7 +2361,9 @@ pub struct BackdropGlass {
 /// textures because neither a fragment in `visible` nor a probe can read them.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct BackdropRenderRegion {
-    /// The integral pixels where the surface can produce fragments.
+    /// The integral enclosure where the surface can produce fragments. Keeping
+    /// the enclosing pixels lets the replacement compositor evaluate the
+    /// one-device-pixel SDF coverage ramp at fractional shape edges.
     pub visible: Bounds<DevicePixels>,
     /// The integral pixels that can contribute to those fragments.
     pub sampling: Bounds<DevicePixels>,

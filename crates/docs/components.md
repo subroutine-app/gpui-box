@@ -837,9 +837,9 @@ is in `crates/docs/interaction.md`.
 | Component | Kind | Notes |
 |---|---|---|
 | `Overlay` | builder | Placement, which trigger edge it hangs from, token-driven paint priority, scrim, dismissal |
-| `Frost` | builder | Glass: the pixels behind are blurred and the surface colour is laid over them at `effect.glassAlpha`, so a popover, dialog or rail on a translucent window keeps its contrast. The whole subtree paints in one scene layer, which is what keeps the blur underneath the content instead of intermittently over it. Where the renderer has no backdrop blur, and where a theme sets `effect.glassAlpha` to 1, the tinted fill is drawn on its own and the surface is merely unblurred |
-| `Glass` | builder | A complete token-backed glass surface over caller content: backdrop blur/refraction where supported, tinted fallback where not, semantic surface/radius, and optional pointer/press response |
-| `GlassGroup` | builder | Caller-owned panes fused into one optical height field, with shared thickness, refractive index, background optical-plane distance and press response; over-budget groups preserve every pane with an opaque fallback |
+| `Frost` | builder | Strongly scattered glass: the pixels behind are blurred by `effect.glassFrostBlur` and the semantic surface colour is laid over them at `effect.glassAlpha`. The whole subtree paints in one scene layer, keeping the blur below its content. Where the renderer has no backdrop blur, and where a theme sets `effect.glassAlpha` to 1, the tinted fill is drawn on its own and the surface is merely unblurred |
+| `Glass` | builder | A complete token-backed glass surface over caller content. Regular Liquid uses the lighter `effect.glassLiquidBlur` plus refraction, wash and rim light; Clear and Lens are sharp by default. `surface` selects Frosted/fallback colour rather than the optical preset; `tint` colours the optical material. Optional pointer/press response remains visual and emits no action |
+| `GlassGroup` | builder | Caller-owned panes fused into one optical height field, with shared thickness, refractive index, background optical-plane distance and press response. `merge` controls the polynomial smooth-union strength rather than promising an exact gap threshold; `gap` remains Kit's row-layout spacing. Over-budget groups preserve every pane with an opaque fallback |
 | `Dialog` | view | Composed modal: reports opened, confirmed, cancelled, dismissed, closed. A dialog that is not dismissable installs no escape or scrim handler |
 | `Drawer` | view | The same surface arriving from an edge: same scrim, same focus trap, same escape and scrim dismissal. It slides out through `Presence`, and because an element cannot animate after it is dropped it stays in the tree until the exit finishes and only then reports `Closed` |
 | `Popover` | view | The anchored surface `Menu` and `Select` are special cases of. Owns only whether it is open: the body is a per-frame callback, escape and a click outside dismiss it unless it is not dismissable, and closing gives the keyboard back to the trigger |
@@ -865,8 +865,10 @@ Thickness is a profile height before the refraction multiplier. Set
 `Glass::refraction(1.0)` to use the height directly. Zero thickness follows the
 bounded bevel. Index 1 removes bending and Fresnel reflection. Background depth
 is distance to a screen-space optical plane, not a physical air gap. Blur still
-controls scattering independently; reduced transparency ignores optical
-overrides. See `crates/docs/compatibility.md` for model limits and backend coverage.
+controls scattering independently: Regular Liquid defaults to
+`effect.glassLiquidBlur`, Frosted to `effect.glassFrostBlur`, and Clear/Lens to
+zero. Reduced transparency ignores optical overrides. See
+`crates/docs/compatibility.md` for model limits and backend coverage.
 
 ### Glass reports focus inside its material
 

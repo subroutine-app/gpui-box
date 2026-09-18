@@ -411,8 +411,9 @@ impl MetalRenderer {
             "shadow_fragment",
             MTLPixelFormat::BGRA8Unorm,
         );
-        // Blending DISABLED: the blur REPLACES the region with the blurred
-        // snapshot verbatim (fragments outside the rounded rect discard).
+        // Blending is disabled: glass replaces each covered pixel after
+        // restoring edge-mask, shape-AA, and ancestor-clip coverage from the
+        // retained sharp snapshot.
         let backdrop_glass_pipeline_state = build_pipeline_state_no_blend(
             &device,
             &library,
@@ -1320,6 +1321,9 @@ impl MetalRenderer {
             Some(textures.1),
         );
 
+        // `visible` is the integral enclosure of the fractional surface. The
+        // vertex shader rasterizes that enclosure while keeping `glass.bounds`
+        // untouched for its optical field and one-pixel SDF coverage.
         command_encoder.set_scissor_rect(metal_scissor(visible));
         command_encoder.draw_primitives_instanced(metal::MTLPrimitiveType::Triangle, 0, 6, 1);
         command_encoder.set_scissor_rect(metal::MTLScissorRect {
@@ -2533,6 +2537,91 @@ mod tests {
             .render_scene_to_image(&Scene::default(), extent)
             .expect("empty frame renders");
         assert_eq!(renderer.backdrop_luminance(new), None);
+    }
+
+    #[test]
+    fn fractional_rounded_glass_edges_restore_the_sharp_snapshot() {
+        let pool = Arc::new(Mutex::new(InstanceBufferPool::default()));
+        let mut renderer = MetalRenderer::new_headless(pool);
+        let extent = size(DevicePixels(256), DevicePixels(256));
+        let mut scene = probed_scene(Hsla::black(), gpui::NO_LUMINANCE_PROBE);
+        let glass = &mut scene.backdrop_glass[0];
+        glass.bounds = Bounds::new(
+            point(ScaledPixels(64.75), ScaledPixels(64.75)),
+            size(ScaledPixels(64.), ScaledPixels(64.)),
+        );
+        glass.corner_radii = Corners::all(ScaledPixels(12.));
+        glass.material = GlassMaterial {
+            wash: gpui::Rgba {
+                r: 1.,
+                g: 1.,
+                b: 1.,
+                a: 1.,
+            },
+            ..GlassMaterial::clear()
+        };
+
+        let image = renderer
+            .render_scene_to_image(&scene, extent)
+            .expect("fractional glass renders");
+        assert_eq!(image.get_pixel(63, 96).0, [0, 0, 0, 255]);
+        assert!(
+            (i16::from(image.get_pixel(64, 96)[0]) - 64).abs() <= 2,
+            "the fractional straight edge has quarter coverage"
+        );
+        assert_eq!(image.get_pixel(65, 96).0, [255, 255, 255, 255]);
+        assert_eq!(
+            image.get_pixel(66, 66).0,
+            [0, 0, 0, 255],
+            "the pixel outside the rounded corner is restored exactly"
+        );
+        let rounded = image.get_pixel(68, 68)[0];
+        assert!(
+            (190..=235).contains(&rounded),
+            "the adjacent rounded pixel is antialiased, got {rounded}"
+        );
+
+        let template = probed_scene(Hsla::black(), gpui::NO_LUMINANCE_PROBE);
+        let mut composed = Scene::default();
+        composed.insert_primitive(template.quads[0]);
+        let mut glass = template.backdrop_glass[0];
+        glass.bounds = Bounds::new(
+            point(ScaledPixels(64.75), ScaledPixels(64.)),
+            size(ScaledPixels(64.), ScaledPixels(64.)),
+        );
+        glass.corner_radii = Corners::default();
+        glass.material = GlassMaterial {
+            wash: gpui::Rgba {
+                r: 1.,
+                g: 1.,
+                b: 1.,
+                a: 1.,
+            },
+            edge_mask_edge: gpui::GlassEdge::Left.as_f32(),
+            edge_mask_band: ScaledPixels(4.),
+            ..GlassMaterial::clear()
+        };
+        let mut chain = gpui::ClipChain::default();
+        chain.push(gpui::RoundedClip::new(
+            Bounds::new(
+                point(gpui::px(66.75), gpui::px(64.)),
+                size(gpui::px(62.), gpui::px(64.)),
+            ),
+            Corners::default(),
+        ));
+        composed.with_clip_chain(&chain, 1., |scene| scene.insert_backdrop_glass(glass));
+        composed.finish();
+        let image = renderer
+            .render_scene_to_image(&composed, extent)
+            .expect("masked glass renders");
+        assert!(
+            (i16::from(image.get_pixel(66, 96)[0]) - 36).abs() <= 2,
+            "edge mask must precede quarter-covered ancestor restoration"
+        );
+        assert!(
+            (i16::from(image.get_pixel(67, 96)[0]) - 80).abs() <= 2,
+            "fully covered ancestor retains the edge-mask result"
+        );
     }
 
     #[test]

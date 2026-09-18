@@ -728,6 +728,9 @@ pub struct Effects {
     /// it is blurred, so it stays out of its neighbours' pixels.
     pub glow_spread: f32,
     pub glass_alpha: f32,
+    /// How far Regular Liquid scatters its backdrop, in pixels.
+    pub glass_liquid_blur: f32,
+    /// How far Frosted scatters its backdrop, in pixels.
     pub glass_frost_blur: f32,
     pub glass_saturation: f32,
     /// Achromatic wash intensity; the theme appearance selects black or white.
@@ -1337,6 +1340,7 @@ impl Theme {
                 glow_blur: tokens.effect.glow_blur,
                 glow_spread: tokens.effect.glow_spread,
                 glass_alpha: tokens.effect.glass_alpha,
+                glass_liquid_blur: tokens.effect.glass_liquid_blur,
                 glass_frost_blur: tokens.effect.glass_frost_blur,
                 glass_saturation: tokens.effect.glass_saturation,
                 glass_wash: tokens.effect.glass_wash,
@@ -2204,10 +2208,18 @@ mod tests {
     #[test]
     fn glass_optics_map_distinct_token_values() {
         let mut tokens = gpui_kit_tokens::all()[0].clone();
+        tokens.effect.glass_liquid_blur = 8.0;
+        tokens.effect.glass_frost_blur = 24.0;
         tokens.effect.glass_thickness = 7.0;
         tokens.effect.glass_refractive_index = 1.8;
         tokens.effect.glass_backdrop_depth = 23.0;
         let theme = Theme::from_tokens(&tokens, Density::Comfortable);
+        assert_eq!(theme.effects.glass_liquid_blur, 8.0);
+        assert_eq!(theme.effects.glass_frost_blur, 24.0);
+        assert_ne!(
+            theme.effects.glass_liquid_blur,
+            theme.effects.glass_frost_blur
+        );
         assert_eq!(theme.effects.glass_thickness, 7.0);
         assert_eq!(theme.effects.glass_refractive_index, 1.8);
         assert_eq!(theme.effects.glass_backdrop_depth, 23.0);

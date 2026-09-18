@@ -1521,7 +1521,6 @@ float4 fill_color(Background background,
 struct BackdropGlassVertexOutput {
   float4 position [[position]];
   uint glass_id [[flat]];
-  float clip_distance [[clip_distance]][4];
 };
 
 struct BackdropGlassFragmentInput {
@@ -1589,14 +1588,23 @@ vertex BackdropGlassVertexOutput backdrop_glass_vertex(
     [[buffer(BackdropGlassInputIndex_ViewportSize)]]) {
   float2 unit_vertex = unit_vertices[unit_vertex_id];
   BackdropGlass glass = surfaces[glass_id];
-  float4 device_position =
-      to_device_position(unit_vertex, glass.bounds, viewport_size);
-  float4 clip_distance = distance_from_clip_rect(unit_vertex, glass.bounds,
-                                                 glass.content_mask.bounds);
+  float2 clipped_origin = max(
+      float2(glass.bounds.origin.x, glass.bounds.origin.y),
+      float2(glass.content_mask.bounds.origin.x, glass.content_mask.bounds.origin.y));
+  float2 clipped_end = min(
+      float2(glass.bounds.origin.x + glass.bounds.size.width,
+             glass.bounds.origin.y + glass.bounds.size.height),
+      float2(glass.content_mask.bounds.origin.x + glass.content_mask.bounds.size.width,
+             glass.content_mask.bounds.origin.y + glass.content_mask.bounds.size.height));
+  // Rasterize the integral enclosure so pixel centres just outside a
+  // fractional edge still run the one-pixel coverage ramp. `glass.bounds`
+  // remains unchanged for the optical field below.
+  float2 raster_origin = floor(clipped_origin);
+  float2 raster_size = ceil(clipped_end) - raster_origin;
+  Bounds_ScaledPixels raster_bounds = {
+      {raster_origin.x, raster_origin.y}, {raster_size.x, raster_size.y}};
   return BackdropGlassVertexOutput{
-      device_position,
-      glass_id,
-      {clip_distance.x, clip_distance.y, clip_distance.z, clip_distance.w}};
+      to_device_position(unit_vertex, raster_bounds, viewport_size), glass_id};
 }
 
 // Single-interface refraction to an effective optical plane, not volume tracing.
@@ -1626,12 +1634,27 @@ float4 backdrop_glass_color(
   float smoothing = glass.material.smoothing;
   float2 point = input.position.xy;
 
+  float2 mask_end = float2(
+      glass.content_mask.bounds.origin.x + glass.content_mask.bounds.size.width,
+      glass.content_mask.bounds.origin.y + glass.content_mask.bounds.size.height);
+  if (point.x < glass.content_mask.bounds.origin.x ||
+      point.y < glass.content_mask.bounds.origin.y || point.x >= mask_end.x ||
+      point.y >= mask_end.y) {
+    discard_fragment();
+  }
+
   float3 field = glass_field(point, glass, lobes, single, lobe_count, smoothing);
   float distance = field.z;
+  // Smooth unions are implicit fields rather than exact signed distances.
+  // Divide by the analytic derivative magnitude so their silhouette still
+  // crosses one device pixel; a cancelling interior gradient remains covered.
+  float shape_coverage = saturate(
+      0.5 - distance / max(length(field.xy), 1e-4));
 
-  // Blending is disabled on this pipeline (the surface REPLACES the region),
-  // so fragments outside the shape must discard, not return 0.
-  if (distance > 0.) {
+  // Blending is disabled on this pipeline (the surface REPLACES the region).
+  // Pixels beyond the one-device-pixel SDF ramp can be skipped; partial pixels
+  // are restored from the sharp snapshot below.
+  if (shape_coverage <= 0.) {
     discard_fragment();
   }
 
@@ -1662,11 +1685,10 @@ float4 backdrop_glass_color(
       glass.material.saturation == 1. && glass.material.wash.a <= 0. &&
       glass.material.hairline <= 0.) {
     float4 frosted = source_texture.sample(source_sampler, uv);
-    if (edge_mask >= 1.) {
-      return frosted;
-    }
-    float4 original = sharp_texture.sample(source_sampler, uv);
-    return mix(original, frosted, edge_mask);
+    float4 original = sharp_texture.read(uint2(point));
+    float4 edge_masked = edge_mask >= 1. ? frosted : mix(original, frosted, edge_mask);
+    return shape_coverage >= 1. ? edge_masked
+                                : mix(original, edge_masked, shape_coverage);
   }
 
   // Keep the smooth-union derivative magnitude for the height derivative.
@@ -1724,12 +1746,13 @@ float4 backdrop_glass_color(
     color.rgb += hair * (1. - 0.18 * facing_up) * 0.18;
   }
 
+  float4 original = sharp_texture.read(uint2(point));
+  float4 optical = float4(saturate(color.rgb), color.a);
   if (edge_mask < 1.) {
-    float4 original = sharp_texture.sample(source_sampler, uv);
-    color = mix(original, color, edge_mask);
+    optical = mix(original, optical, edge_mask);
   }
-
-  return float4(saturate(color.rgb), color.a);
+  return shape_coverage >= 1. ? optical
+                              : mix(original, optical, shape_coverage);
 }
 
 fragment float4 quad_fragment(QuadFragmentInput input [[stage_in]], constant Quad *quads [[buffer(QuadInputIndex_Quads)]], constant ClipNode *clips [[buffer(15)]]) {
@@ -1765,5 +1788,7 @@ fragment float4 backdrop_glass_fragment(BackdropGlassFragmentInput input [[stage
   float4 optical = backdrop_glass_color(input, surfaces, viewport, source, sharp);
   uint id = surfaces[input.glass_id].clip_id.index;
   if (id == 0) return optical;
+  // Edge masking and shape coverage have already restored from this exact
+  // snapshot. Apply inherited rounded clips last against the same pixels.
   return mix(sharp.read(uint2(input.position.xy)), optical, rounded_clip_coverage(input.position.xy, id, clips));
 }

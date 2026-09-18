@@ -581,7 +581,10 @@ pub(super) fn frost(_window: &mut Window, cx: &mut App) -> AnyElement {
     // judge is whether text they can otherwise read has gone out of focus.
     stack(&theme)
         .w(px(480.0))
-        .child(caption(&theme, "A floating surface on glass"))
+        .child(caption(
+            &theme,
+            "Frosted: 24 px scattering and a surface-colour fill",
+        ))
         .child(
             div()
                 .relative()
@@ -613,7 +616,7 @@ pub(super) fn frost(_window: &mut Window, cx: &mut App) -> AnyElement {
         )
         .child(caption(
             &theme,
-            "The same glass, blurred further and raised above the panel",
+            "Frosted override: 32 px scattering and a raised surface colour",
         ))
         .child(
             div()
@@ -766,9 +769,9 @@ pub(super) fn glass(_window: &mut Window, cx: &mut App) -> AnyElement {
     };
 
     // A ruled checkerboard makes the material contract visible: Regular's
-    // rim refracts the scattered source, bending colour and luminance bands
-    // without restoring recognizable fine lines. Clear stays sharp because
-    // its blur is zero. The board is neutral, and every plate is an exact
+    // rim refracts the lightly scattered source, bending colour and luminance
+    // bands while preserving more structure than Frosted. Clear stays sharp
+    // because its blur is zero. The board is neutral, and every plate is an exact
     // number of squares across and down: a board cut through the middle of a
     // square at the plate edge reads as a broken pattern rather than as the
     // ruled backdrop the optics are being measured against.
@@ -859,7 +862,7 @@ pub(super) fn glass(_window: &mut Window, cx: &mut App) -> AnyElement {
                             Glass::new(ident)
                                 .preset(preset)
                                 .dimmed(preset == GlassPreset::Clear)
-                                .adaptive(true)
+                                .adaptive_appearance(true)
                                 .radius(Radius::Dialog)
                                 .child(label(title, body)),
                         ),
@@ -892,7 +895,7 @@ pub(super) fn glass(_window: &mut Window, cx: &mut App) -> AnyElement {
         )
         .child(caption(
             &theme,
-            "Regular over text and media: blur, achromatic wash, lensing and hairline",
+            "Regular Liquid: 8 px scattering, achromatic wash, lensing and hairline",
         ))
         .child(
             row(&theme)
@@ -944,7 +947,7 @@ pub(super) fn glass(_window: &mut Window, cx: &mut App) -> AnyElement {
                                 .preset(GlassPreset::Liquid)
                                 .surface(Surface::Raised)
                                 .radius(Radius::Pill)
-                                .adaptive(true)
+                                .adaptive_appearance(true)
                                 .child(
                                     div()
                                         .w(px(110.0))
@@ -959,7 +962,7 @@ pub(super) fn glass(_window: &mut Window, cx: &mut App) -> AnyElement {
                             Glass::new("scene.glass.regular.two")
                                 .preset(GlassPreset::Liquid)
                                 .radius(Radius::Pill)
-                                .adaptive(true)
+                                .adaptive_appearance(true)
                                 .child(
                                     div()
                                         .w(px(110.0))
@@ -1055,7 +1058,6 @@ pub(super) fn glass(_window: &mut Window, cx: &mut App) -> AnyElement {
                                             Glass::new("scene.glass.adaptive.bright")
                                                 .preset(GlassPreset::Liquid)
                                                 .radius(Radius::Dialog)
-                                                .adaptive(true)
                                                 .adaptive_appearance(true)
                                                 .child(label(
                                                     "Bright",
@@ -1073,7 +1075,7 @@ pub(super) fn glass(_window: &mut Window, cx: &mut App) -> AnyElement {
                                             Glass::new("scene.glass.adaptive.dark")
                                                 .preset(GlassPreset::Liquid)
                                                 .radius(Radius::Dialog)
-                                                .adaptive(true)
+                                                .adaptive_appearance(true)
                                                 .child(label("Dark", "The same glass, other side")),
                                         ),
                                 ),

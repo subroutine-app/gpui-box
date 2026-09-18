@@ -19,7 +19,9 @@ use std::sync::{Arc, Mutex};
 const MAX_INSTANCE_BUFFER_SIZE: u64 = 256 * 1024 * 1024;
 // Backdrop glass precomputes one 65-pixel Gaussian weight LUT, preserves one
 // sharp snapshot, then uses two clipped render passes per variance-splitting
-// iteration and one composite pass. How many iterations one radius needs is
+// iteration and one replacement composite pass. Edge masks, the one-pixel
+// shape ramp, and ancestor clips all restore from that same snapshot. How many
+// iterations one radius needs is
 // `BackdropGlass::gaussian_pass_count`,
 // which this renderer shares with DirectX. Only those Gaussian passes are
 // bounded: the sharp snapshot and composite are the material's correctness
@@ -324,8 +326,9 @@ struct CachedBackdropBindGroup {
 struct BackdropTextures {
     _scene: wgpu::Texture,
     scene_view: wgpu::TextureView,
-    /// The exact framebuffer at one surface's paint order. Liquid samples this
-    /// directly; frosted liquid keeps it for its sharp refracted rim.
+    /// The exact framebuffer at one surface's paint order. Clear and Lens use
+    /// it as their optical source; scattered materials retain it so shape,
+    /// edge-mask, and ancestor-clip coverage can restore exact backdrop pixels.
     sharp: wgpu::Texture,
     sharp_view: wgpu::TextureView,
     _horizontal: wgpu::Texture,
@@ -2812,6 +2815,9 @@ impl WgpuRenderer {
             source = vertical;
             source_role = BackdropTextureRole::Vertical;
         }
+        // The integral scissor encloses fractional shape edges; the shader
+        // computes optical distance from the original floating-point bounds and
+        // restores partial coverage from `sharp` under replacement compositing.
         self.draw_backdrop_pass(
             encoder,
             params_buffers,
@@ -4928,6 +4934,97 @@ mod tests {
         });
         scene.finish();
         scene
+    }
+
+    #[test]
+    fn fractional_rounded_glass_edges_restore_the_sharp_snapshot() {
+        use gpui::{PlatformHeadlessRenderer, Rgba, point, size};
+        let _gpu = crate::serialised_gpu_test();
+        let mut renderer = match WgpuHeadlessRenderer::new() {
+            Ok(renderer) => renderer,
+            Err(error) => {
+                eprintln!("skipping: {error}");
+                return;
+            }
+        };
+        let mut scene = probed_scene(gpui::Hsla::black(), gpui::NO_LUMINANCE_PROBE);
+        let glass = &mut scene.backdrop_glass[0];
+        glass.bounds = Bounds::new(
+            point(ScaledPixels(64.75), ScaledPixels(64.75)),
+            size(ScaledPixels(64.), ScaledPixels(64.)),
+        );
+        glass.corner_radii = Corners::all(ScaledPixels(12.));
+        glass.material = GlassMaterial {
+            wash: Rgba {
+                r: 1.,
+                g: 1.,
+                b: 1.,
+                a: 1.,
+            },
+            ..GlassMaterial::clear()
+        };
+
+        let image = renderer
+            .render_scene_to_image(&scene, size(DevicePixels(256), DevicePixels(256)))
+            .expect("fractional glass renders");
+        assert_eq!(image.get_pixel(63, 96).0, [0, 0, 0, 255]);
+        assert!(
+            (i16::from(image.get_pixel(64, 96)[0]) - 64).abs() <= 2,
+            "the fractional straight edge has quarter coverage"
+        );
+        assert_eq!(image.get_pixel(65, 96).0, [255, 255, 255, 255]);
+        assert_eq!(
+            image.get_pixel(66, 66).0,
+            [0, 0, 0, 255],
+            "the pixel outside the rounded corner is restored exactly"
+        );
+        let rounded = image.get_pixel(68, 68)[0];
+        assert!(
+            (190..=235).contains(&rounded),
+            "the adjacent rounded pixel is antialiased, got {rounded}"
+        );
+
+        let template = probed_scene(gpui::Hsla::black(), gpui::NO_LUMINANCE_PROBE);
+        let mut composed = Scene::default();
+        composed.insert_primitive(template.quads[0]);
+        let mut glass = template.backdrop_glass[0];
+        glass.bounds = Bounds::new(
+            point(ScaledPixels(64.75), ScaledPixels(64.)),
+            size(ScaledPixels(64.), ScaledPixels(64.)),
+        );
+        glass.corner_radii = Corners::default();
+        glass.material = GlassMaterial {
+            wash: Rgba {
+                r: 1.,
+                g: 1.,
+                b: 1.,
+                a: 1.,
+            },
+            edge_mask_edge: gpui::GlassEdge::Left.as_f32(),
+            edge_mask_band: ScaledPixels(4.),
+            ..GlassMaterial::clear()
+        };
+        let mut chain = gpui::ClipChain::default();
+        chain.push(gpui::RoundedClip::new(
+            Bounds::new(
+                point(gpui::px(66.75), gpui::px(64.)),
+                size(gpui::px(62.), gpui::px(64.)),
+            ),
+            Corners::default(),
+        ));
+        composed.with_clip_chain(&chain, 1., |scene| scene.insert_backdrop_glass(glass));
+        composed.finish();
+        let image = renderer
+            .render_scene_to_image(&composed, size(DevicePixels(256), DevicePixels(256)))
+            .expect("masked glass renders");
+        assert!(
+            (i16::from(image.get_pixel(66, 96)[0]) - 36).abs() <= 2,
+            "edge mask must precede quarter-covered ancestor restoration"
+        );
+        assert!(
+            (i16::from(image.get_pixel(67, 96)[0]) - 80).abs() <= 2,
+            "fully covered ancestor retains the edge-mask result"
+        );
     }
 
     #[cfg(any(target_os = "linux", target_os = "windows"))]

@@ -137,6 +137,21 @@ fn apply_edge_mask(color: vec4<f32>, point: vec2<f32>) -> vec4<f32> {
     return mix(original, color, mask);
 }
 
+// One device-pixel SDF ramp. The pass uses replacement compositing, so partial
+// shape coverage restores the exact sharp draw-order snapshot rather than
+// emitting transparent color or relying on target blending.
+fn apply_shape_coverage(color: vec4<f32>, point: vec2<f32>, field: vec3<f32>) -> vec4<f32> {
+    // Smooth unions are implicit fields rather than exact signed distances.
+    // Normalize by the analytic derivative magnitude so the transition remains
+    // one device pixel around fused bridges as well as individual lobes.
+    let coverage = clamp(0.5 - field.z / max(length(field.xy), 1e-4), 0.0, 1.0);
+    if (coverage >= 1.0) {
+        return color;
+    }
+    let original = textureLoad(sharp_source, vec2<i32>(point), 0);
+    return mix(original, color, coverage);
+}
+
 // Analytic field of the shape. Smooth-min derivatives use h/2, with no
 // intermediate normalization. Mirrors `glass_field` in scene.rs.
 fn glass_field(point: vec2<f32>) -> vec3<f32> {
@@ -175,7 +190,7 @@ fn composite_color(input: Varying) -> vec4<f32> {
     let field = glass_field(point);
     let distance = field.z;
     if (point.x < params.mask.x || point.y < params.mask.y || point.x >= mask_end.x ||
-        point.y >= mask_end.y || distance > 0.0) {
+        point.y >= mask_end.y || distance >= 0.5) {
         discard;
     }
 
@@ -186,7 +201,11 @@ fn composite_color(input: Varying) -> vec4<f32> {
         params.transmission_gain == 1.0 && params.optical_lift.a <= 0.0 &&
         params.saturation == 1.0 && params.wash.a <= 0.0 &&
         params.hairline <= 0.0) {
-        return apply_edge_mask(textureLoad(source, vec2<i32>(point), 0), point);
+        return apply_shape_coverage(
+            apply_edge_mask(textureLoad(source, vec2<i32>(point), 0), point),
+            point,
+            field,
+        );
     }
 
     // Keep the smooth-union derivative magnitude for the height derivative.
@@ -249,9 +268,13 @@ fn composite_color(input: Varying) -> vec4<f32> {
         color = vec4<f32>(color.rgb + hair * (1.0 - 0.18 * facing_up) * 0.18, color.a);
     }
 
-    return apply_edge_mask(
-        vec4<f32>(clamp(color.rgb, vec3<f32>(0.0), vec3<f32>(1.0)), color.a),
+    return apply_shape_coverage(
+        apply_edge_mask(
+            vec4<f32>(clamp(color.rgb, vec3<f32>(0.0), vec3<f32>(1.0)), color.a),
+            point,
+        ),
         point,
+        field,
     );
 }
 
@@ -264,8 +287,9 @@ fn fs_copy(input: Varying) -> @location(0) vec4<f32> {
 fn fs_composite(input: Varying) -> @location(0) vec4<f32> {
     let optical = composite_color(input);
     if (params.clip_id == 0u) { return optical; }
-    // The compositor replaces its destination. Mix against the original sharp
-    // snapshot, never a clipped/blurred source or a newly captured subtree.
+    // Shape coverage has already restored from the sharp snapshot after the
+    // edge mask. Apply the ancestor chain last, restoring from that same exact
+    // snapshot rather than a clipped/blurred source or newly captured subtree.
     let original = textureLoad(sharp_source, vec2<i32>(input.position.xy), 0);
     return mix(original, optical, rounded_clip_coverage(input.position.xy, params.clip_id));
 }

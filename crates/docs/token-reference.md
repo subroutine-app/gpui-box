@@ -492,6 +492,7 @@ Row stagger maximum items: `8`.
 | `effect.glowBlur` | 12 |
 | `effect.glowSpread` | -5 |
 | `effect.glassAlpha` | 0.72 |
+| `effect.glassLiquidBlur` | 8 |
 | `effect.glassFrostBlur` | 24 |
 | `effect.glassSaturation` | 1.5 |
 | `effect.glassWash` | 0.45 |
@@ -1309,6 +1310,7 @@ Row stagger maximum items: `8`.
 | `effect.glowBlur` | 12 |
 | `effect.glowSpread` | -5 |
 | `effect.glassAlpha` | 0.78 |
+| `effect.glassLiquidBlur` | 8 |
 | `effect.glassFrostBlur` | 24 |
 | `effect.glassSaturation` | 1.5 |
 | `effect.glassWash` | 0.55 |
@@ -2126,6 +2128,7 @@ Row stagger maximum items: `8`.
 | `effect.glowBlur` | 12 |
 | `effect.glowSpread` | -5 |
 | `effect.glassAlpha` | 0.72 |
+| `effect.glassLiquidBlur` | 8 |
 | `effect.glassFrostBlur` | 24 |
 | `effect.glassSaturation` | 1.5 |
 | `effect.glassWash` | 0.45 |
@@ -2943,6 +2946,7 @@ Row stagger maximum items: `8`.
 | `effect.glowBlur` | 12 |
 | `effect.glowSpread` | -5 |
 | `effect.glassAlpha` | 0.78 |
+| `effect.glassLiquidBlur` | 8 |
 | `effect.glassFrostBlur` | 24 |
 | `effect.glassSaturation` | 1.5 |
 | `effect.glassWash` | 0.55 |
@@ -3760,6 +3764,7 @@ Row stagger maximum items: `8`.
 | `effect.glowBlur` | 12 |
 | `effect.glowSpread` | -5 |
 | `effect.glassAlpha` | 0.72 |
+| `effect.glassLiquidBlur` | 8 |
 | `effect.glassFrostBlur` | 24 |
 | `effect.glassSaturation` | 1.5 |
 | `effect.glassWash` | 0.45 |
@@ -4577,6 +4582,7 @@ Row stagger maximum items: `8`.
 | `effect.glowBlur` | 12 |
 | `effect.glowSpread` | -5 |
 | `effect.glassAlpha` | 0.72 |
+| `effect.glassLiquidBlur` | 8 |
 | `effect.glassFrostBlur` | 24 |
 | `effect.glassSaturation` | 1.5 |
 | `effect.glassWash` | 0.45 |
@@ -5394,6 +5400,7 @@ Row stagger maximum items: `8`.
 | `effect.glowBlur` | 12 |
 | `effect.glowSpread` | -5 |
 | `effect.glassAlpha` | 0.72 |
+| `effect.glassLiquidBlur` | 8 |
 | `effect.glassFrostBlur` | 24 |
 | `effect.glassSaturation` | 1.5 |
 | `effect.glassWash` | 0.45 |
@@ -6211,6 +6218,7 @@ Row stagger maximum items: `8`.
 | `effect.glowBlur` | 12 |
 | `effect.glowSpread` | -5 |
 | `effect.glassAlpha` | 0.72 |
+| `effect.glassLiquidBlur` | 8 |
 | `effect.glassFrostBlur` | 24 |
 | `effect.glassSaturation` | 1.5 |
 | `effect.glassWash` | 0.45 |
@@ -7028,6 +7036,7 @@ Row stagger maximum items: `8`.
 | `effect.glowBlur` | 12 |
 | `effect.glowSpread` | -5 |
 | `effect.glassAlpha` | 0.72 |
+| `effect.glassLiquidBlur` | 8 |
 | `effect.glassFrostBlur` | 24 |
 | `effect.glassSaturation` | 1.5 |
 | `effect.glassWash` | 0.45 |
@@ -7845,6 +7854,7 @@ Row stagger maximum items: `8`.
 | `effect.glowBlur` | 12 |
 | `effect.glowSpread` | -5 |
 | `effect.glassAlpha` | 0.78 |
+| `effect.glassLiquidBlur` | 8 |
 | `effect.glassFrostBlur` | 24 |
 | `effect.glassSaturation` | 1.5 |
 | `effect.glassWash` | 0.55 |

@@ -547,8 +547,11 @@ platform reporting a focus modality of its own.
 Backdrop glass is one material contract across Metal, Direct3D, and WGPU.
 `GlassMaterial::blur_radius` controls scattering only: zero performs no
 gaussian passes but still snapshots and composites clear refraction. A positive
-radius derives a blurred source for both the interior and refracted rim; the
-sharp paint-order snapshot is retained only for explicit edge-mask restoration.
+radius derives a blurred source for both the interior and refracted rim. The
+sharp paint-order snapshot is retained for explicit edge-mask restoration,
+one-device-pixel material-shape coverage, and inherited rounded clips. Each
+replacement composite therefore preserves exact backdrop pixels outside its
+analytic shape instead of leaving a hard binary or transparent fringe.
 `GlassMaterial::clear()` replaces the historical
 zero-argument `frosted()` constructor; `GlassMaterial::frosted(radius)` names an
 actual frost. The material also carries saturation, a straight-alpha colour wash,
@@ -607,6 +610,19 @@ screen-space optics: `backdrop_depth` is distance in the refracted medium,
 geometry, real external environment reflection, multiple internal reflection,
 or caustic transport. Blur remains a spatially uniform scattering model.
 It is not Apple's private Liquid Glass renderer.
+
+Kit gives Regular Liquid and Frosted independent scattering roles: bundled
+Regular uses `effect.glassLiquidBlur = 8`, while Frosted uses
+`effect.glassFrostBlur = 24`; Clear and Lens remain sharp by default. This is
+an authored cross-platform policy, not a claim about Apple's private constants.
+The lower Regular radius preserves enough spatial structure for refraction to
+read distinctly, while Frost remains the stronger portable/accessibility
+fallback.
+
+`GlassGroup::merge` exposes the renderer's polynomial smooth-min strength; it
+widens and softens bridges but is not an exact maximum gap threshold. `gap`
+remains the current row-layout spacing; arbitrary descendant layout is not
+claimed.
 
 The `glass-optics` exhibit isolates index, thickness, plane distance, dispersion,
 Fresnel and scattering over a ruled fixture and includes a fused height field.

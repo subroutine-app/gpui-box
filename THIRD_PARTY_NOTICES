@@ -159,6 +159,22 @@ The AVFoundation and Media Foundation playback services are GPUI Box work and
 use operating-system frameworks; they import no additional third-party source
 or media assets.
 
+Liquid glass design references
+--------------------------------------------------------------------------------
+Sources: https://github.com/ybouane/liquidglass
+         revision 00aafe50202e916951d6f30d49afa1197ca236a7
+         https://github.com/callstack/liquid-glass
+         revision b7fd5abbabcd1dc5233d35c97c3f51bcb407d015
+Licenses: MIT
+Authors: @ybouane; Copyright (c) 2025 Oskar Kwaśniewski
+Scope: design and public-behavior references for separating Regular, Clear and
+Frosted materials, optional scattering, antialiased SDF silhouettes, tint,
+interaction, and optical grouping. GPUI Box does not include their TypeScript,
+GLSL, React Native, Objective-C++, or Swift source and does not reproduce
+UIKit's private renderer. Its one-device-pixel coverage convention, analytic
+height field, Snell/Fresnel shaders, and 8 px Regular scattering policy are
+implemented independently in the existing local framework.
+
 GPUI CE transition coordinate rebasing
 --------------------------------------------------------------------------------
 Source: https://github.com/brendon-felix/gpui-ce

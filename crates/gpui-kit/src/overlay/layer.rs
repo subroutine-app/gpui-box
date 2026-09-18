@@ -16,12 +16,12 @@ use crate::foundation::{ActiveTheme, Ident, StyledExt};
 
 type DismissHandler = Rc<dyn Fn(&mut Window, &mut App)>;
 
-/// The complete token recipe for an overlay entity.
+/// The complete material recipe for an overlay entity.
 ///
-/// Placement and elevation are not enough to infer shape: a dialog and a
-/// drawer are both modal, but the dialog is detached while the drawer is a
-/// window plane pinned to an edge. These recipes keep radius and elevation
-/// together without copying either value into each component.
+/// Each recipe keeps its corner radius, elevation, glass preset, and Clear
+/// dimming policy together. Placement and elevation alone cannot infer those
+/// choices: a dialog and a drawer are both modal, but the dialog is detached
+/// while the drawer is a window plane pinned to an edge.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OverlaySurface {
     radius: Option<Radius>,
@@ -409,7 +409,12 @@ impl RenderOnce for Overlay {
     }
 }
 
-/// An overlay entity built from one complete Regular Liquid recipe.
+/// An overlay entity built from one complete [`OverlaySurface`] recipe.
+///
+/// The recipe installs its corner radius, elevation, glass preset, and Clear
+/// dimming policy together. The standard floating, modal, and edge recipes use
+/// Regular Liquid; [`OverlaySurface::MEDIA_CAPTION`] uses dimmed Clear, including
+/// Clear's light on-media content and reduced-transparency Frosted fallback.
 /// All style and interaction builders target the content div; material is
 /// installed exactly once after those builders finish.
 pub fn surface(
@@ -530,7 +535,7 @@ impl gpui::Element for GlassSurface {
                     .map_or(0.0, |radius| self.theme.radius(radius)),
             )
             .elevation(self.recipe.elevation)
-            .adaptive(true)
+            .adaptive_appearance(true)
             .frame(
                 std::mem::replace(&mut self.inner, div().id(self.ident.element_id())),
                 std::mem::take(&mut self.children),
@@ -745,12 +750,41 @@ mod tests {
 
     #[test]
     fn each_overlay_entity_takes_one_complete_token_recipe() {
-        assert_eq!(OverlaySurface::FLOATING.radius, Some(Radius::Card));
-        assert_eq!(OverlaySurface::FLOATING.elevation, Elevation::Overlay);
-        assert_eq!(OverlaySurface::MODAL.radius, Some(Radius::Dialog));
-        assert_eq!(OverlaySurface::MODAL.elevation, Elevation::Modal);
-        assert_eq!(OverlaySurface::EDGE.radius, None);
-        assert_eq!(OverlaySurface::EDGE.elevation, Elevation::Modal);
+        for (recipe, radius, elevation, preset, dimmed) in [
+            (
+                OverlaySurface::FLOATING,
+                Some(Radius::Card),
+                Elevation::Overlay,
+                crate::overlay::GlassPreset::Liquid,
+                false,
+            ),
+            (
+                OverlaySurface::MODAL,
+                Some(Radius::Dialog),
+                Elevation::Modal,
+                crate::overlay::GlassPreset::Liquid,
+                false,
+            ),
+            (
+                OverlaySurface::EDGE,
+                None,
+                Elevation::Modal,
+                crate::overlay::GlassPreset::Liquid,
+                false,
+            ),
+            (
+                OverlaySurface::MEDIA_CAPTION,
+                Some(Radius::Card),
+                Elevation::Flat,
+                crate::overlay::GlassPreset::Clear,
+                true,
+            ),
+        ] {
+            assert_eq!(recipe.radius, radius);
+            assert_eq!(recipe.elevation, elevation);
+            assert_eq!(recipe.preset, preset);
+            assert_eq!(recipe.dimmed, dimmed);
+        }
         assert_eq!(
             OverlaySurface::from(Elevation::Modal),
             OverlaySurface::MODAL

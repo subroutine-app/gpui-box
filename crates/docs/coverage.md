@@ -10,10 +10,14 @@ exists so a gap is a recorded decision rather than an oversight.
 
 Glass optics use a shared height field, Snell refraction, spectral indices and
 Fresnel reflection in all three shader backends. `glass-optics` isolates these
-parameters over a ruled fixture, including fused panes. The implementation is
+parameters over a ruled fixture, including fused panes. Regular Liquid uses a
+lighter Gaussian than Frost so refraction remains legible; Clear and Lens stay
+sharp by default. Material silhouettes use the same one-device-pixel SDF
+coverage convention on Metal, Direct3D and WGPU, restoring partial pixels from
+the exact sharp snapshot under replacement compositing. The implementation is
 single-interface screen-space optics, not full volume transport: no second
 interface, internal bounces, caustics, hidden-background recovery or real
-environment reflection is claimed. Scattering remains a uniform Gaussian;
+environment reflection is claimed. Scattering remains spatially uniform;
 background-busyness probes and fused-outline shadows remain deferred. See
 `crates/docs/compatibility.md` for the material contract and platform evidence boundary.
 
@@ -595,7 +599,7 @@ that rubric, not that every possible interaction was exercised.
 | `find-replace` | High: dark explanatory copy disappears, controls are over-wide, and count/arrows are crowded. |
 | `form` | Medium: the Region popup covers field help; dark unselected text is still faint. Errors now clear the field. |
 | `frost` | High: dark frost lacks enough edge/surface evidence; light needs bottom clearance and consistent stripes. The edge evidence a frosted surface is missing is what `glass` carries; `Frost` stays frosted deliberately, being the material every renderer can produce. |
-| `glass` | Regular Liquid separates reading surfaces with material-owned blur, saturation, achromatic wash, lensing and hairline. Rim refraction samples the scattered source; Clear stays sharp and media-only, with light content and optional 35% dimming. Reduced transparency resolves presets and overlays to Frosted. Small non-Clear surfaces may flip appearance through hysteresis; large and unmeasured surfaces keep the window appearance. Ring shadows use the five optical-source samples' mean and variance, retaining the last completed statistics; this is a sampled separation cue, not exhaustive backdrop analysis. Foreground press scale uses paired framework transforms without reflow and is suppressed under reduced motion. Caller content is rounded-clipped; window overlays explicitly escape ancestor masks. Fused-outline shadows still need a generic SDF shadow primitive. Over-budget surfaces/groups use opaque fallbacks. The exhibit covers text/media backdrops, compact controls, non-flipping surfaces and admission/lobe budgets. `scroll-edge-effect` owns the transcript-ramp exhibit. Native renderer evidence is recorded in `compatibility.toml`; no Apple optical/dynamic equivalence is claimed. |
+| `glass` | Regular Liquid separates reading surfaces with its 8 px material-owned blur, saturation, achromatic wash, lensing and hairline; Frost retains the stronger 24 px scattering fallback. Rim refraction samples the scattered source; Clear stays sharp and media-only, with light content and optional 35% dimming. The material's own fractional and rounded edge uses a one-device-pixel SDF ramp restored from the sharp snapshot, before inherited clip coverage. Reduced transparency resolves presets and overlays to Frosted. Small non-Clear surfaces may flip appearance through hysteresis; large and unmeasured surfaces keep the window appearance. Ring shadows use the five optical-source samples' mean and variance, retaining the last completed statistics; this is a sampled separation cue, not exhaustive backdrop analysis. Foreground press scale uses paired framework transforms without reflow and is suppressed under reduced motion. Caller content is rounded-clipped; window overlays explicitly escape ancestor masks. Fused-outline shadows still need a generic SDF shadow primitive. Over-budget surfaces/groups use opaque fallbacks. The exhibit covers text/media backdrops, compact controls, non-flipping surfaces and admission/lobe budgets. `scroll-edge-effect` owns the transcript-ramp exhibit. Native renderer evidence is recorded in `compatibility.toml`; ybouane/liquidglass and callstack/liquid-glass informed public material distinctions and edge treatment, but no Apple optical/dynamic equivalence is claimed. |
 | `hover-card` | Medium: helper and body copy are too faint, especially in dark. |
 | `ide-shell` | High: dark shell height leaves a large void and Empty/Unavailable claims conflict. |
 | `image-viewer` | High: metadata and disabled controls are too faint; the third viewer breaks the first two viewers' grid/container rhythm. |

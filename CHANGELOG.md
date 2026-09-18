@@ -8,6 +8,22 @@ See `crates/docs/releasing.md` for the protected publication and verification ru
 
 ## [Unreleased]
 
+### Changed
+
+- Regular Liquid now uses its own `effect.glassLiquidBlur` token at 8 px,
+  independently from Frosted's 24 px `effect.glassFrostBlur`. Clear and Lens
+  remain sharp by default, and per-surface `Glass::blur` overrides remain
+  available outside reduced-transparency fallback.
+- Glass and Frost silhouettes now use a one-device-pixel signed-distance
+  coverage ramp in Metal, Direct3D, WGPU, and browser WebGPU/WebGL. Replacement
+  compositing restores partial edge pixels from the exact sharp backdrop,
+  eliminating hard rounded and fractional edges without transparent fringes.
+- `GlassGroup::merge` is now documented as polynomial smooth-union strength,
+  separate from its row-layout `gap`, rather than as an exact gap threshold.
+- Glass, surface-role, overlay-recipe, adaptive-appearance, and canvas-toolbar
+  documentation now distinguishes material, colour, placement, and fallback
+  responsibilities.
+
 ## [0.2.0] - 2026-09-12
 
 This is a GitHub source release for Git-pinned consumers. No 0.2.0 packages
@@ -47,15 +63,13 @@ preserving its playhead and carried velocity. `scale_by`, `scale_by_axes`, and
 `offset_by` cover zoom and origin changes directly; `ScaleAxes` supports
 `Point`, `Size`, and `Bounds` values.
 
-**Compact glass keeps a face.** `Glass::grounded` and `GlassGroup::grounded`
-give Liquid and Lens the theme's `glassAlpha` wash while keeping refraction,
-lift, and the hairline. Large plates stay clear by default so a fill cannot
-mute the optics. `Tabs::capsules` draws each item as its own grounded Liquid
-pill on an opaque Overlay face; the current item's `tint` is blended onto
-that face (`Theme::washed_surface`) rather than painted as a wash the page
-can show through. A graph toolbar sits inside `fit_clearance` so caller
-overlays — a titlebar, a side lens — do not share pixels with Fit. Overflow,
-scrolling, reorder and the keyboard stay what they were.
+**Capsule tabs use one Regular Liquid material.** `Tabs::capsules` draws each
+item as its own blurred Liquid pill. The interim opaque capsule face was
+removed before release: capsules add no opaque surface fill, and the current
+item's `TabItem::tint` is a translucent selected wash inside the same material
+rather than a second glass surface. A graph toolbar sits inside `fit_clearance`
+so caller overlays — a titlebar, a side lens — do not share pixels with Fit.
+Overflow, scrolling, reorder and the keyboard stay what they were.
 
 ### Changed
 

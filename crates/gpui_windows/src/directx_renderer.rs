@@ -158,9 +158,10 @@ struct DirectXRenderPipelines {
     poly_additive_blend: ID3D11BlendState,
     poly_screen_blend: ID3D11BlendState,
     // The two backdrop passes carry no instance buffer: each submits one
-    // viewport strip clipped by a scissor and reads everything it needs from
-    // `b2`, so they are a shader pair and a blend state rather than a
-    // `PipelineState`.
+    // viewport strip clipped to an integral region and reads everything it
+    // needs from `b2`. The composite replaces covered pixels after restoring
+    // shape-AA and clip coverage from the sharp snapshot, so these are a shader
+    // pair and a no-blend state rather than a `PipelineState`.
     backdrop_blur: BackdropPipeline,
     backdrop_glass: BackdropPipeline,
 }
@@ -921,9 +922,9 @@ impl DirectXRenderer {
             }
         }
 
-        // The composite reads the optical source plus the retained sharp
-        // snapshot and writes the surface back into the render target it was
-        // taken from.
+        // The replacement composite reads the optical source plus the retained
+        // sharp snapshot. Its integral scissor includes fractional edge pixels;
+        // shape and ancestor coverage restore those pixels from that snapshot.
         params.direction = [0.0, 0.0];
         update_buffer(device_context, backdrop_params_buffer, &[params])?;
         unsafe {

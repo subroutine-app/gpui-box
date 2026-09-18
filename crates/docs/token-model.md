@@ -384,12 +384,12 @@ not bypassed by a default constructor. Micro bounce, wobble, and pop timings
 also live in `durationMs`; their keyframe shapes remain local component
 topology.
 
-Overlay surfaces use Regular Liquid by default: `effect.glassFrostBlur`,
+Overlay surfaces use Regular Liquid by default. Regular uses
+`effect.glassLiquidBlur`, while Frosted alone uses `effect.glassFrostBlur`;
 `glassSaturation` and shader-owned achromatic `glassWash` separate reading
-content from its backdrop. Rim refraction samples the scattered (blurred)
-source, so the edge bends colour bands and luminance without recognizable
-background details. `Clear` and `Lens` naturally remain sharp at their default
-`blur = 0`; adding blur scatters their rim source too. `effect.glassAlpha` is
+content from its backdrop. Rim refraction samples the lightly scattered source,
+so the edge bends colour bands and luminance while retaining more spatial
+structure than Frosted. `Clear` and `Lens` use zero blur. `effect.glassAlpha` is
 Frosted's source-over fill, never an adaptive Regular fill. Adaptive appearance
 only flips small controls; large reading surfaces retain the host appearance.
 `glassTransmissionGain` multiplies transmitted backdrop light and

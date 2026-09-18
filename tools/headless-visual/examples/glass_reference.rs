@@ -2,15 +2,15 @@
 //! Usage: glass_reference REQUEST.json OUTPUT_DIRECTORY
 //! Requests and parameters are produced/validated by gpui_capture.py. Transition
 //! samples replay a persistent surface resize, not cross-view matched geometry.
-use anyhow::{Result, bail, ensure};
+use anyhow::{bail, ensure, Result};
 use gpui::{
-    AnyWindowHandle, App, Context, FontWeight, HeadlessAppContext, IntoElement, Render, Window,
-    div, hsla, prelude::*, px, rgb, size,
+    div, hsla, prelude::*, px, rgb, size, AnyWindowHandle, App, Context, FontWeight,
+    HeadlessAppContext, IntoElement, Render, Window,
 };
 use gpui_kit::motion::Animator;
 use gpui_kit::prelude::{Glass, GlassGroup, GlassPreset, ThemeOverlay};
-use gpui_kit_theme::{Radius, activate_theme};
-use serde_json::{Value, json};
+use gpui_kit_theme::{activate_theme, Radius};
+use serde_json::{json, Value};
 use std::{
     cell::Cell,
     fs,
@@ -93,7 +93,7 @@ fn regular(child: impl IntoElement, p: &Value) -> gpui::AnyElement {
                 for (key, value) in p.as_object().unwrap() {
                     let v = value.as_f64().unwrap() as f32;
                     match key.as_str() {
-                        "regular_blur" => t.effects.glass_frost_blur = v,
+                        "regular_blur" => t.effects.glass_liquid_blur = v,
                         "regular_saturation" => t.effects.glass_saturation = v,
                         "regular_wash" => t.effects.glass_wash = v,
                         "regular_gain" => t.effects.glass_transmission_gain = v,

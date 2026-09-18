@@ -340,6 +340,7 @@ impl TokenDocument {
         for (path, value) in [
             ("effect.edgeFadeBand", self.effect.edge_fade_band),
             ("effect.glowBlur", self.effect.glow_blur),
+            ("effect.glassLiquidBlur", self.effect.glass_liquid_blur),
             ("effect.glassFrostBlur", self.effect.glass_frost_blur),
             ("effect.glassSaturation", self.effect.glass_saturation),
             ("effect.scrollEdgeBand", self.effect.scroll_edge_band),
@@ -1272,15 +1273,25 @@ pub fn bundled_json() -> [&'static str; 2] {
     [STUDIO_DARK_JSON, STUDIO_LIGHT_JSON]
 }
 
+/// A semantic base-colour step in the interface's depth ladder.
+///
+/// A surface role selects colour only. It does not imply elevation, placement,
+/// glass optics, or a particular component. With Kit's `Glass` component the
+/// role colours Frosted and opaque fallbacks; optical presets otherwise
+/// take their colour from their material wash or caller tint.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Surface {
     /// The substrate behind the page. A card can sit on it; a well cannot.
     Backdrop,
+    /// The plane a window's primary page content stands on.
     Canvas,
     /// Recessed below whatever carries it: the well an editable value sits in.
     Sunken,
+    /// A bounded region of the page, and the usual ground beneath cards.
     Panel,
+    /// A card or control raised one colour step above its containing region.
     Raised,
+    /// A detached floating plane such as a menu, popover, or dialog.
     Overlay,
 }
 
@@ -2652,7 +2663,9 @@ pub struct EffectTokens {
     /// that sets this to 1 declares itself opaque, and a frosted surface then
     /// paints no blur at all rather than blurring pixels nobody can see.
     pub glass_alpha: f32,
-    /// How far Frosted and Regular Liquid scatter what is behind them, in pixels.
+    /// How far Regular Liquid scatters what is behind it, in pixels.
+    pub glass_liquid_blur: f32,
+    /// How far Frosted scatters what is behind it, in pixels.
     pub glass_frost_blur: f32,
     /// Backdrop saturation multiplier before transmission gain. One is unchanged.
     pub glass_saturation: f32,
@@ -2696,8 +2709,8 @@ pub struct EffectTokens {
     /// Where the light that makes the highlight is, in radians clockwise from
     /// straight up. A surface that tracks the pointer starts here.
     pub glass_light_angle: f32,
-    /// How close two glass surfaces in a group must be to join into one body,
-    /// in pixels.
+    /// Polynomial smooth-union strength for glass groups, in pixels. Larger
+    /// values widen and soften bridges; this is not an exact gap threshold.
     pub glass_merge_distance: f32,
     /// Backdrop luminance below which a glass surface carries light content,
     /// and above which it carries dark. The two are apart rather than equal on
@@ -3274,6 +3287,17 @@ decelerates on the way out, which reads as reluctance"
         value["typography"]["readoutScale"] = serde_json::json!(0.9);
         let error = TokenDocument::parse(&value.to_string()).expect_err("shrinking readout");
         assert!(error.to_string().contains("typography.readoutScale"));
+    }
+
+    #[test]
+    fn glass_blurs_must_not_be_negative() {
+        for name in ["glassLiquidBlur", "glassFrostBlur"] {
+            let mut value: serde_json::Value =
+                serde_json::from_str(studio_dark_json()).expect("bundled JSON");
+            value["effect"][name] = serde_json::json!(-1);
+            let error = TokenDocument::parse(&value.to_string()).expect_err("negative blur");
+            assert!(error.to_string().contains(&format!("effect.{name}")));
+        }
     }
 
     #[test]

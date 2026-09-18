@@ -1,10 +1,12 @@
 //! A surface that shows what is behind it, out of focus and bent.
 //!
 //! [`Glass`] is the material a popover, a dialog or a rail is placed on when
-//! the window itself is translucent. Regular Liquid refracts the scattered
-//! (blurred) source at its rim: colour bands and luminance bend there, not
-//! recognizable background details. Clear and Lens stay sharp because their
-//! default blur is zero; Frosted scatters without bending the backdrop.
+//! the window itself is translucent. Regular Liquid lightly scatters the
+//! backdrop before refracting it, retaining enough structure for the optical
+//! displacement to remain visible without leaving background text sharp.
+//! Clear and Lens stay sharp because their default blur is zero; Frosted uses
+//! the stronger accessibility-oriented scattering radius without bending the
+//! backdrop.
 //!
 //! # One layer, in one order
 //!
@@ -41,11 +43,12 @@ use crate::foundation::{Ident, ThemeOverlay};
 use crate::layout::measure;
 use crate::motion::{self, MotionPolicy, MotionRole, keyed};
 
-/// Which appearance a glass surface is currently painting.
+/// Appearance vocabulary retained for source compatibility.
 ///
-/// `Inherited` is the window theme. `Light` and `Dark` are the counterpart
-/// the surface resolved from its backdrop luminance when
-/// [`Glass::adaptive_appearance`] is on.
+/// `Glass` currently resolves appearance internally from the inherited theme
+/// and [`Glass::adaptive_appearance`]; it does not expose the transient result
+/// as caller-owned state. This enum is therefore descriptive, not a builder or
+/// query API.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum GlassAppearance {
     /// The window theme is in force.
@@ -64,11 +67,13 @@ pub enum GlassAppearance {
 /// rail on another.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum GlassPreset {
-    /// Blurred and tinted, and nothing else. This is what [`super::Frost`]
-    /// paints, and what every renderer that can blur at all can produce.
+    /// Strongly blurred and tinted, and nothing else. This uses
+    /// `effect.glassFrostBlur`; it is what [`super::Frost`] paints and what
+    /// every renderer that can blur at all can produce.
     Frosted,
-    /// Regular Liquid Glass: blurred, saturation-adjusted backdrop with an
-    /// achromatic wash, edge lensing and a highlighted rim.
+    /// Regular Liquid Glass: lightly blurred with `effect.glassLiquidBlur`,
+    /// saturation-adjusted backdrop with an achromatic wash, edge lensing and
+    /// a highlighted rim.
     #[default]
     Liquid,
     /// Apple Clear variant, only above media, always with light content.
@@ -138,7 +143,7 @@ impl GlassPreset {
         match self.resolved(theme) {
             GlassPreset::Frosted => GlassMaterial::frosted(px(effects.glass_frost_blur)),
             GlassPreset::Liquid => GlassMaterial {
-                blur_radius: px(effects.glass_frost_blur),
+                blur_radius: px(effects.glass_liquid_blur),
                 saturation: effects.glass_saturation,
                 wash: Rgba {
                     r: wash_channel,
@@ -338,7 +343,15 @@ impl Glass {
         }
     }
 
-    /// Which surface colour Frosted lays over the backdrop.
+    /// Select the semantic base colour for this material.
+    ///
+    /// Frosted lays this colour over its blurred source. Liquid, Clear and Lens
+    /// have no ordinary source-over fill, so the role is visible only in their
+    /// opaque renderer-budget fallback or after reduced transparency resolves
+    /// them to Frosted. [`Self::tint`] replaces this colour for Frosted and the
+    /// fallback while composing into optical presets' material wash.
+    ///
+    /// This does not select a [`GlassPreset`], elevation, or overlay placement.
     pub fn surface(mut self, surface: Surface) -> Self {
         self.surface = surface;
         self
@@ -382,7 +395,8 @@ impl Glass {
     }
 
     /// How far the backdrop is blurred, in pixels, overriding the preset.
-    /// Clear and Lens default to zero; Regular Liquid includes scattering.
+    /// Regular Liquid defaults to `effect.glassLiquidBlur`, Frosted to
+    /// `effect.glassFrostBlur`, and Clear/Lens to zero.
     pub fn blur(mut self, blur: f32) -> Self {
         self.blur = Some(blur.max(0.0));
         self
@@ -464,19 +478,23 @@ impl Glass {
         self
     }
 
-    /// Let small controls flip their material and content appearance from
-    /// backdrop probes. Large surfaces never flip. Before a probe resolves,
-    /// the window theme supplies the direction; no extra fill is painted.
+    /// Compatibility alias for [`Self::adaptive_appearance`].
+    ///
+    /// Both builders currently enable the same small-surface probe, hysteresis,
+    /// material switch, and counterpart theme for descendants. Large surfaces
+    /// never flip; before a probe resolves, the inherited theme supplies the
+    /// direction and no extra fill is painted.
     pub fn adaptive(mut self, adaptive: bool) -> Self {
         self.adaptive = adaptive;
         self
     }
 
-    /// Flip this surface, and the subtree it holds, to the counterpart
-    /// appearance when the backdrop luminance opposes the current theme.
+    /// Let a small surface and its subtree flip to the registered counterpart
+    /// appearance when backdrop luminance opposes the inherited theme.
     ///
-    /// Uses the same probe and hysteresis as [`Self::adaptive`]. A product
-    /// that registered only one appearance never flips.
+    /// The size limit and hysteresis come from the theme. A product that
+    /// registered only one appearance never flips. [`Self::adaptive`] is a
+    /// compatibility alias for this behavior.
     pub fn adaptive_appearance(mut self, adaptive: bool) -> Self {
         self.adaptive_appearance = adaptive;
         self
@@ -772,11 +790,12 @@ fn finish_glass(overlay_theme: Option<Theme>, layer: BackdropLayer) -> AnyElemen
 
 /// Several glass panes fused into one body.
 ///
-/// Each pane is a rounded rect lobe of a single glass surface; where two
-/// panes come within `effect.glassMergeDistance` of each other, the shape's
-/// smooth minimum joins them into one outline, the way two drops of water
-/// meet. The optics — bevel, refraction, dispersion, the highlight — follow
-/// the fused outline rather than each pane's own.
+/// Each pane is a rounded rect lobe of a single glass surface. The shape's
+/// polynomial smooth minimum uses `effect.glassMergeDistance` as its smoothing
+/// strength, widening and softening nearby bridges the way two drops of water
+/// meet; the token is not an exact geometric gap threshold. The optics — bevel,
+/// refraction, dispersion, and highlight — follow the fused outline rather than
+/// each pane's own.
 ///
 /// At most [`MAX_GLASS_LOBES`] panes fuse. A larger group paints opaque
 /// overlay panes instead, preserving every pane's content without holes.
@@ -849,7 +868,12 @@ impl GlassGroup {
         }
     }
 
-    /// Which surface colour each Frosted pane lays over the backdrop.
+    /// Select the semantic base colour for every pane and fallback.
+    ///
+    /// Frosted lays this colour over its blurred source. Optical presets use it
+    /// only for renderer-budget fallback or after reduced transparency resolves
+    /// them to Frosted. [`Self::tint`] replaces the fallback/fill colour and
+    /// composes into the joined optical wash, including the bridge.
     pub fn surface(mut self, surface: Surface) -> Self {
         self.surface = surface;
         self
@@ -895,16 +919,20 @@ impl GlassGroup {
         self
     }
 
-    /// How far apart two panes may sit and still join, in pixels, overriding
+    /// Smooth-union strength for nearby pane outlines, in pixels, overriding
     /// `effect.glassMergeDistance`.
+    ///
+    /// This is the polynomial smooth-min coefficient, not an exact maximum gap:
+    /// larger values create a wider bridge and begin joining panes farther apart.
     pub fn merge(mut self, merge: f32) -> Self {
         self.merge = Some(merge.max(0.0));
         self
     }
 
-    /// The space between panes, in pixels. The default is the theme's small
-    /// step, which sits inside the default merge distance so adjacent panes
-    /// join out of the box.
+    /// Row-layout space between panes, in pixels. This moves the child panes;
+    /// [`Self::merge`] independently controls the optical join threshold. The
+    /// default small spacing sits inside the default merge distance, so adjacent
+    /// panes join out of the box.
     pub fn gap(mut self, gap: f32) -> Self {
         self.gap = Some(gap.max(0.0));
         self
@@ -918,15 +946,18 @@ impl GlassGroup {
         self
     }
 
-    /// Let a small fused body flip appearance using [`Glass::adaptive`]'s
-    /// probe, area limit, and hysteresis. Never adds a source-over wash.
+    /// Compatibility alias for [`Self::adaptive_appearance`].
+    ///
+    /// Both builders use the same probe, size limit, hysteresis, material
+    /// switch, and counterpart subtree theme. Neither adds a source-over wash.
     pub fn adaptive(mut self, adaptive: bool) -> Self {
         self.adaptive = adaptive;
         self
     }
 
-    /// Flip this fused body, and the subtree it holds, to the counterpart
-    /// appearance when the backdrop luminance opposes the current theme.
+    /// Let a small fused body and its subtree flip to the registered
+    /// counterpart appearance when backdrop luminance opposes the inherited
+    /// theme. [`Self::adaptive`] is a compatibility alias for this behavior.
     pub fn adaptive_appearance(mut self, adaptive: bool) -> Self {
         self.adaptive_appearance = adaptive;
         self
@@ -1844,7 +1875,7 @@ mod tests {
             px(100.0 * theme.effects.glass_bevel_ratio),
             "the profile follows the control's short edge"
         );
-        assert_eq!(material.blur_radius, px(theme.effects.glass_frost_blur));
+        assert_eq!(material.blur_radius, px(theme.effects.glass_liquid_blur));
         assert_eq!(material.saturation, theme.effects.glass_saturation);
         assert_eq!(
             material.wash,
@@ -2266,7 +2297,7 @@ mod tests {
     }
 
     #[test]
-    fn a_blur_override_composes_frost_with_liquid() {
+    fn a_blur_override_replaces_the_preset_scattering_radius() {
         let theme = Theme::studio_dark();
         let material = Glass::new("surface")
             .preset(GlassPreset::Liquid)

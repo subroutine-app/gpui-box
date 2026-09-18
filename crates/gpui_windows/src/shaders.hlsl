@@ -1500,9 +1500,10 @@ float4 polychrome_sprite_color(PolychromeSpriteFragmentInput input) {
 **
 */
 
-// The blur and the composite both draw one full-viewport triangle strip and
-// read `t_sprite`, which the renderer points at whichever scratch texture the
-// pass is reading. `b2` carries what changes between them.
+// The blur and replacement composite both draw one full-viewport triangle
+// strip under an integral scissor and read `t_sprite`, which the renderer
+// points at whichever scratch texture the pass is reading. `b2` carries what
+// changes between them.
 cbuffer BackdropGlassParams: register(b2) {
     // The separable gaussian's axis for this pass, and its sigma.
     float2 backdrop_direction;
@@ -1662,6 +1663,20 @@ float4 apply_backdrop_edge_mask(float4 color, float2 pt) {
     return lerp(original, color, mask);
 }
 
+// One device-pixel SDF ramp. Replacement compositing restores partially
+// covered pixels from the exact sharp draw-order snapshot.
+float4 apply_backdrop_shape_coverage(float4 color, float2 pt, float3 field) {
+    // Smooth unions are implicit fields rather than exact signed distances.
+    // Normalize by the analytic derivative magnitude so the transition remains
+    // one device pixel around fused bridges as well as individual lobes.
+    float coverage = saturate(0.5 - field.z / max(length(field.xy), 1e-4));
+    if (coverage >= 1.0) {
+        return color;
+    }
+    float4 original = t_backdrop_sharp.Load(int3(int2(pt), 0));
+    return lerp(original, color, coverage);
+}
+
 // The optical source and retained sharp snapshot painted back through the
 // surface's shape and material.
 // Mirrors `fs_composite` in backdrop_glass.wgsl and
@@ -1679,7 +1694,7 @@ float4 backdrop_glass_color(BackdropVertexOutput input) {
     float3 field = backdrop_glass_field(pt);
     float distance = field.z;
     if (pt.x < backdrop_mask.x || pt.y < backdrop_mask.y ||
-        pt.x >= mask_end.x || pt.y >= mask_end.y || distance > 0.0) {
+        pt.x >= mask_end.x || pt.y >= mask_end.y || distance >= 0.5) {
         discard;
     }
 
@@ -1689,7 +1704,8 @@ float4 backdrop_glass_color(BackdropVertexOutput input) {
         (backdrop_specular <= 0.0 || backdrop_refractive_index == 1.0) && backdrop_transmission_gain == 1.0 &&
         backdrop_saturation == 1.0 && backdrop_wash.a <= 0.0 &&
         backdrop_optical_lift.a <= 0.0 && backdrop_hairline <= 0.0) {
-        return apply_backdrop_edge_mask(t_sprite.Load(int3(int2(pt), 0)), pt);
+        return apply_backdrop_shape_coverage(
+            apply_backdrop_edge_mask(t_sprite.Load(int3(int2(pt), 0)), pt), pt, field);
     }
 
     // Keep the smooth-union derivative magnitude for the height derivative.
@@ -1747,7 +1763,8 @@ float4 backdrop_glass_color(BackdropVertexOutput input) {
         color.rgb += hair * (1.0 - 0.18 * facing_up) * 0.18;
     }
 
-    return apply_backdrop_edge_mask(float4(saturate(color.rgb), color.a), pt);
+    return apply_backdrop_shape_coverage(
+        apply_backdrop_edge_mask(float4(saturate(color.rgb), color.a), pt), pt, field);
 }
 
 float4 quad_fragment(QuadFragmentInput input): SV_Target {
@@ -1772,6 +1789,8 @@ float4 path_rasterization_fragment(PathFragmentInput input): SV_Target {
 float4 backdrop_glass_fragment(BackdropVertexOutput input): SV_Target {
     float4 optical = backdrop_glass_color(input);
     if (backdrop_clip_id == 0u) return optical;
+    // Edge masking and shape coverage have already restored from this exact
+    // snapshot. Apply inherited rounded clips last against the same pixels.
     float4 original = t_backdrop_sharp.Load(int3(int2(input.position.xy), 0));
     return lerp(original, optical, rounded_clip_coverage(input.position.xy, backdrop_clip_id));
 }

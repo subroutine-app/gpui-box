@@ -1082,6 +1082,28 @@ an external source/package authority. Reference observations do not establish
 Apple-equivalent optics, volume transport or native-platform verification of
 the GPUI implementation.
 
+Two public implementations were reviewed on 2026-09-17 while separating
+Regular Liquid scattering from Frost and correcting material-edge coverage:
+
+- ybouane/liquidglass at `00aafe50202e916951d6f30d49afa1197ca236a7`,
+  especially `src/defaults.ts`, `src/GlassRenderer.ts`, and `src/shaders.ts`;
+- callstack/liquid-glass at `b7fd5abbabcd1dc5233d35c97c3f51bcb407d015`,
+  especially the public Regular/Clear modes, tint/interactivity contract, and
+  `UIGlassContainerEffect.spacing` bridge.
+
+The former demonstrates a sharp-by-default WebGL material, separate optional
+scattering, and antialiased SDF silhouette. The latter is a wrapper around
+public UIKit effects and exposes no Apple shader or private optical constants.
+GPUI Box does not copy either renderer: it retains its analytic signed-distance
+field, Snell rays, spectral indices, Schlick Fresnel response, uniform scattering,
+and caller-owned actions. The one-device-pixel coverage ramp reuses GPUI Box's
+existing rounded-clip convention, and `effect.glassLiquidBlur = 8` is original
+Kit policy chosen to retain visible structure while keeping Regular distinct
+from 24 px Frost. Callstack's container spacing informed the review of optical
+grouping versus child layout; GPUI Box retains and documents its own polynomial
+smooth-union coefficient rather than claiming UIKit's private merge geometry.
+No dependency, source import, or frozen receipt changed.
+
 ## P21: gpui-ce transition coordinate rebasing
 
 - Upstream: <https://github.com/brendon-felix/gpui-ce>
