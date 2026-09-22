@@ -542,7 +542,7 @@ pub fn catalog() -> Vec<Scene> {
         Scene {
             name: "glass",
             build: glass,
-            shows: Shows::Subjects(&["Glass"]),
+            shows: Shows::Subjects(&["Glass", "GlassFrame"]),
         },
         Scene {
             name: "glass-optics",

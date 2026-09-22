@@ -859,11 +859,14 @@ pub(super) fn glass(_window: &mut Window, cx: &mut App) -> AnyElement {
                         .left(px(52.0))
                         .w(px(280.0))
                         .child(
-                            Glass::new(ident)
-                                .preset(preset)
-                                .dimmed(preset == GlassPreset::Clear)
-                                .adaptive_appearance(true)
-                                .radius(Radius::Dialog)
+                            GlassFrame::new(div().id(ident))
+                                .glass_preset(preset)
+                                .glass_radius(Radius::Dialog)
+                                .glass(|glass| {
+                                    glass
+                                        .dimmed(preset == GlassPreset::Clear)
+                                        .adaptive_appearance(true)
+                                })
                                 .child(label(title, body)),
                         ),
                 )

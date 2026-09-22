@@ -343,9 +343,9 @@ pub mod prelude {
     pub use crate::overlay::{
         ActionSheet, ActionSheetEvent, BottomSheet, BottomSheetEvent, Command, CommandPalette,
         CommandPaletteEvent, ContextMenu, ContextMenuEvent, ContextMenuPresentation, Dialog,
-        DialogEvent, Drawer, DrawerEvent, Edge, FocusTrap, Frost, Glass, GlassAppearance,
-        GlassGroup, GlassPreset, Hang, HoverCard, HoverCardEvent, Kbd, Menu, MenuEvent, MenuItem,
-        Menubar, MenubarEvent, MenubarMenu, Notification, NotificationCenter,
+        DialogEvent, Drawer, DrawerEvent, Edge, FocusTrap, Frost, Glass, GlassAppearance, GlassExt,
+        GlassFrame, GlassGroup, GlassPreset, Hang, HoverCard, HoverCardEvent, Kbd, Menu, MenuEvent,
+        MenuItem, Menubar, MenubarEvent, MenubarMenu, Notification, NotificationCenter,
         NotificationCenterEvent, Overlay, PickerPresentation, Placement, Popover, PopoverEvent,
         SheetAction, SheetActionState, SheetDetent, Toast, ToastCorner, ToastLayer, Tooltip,
         Tooltipped, UnreadCount,

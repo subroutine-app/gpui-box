@@ -99,6 +99,7 @@ Form
 FormField
 Frost
 Glass
+GlassFrame
 GlassGroup
 GraphNode
 Grid
@@ -196,6 +197,7 @@ SplitButton
 SplitPane
 SplitTree
 StateView
+Stateful<Div> always carries an element id
 StatusBar
 StatusItem
 SubagentTree

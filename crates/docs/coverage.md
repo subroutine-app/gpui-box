@@ -45,7 +45,7 @@ data-only identity/label/kind/built-in-icon values, not file capabilities.
 | Date and time | `Calendar`, `DateInput`, `RangePicker`, `TimeInput` |
 | Content | `Markdown`, `AgentDocument`, `MessageList`, `ImageViewer`, `CodeView`, `TransportBar`, `BrowserPanel` (shell only), `LogStream`, `DiffView`, `ArtifactPreview`, `Terminal` |
 | Display | `Icon`, `Badge`, `Tag`, `Avatar`, `AvatarGroup`, `Card`, `ListRow`, `Divider`, `ProgressBar`, `EmptyState`, `FailurePanel`, `StatusDot`, `StatusLine`, `Callout`, `Banner`, `StaleMark`, `PulseLoader`, `Skeleton`, `Spinner`, `BarLoader`, `LoadMore`, `RefreshVeil`, `ProgressCircle`, `StageProgress`, `StateView`, `OutcomePanel`, `DescriptionList`, `Timeline`, `HighlightedText`, `AnimatedNumber`, `MetricCard`, `Sparkline`, `PerformanceHud`, `MicroMark`, `Rating`, `Bubble`, `Plot`, `CandlestickChart`, `SankeyChart`, `LineChart`, `BarChart`, `AreaChart`, `ScatterChart`, `PieChart`, `StackedBarChart`, `RadarChart`, `GaugeChart`, `ChartLegend`, `Heatmap` |
-| Overlay | `Overlay`, `Frost`, `Glass`, `Dialog`, `Drawer`, `Popover`, `Menu`, `ContextMenu`, `Menubar`, `CommandPalette`, `Tooltip`, `HoverCard`, `Toast`, `ToastLayer`, `NotificationCenter`, `Kbd` |
+| Overlay | `Overlay`, `Frost`, `Glass`, `GlassFrame`, `Dialog`, `Drawer`, `Popover`, `Menu`, `ContextMenu`, `Menubar`, `CommandPalette`, `Tooltip`, `HoverCard`, `Toast`, `ToastLayer`, `NotificationCenter`, `Kbd` |
 | Layout | `DesktopTitlebar`, `SplitPane`, `SplitTree`, `ScrollArea`, `ScrollFade`, `Toolbar`, `AspectRatio`, `Responsive`, `Grid`, `Container` |
 | Shell | `Dock`, `StatusBar` |
 | Keymap | `KeybindingRecorder`, `KeymapEditor` |

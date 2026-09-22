@@ -29,10 +29,11 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use gpui::{
-    AnyElement, App, BackdropStatistics, Bounds, Corners, Element, GlassEdge, GlassLobe,
-    GlassMaterial, GlobalElementId, Hsla, InspectorElementId, InteractiveElement as _, IntoElement,
-    LayoutId, LuminanceProbeLease, MAX_GLASS_LOBES, MouseButton, ParentElement, Pixels, RenderOnce,
-    Rgba, RoundedClip, StatefulInteractiveElement as _, Styled, Window, div, px,
+    AnyElement, App, BackdropStatistics, Bounds, Corners, Div, Element, GlassEdge, GlassLobe,
+    GlassMaterial, GlobalElementId, Hsla, InspectorElementId, InteractiveElement, Interactivity,
+    IntoElement, LayoutId, LuminanceProbeLease, MAX_GLASS_LOBES, MouseButton, ParentElement,
+    Pixels, RenderOnce, Rgba, RoundedClip, Stateful, StatefulInteractiveElement, Styled, Window,
+    div, px,
 };
 use gpui_kit_semantics::{NodeSpec, Role, Semantic};
 use gpui_kit_theme::{
@@ -248,6 +249,143 @@ struct GlassState {
     appearance_flipped: bool,
     lease: LuminanceProbeLease,
     statistics: Option<BackdropStatistics>,
+}
+
+/// Fluent backdrop-material helpers for an identified [`Div`].
+///
+/// Identity comes from the div's existing [`.id(...)`](gpui::InteractiveElement::id),
+/// so the effect does not ask callers to repeat the same business identity. The
+/// returned [`GlassFrame`] still behaves like a styled parent: ordinary methods
+/// configure the content frame, while `glass_*` methods configure the backdrop.
+///
+/// ```no_run
+/// # use gpui::{InteractiveElement as _, ParentElement as _, Styled as _, div, prelude::FluentBuilder as _, px};
+/// # use gpui_kit::overlay::{GlassExt as _, GlassPreset};
+/// let portable = cfg!(not(target_os = "macos"));
+/// let panel = div()
+///     .id("settings")
+///     .bg_glass()
+///     .rounded(px(20.0))
+///     .border_1()
+///     .glass_radius_px(20.0)
+///     .glass_blur(18.0)
+///     .when(portable, |frame| frame.glass_preset(GlassPreset::Frosted))
+///     .child("Settings");
+/// # let _ = panel;
+/// ```
+///
+/// This is deliberately structural rather than a style refinement: [`Glass`]
+/// isolates the subtree in one scene layer so its backdrop snapshot cannot
+/// reorder the frame's own fill, border, or children.
+pub trait GlassExt: Sized {
+    /// Place this identified frame on Regular Liquid glass.
+    fn bg_glass(self) -> GlassFrame;
+
+    /// Place this identified frame on portable frosted glass.
+    fn bg_frost(self) -> GlassFrame;
+}
+
+impl GlassExt for Stateful<Div> {
+    fn bg_glass(self) -> GlassFrame {
+        GlassFrame::new(self)
+    }
+
+    fn bg_frost(self) -> GlassFrame {
+        GlassFrame::new(self).glass_preset(GlassPreset::Frosted)
+    }
+}
+
+/// A styled content frame with a separately configurable backdrop material.
+///
+/// Frame styling such as borders, fills, layout, and rounding remains available
+/// after `.bg_glass()` or `.bg_frost()`. Glass clipping is intentionally
+/// separate: use [`Self::glass_radius`] or [`Self::glass_radius_px`] to match the
+/// frame when desired, or choose a different optical outline deliberately.
+#[derive(IntoElement)]
+pub struct GlassFrame {
+    glass: Glass,
+    frame: Stateful<Div>,
+}
+
+impl std::fmt::Debug for GlassFrame {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("GlassFrame")
+            .field("glass", &self.glass)
+            .finish_non_exhaustive()
+    }
+}
+
+impl GlassFrame {
+    /// Wrap an identified div in Regular Liquid glass.
+    ///
+    /// Prefer [`.bg_glass()`](GlassExt::bg_glass) in fluent element code. This
+    /// constructor exists for code that needs to name the wrapper type directly.
+    pub fn new(frame: Stateful<Div>) -> Self {
+        let id = Element::id(&frame).expect("Stateful<Div> always carries an element id");
+        let ident = Ident::new(id.to_string()).child("glass");
+        Self {
+            glass: Glass::new(ident),
+            frame,
+        }
+    }
+
+    /// Configure the complete glass builder without giving up the styled frame.
+    pub fn glass(mut self, configure: impl FnOnce(Glass) -> Glass) -> Self {
+        self.glass = configure(self.glass);
+        self
+    }
+
+    /// Select the semantic colour behind this material and for its fallback.
+    pub fn glass_surface(self, surface: Surface) -> Self {
+        self.glass(|glass| glass.surface(surface))
+    }
+
+    /// Select the glass material preset.
+    pub fn glass_preset(self, preset: GlassPreset) -> Self {
+        self.glass(|glass| glass.preset(preset))
+    }
+
+    /// Set the token radius that clips the backdrop material.
+    pub fn glass_radius(self, radius: Radius) -> Self {
+        self.glass(|glass| glass.radius(radius))
+    }
+
+    /// Set the exact pixel radius that clips the backdrop material.
+    pub fn glass_radius_px(self, radius: f32) -> Self {
+        self.glass(|glass| glass.radius_px(radius))
+    }
+
+    /// Override the material's backdrop blur radius in pixels.
+    pub fn glass_blur(self, blur: f32) -> Self {
+        self.glass(|glass| glass.blur(blur))
+    }
+}
+
+impl Styled for GlassFrame {
+    fn style(&mut self) -> &mut gpui::StyleRefinement {
+        self.frame.style()
+    }
+}
+
+impl ParentElement for GlassFrame {
+    fn extend(&mut self, elements: impl IntoIterator<Item = AnyElement>) {
+        self.frame.extend(elements);
+    }
+}
+
+impl InteractiveElement for GlassFrame {
+    fn interactivity(&mut self) -> &mut Interactivity {
+        self.frame.interactivity()
+    }
+}
+
+impl StatefulInteractiveElement for GlassFrame {}
+
+impl RenderOnce for GlassFrame {
+    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+        self.glass.child(self.frame)
+    }
 }
 
 /// A glass surface: optionally scattered and bent backdrop, optional fill,
@@ -1653,6 +1791,27 @@ impl Glass {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn identified_div_helpers_keep_frame_and_material_configuration_separate() {
+        let mut liquid = div()
+            .id("liquid")
+            .bg_glass()
+            .border_1()
+            .rounded(px(18.0))
+            .glass_radius_px(20.0)
+            .glass_blur(12.0);
+        assert_eq!(liquid.glass.ident.as_str(), "liquid.glass");
+        assert_eq!(liquid.glass.preset, GlassPreset::Liquid);
+        assert_eq!(liquid.glass.radius_px, Some(20.0));
+        assert_eq!(liquid.glass.blur, Some(12.0));
+        assert!(liquid.style().border_widths.is_some());
+        assert!(liquid.style().corner_radii.is_some());
+
+        let frosted = div().id("frosted").bg_frost();
+        assert_eq!(frosted.glass.ident.as_str(), "frosted.glass");
+        assert_eq!(frosted.glass.preset, GlassPreset::Frosted);
+    }
 
     #[gpui::test]
     fn rounded_glass_descendants_reject_corner_input(cx: &mut gpui::TestAppContext) {

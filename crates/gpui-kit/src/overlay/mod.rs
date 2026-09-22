@@ -41,7 +41,7 @@ pub use dialog::{Dialog, DialogEvent};
 pub use drawer::{Drawer, DrawerEvent};
 pub use focus::FocusTrap;
 pub use frost::Frost;
-pub use glass::{Glass, GlassAppearance, GlassGroup, GlassPreset};
+pub use glass::{Glass, GlassAppearance, GlassExt, GlassFrame, GlassGroup, GlassPreset};
 pub use hover_card::{HoverCard, HoverCardEvent};
 pub use kbd::{Kbd, caps};
 pub use layer::{Edge, GlassSurface, Hang, Overlay, OverlaySurface, Placement, priority, surface};
