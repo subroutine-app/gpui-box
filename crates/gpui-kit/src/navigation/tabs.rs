@@ -40,7 +40,7 @@ use crate::display::badge::Badge;
 use crate::display::icon::{flips, paint as paint_icon};
 use crate::foundation::direction::{ActiveDirection, DirectionalExt, LayoutDirection};
 use crate::foundation::stepping::bounded_step;
-use crate::foundation::{Disableable, FocusRing, Ident, Pressable, Sizable, StyledExt, text};
+use crate::foundation::{Disableable, FocusRing, Ident, Sizable, StyledExt, text};
 use crate::interaction::dnd::{
     self, DragItem, DropAxis, DropIntent, DropPosition, MakingWay, RowTarget, SurfaceDrag,
 };
@@ -680,6 +680,11 @@ impl Tabs {
         // a tab nobody can reach is the disabled grey whatever it belongs to.
         let tint = tab.tint.filter(|_| !disabled);
         let glyph_color = tint.unwrap_or(color);
+        let border = if self.capsules {
+            0.0
+        } else {
+            theme.borders.hairline
+        };
 
         let mut element = div()
             .id(ident.element_id())
@@ -694,6 +699,14 @@ impl Tabs {
                     Radius::Control
                 },
             )
+            // Reserve the selected surface's edge even when it is not drawn;
+            // switching tabs must not resize a tab or move any label. The edge
+            // consumes horizontal padding rather than adding to the tab's width.
+            .when(!self.capsules, |element| {
+                element
+                    .border(px(border))
+                    .border_color(gpui::transparent_black())
+            })
             // Capsules wear their face on the glass mount, so a selected fill
             // here would be a second layer on top of the wash.
             .when(!self.capsules && selected, |element| {
@@ -716,7 +729,7 @@ impl Tabs {
                 div()
                     .row()
                     .h(px(metrics.height))
-                    .px(px(metrics.padding_x))
+                    .px(px((metrics.padding_x - border).max(0.0)))
                     .gap(px(metrics.gap))
                     .children(tab.icon.map(|glyph| {
                         let glyph = if selected { glyph.filled() } else { glyph };
@@ -729,6 +742,7 @@ impl Tabs {
                     }))
                     .child(
                         text(theme, TypeScale::Label, tab.label.clone())
+                            .debug_selector(|| ident.child("label").semantic_id().to_string())
                             .text_size(px(metrics.font_size))
                             .text_color(color)
                             .when(actionable, |element| {
@@ -752,7 +766,8 @@ impl Tabs {
                 element
                     .cursor_pointer()
                     .tab_index(0)
-                    .pressable(cx)
+                    // Navigation stays anchored; a press changes paint, not position.
+                    .active(|style| style.bg(theme.colors.control_pressed))
                     .focus_ring(theme)
             });
 

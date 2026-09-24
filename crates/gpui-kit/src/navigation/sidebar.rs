@@ -22,7 +22,7 @@ use gpui_kit_theme::{ActiveTheme, ControlSize, Radius, Space, TextTone, Theme, T
 use crate::display::badge::Badge;
 use crate::foundation::direction::{ActiveDirection, DirectionalExt};
 use crate::foundation::{
-    Disableable, FocusRing, Hoverable, Ident, Pressable, SelectedFill, Sizable, StyledExt, rule,
+    Disableable, FocusRing, Hoverable, Ident, SelectedFill, Sizable, StyledExt, rule,
     text as foundation_text,
 };
 use crate::motion::{Flipping, flip};
@@ -308,6 +308,7 @@ impl Sidebar {
                     .child(
                         div().flex_1().overflow_hidden().child(
                             foundation_text(theme, TypeScale::Label, item.label.clone())
+                                .debug_selector(|| ident.child("label").semantic_id().to_string())
                                 .text_size(px(metrics.font_size))
                                 .text_color(color),
                         ),
@@ -318,7 +319,8 @@ impl Sidebar {
                 element
                     .cursor_pointer()
                     .tab_index(0)
-                    .pressable(cx)
+                    // Navigation stays anchored; a press changes paint, not position.
+                    .active(|style| style.bg(theme.colors.control_pressed))
                     .when(!active, |element| element.hover_row(theme))
                     .focus_ring(theme)
             });

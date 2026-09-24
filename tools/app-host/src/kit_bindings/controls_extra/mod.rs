@@ -1007,6 +1007,7 @@ impl State {
                 if entity.read(cx).is_disabled() { return; }
                 let (name, payload) = match event {
                     KeymapEditorEvent::AddCaptured {command_id,keystroke} => ("addCaptured", json!({"command_id":command_id.as_ref(),"keystroke":keystroke.as_ref()})),
+                                        KeymapEditorEvent::ReplaceCaptured {command_id,binding_id,keystroke} => ("replaceCaptured", json!({"command_id":command_id.as_ref(),"binding_id":binding_id.as_ref(),"keystroke":keystroke.as_ref()})),
                     KeymapEditorEvent::Remove {command_id,binding_id} => ("remove", json!({"command_id":command_id.as_ref(),"binding_id":binding_id.as_ref()})),
                     KeymapEditorEvent::Reset {command_id} => ("reset", json!({"command_id":command_id.as_ref()})),
                     KeymapEditorEvent::RecordingCancelled {command_id} => ("recordingCancelled", json!({"command_id":command_id.as_ref()})),

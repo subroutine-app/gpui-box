@@ -2354,38 +2354,125 @@ pub(super) fn dropzone(_window: &mut Window, cx: &mut App) -> AnyElement {
         .into_any_element()
 }
 
-struct SceneSettingsInputs(Vec<Entity<TextInput>>);
-impl Global for SceneSettingsInputs {}
+struct SceneSettingsChoice {
+    control: Entity<Select>,
+    _selection: gpui::Subscription,
+}
+
+fn settings_select(
+    id: &'static str,
+    options: impl IntoIterator<Item = SelectOption>,
+    selected: &'static str,
+    window: &mut Window,
+    cx: &mut App,
+) -> Entity<Select> {
+    let fixture = window.use_keyed_state(id, cx, |window, cx| {
+        let control = cx.new(|cx| {
+            Select::new(id, window, cx)
+                .large()
+                .options(options)
+                .selected(selected)
+        });
+        let selection = cx.subscribe(
+            &control,
+            |_: &mut SceneSettingsChoice, control, event, cx| {
+                if let crate::controls::select::SelectEvent::Selected(id) = event {
+                    control.update(cx, |control, cx| control.set_selected(Some(id.clone()), cx));
+                    cx.notify();
+                }
+            },
+        );
+        SceneSettingsChoice {
+            control,
+            _selection: selection,
+        }
+    });
+    fixture.read(cx).control.clone()
+}
+
+fn settings_switch(id: &'static str, initial: bool, window: &mut Window, cx: &mut App) -> Switch {
+    let state = window.use_keyed_state(id, cx, |_, _| initial);
+    Switch::new(id)
+        .large()
+        .on(*state.read(cx))
+        .on_change(move |next, _, cx| {
+            state.update(cx, |value, cx| {
+                *value = next;
+                cx.notify();
+            });
+        })
+}
 
 pub(super) fn settings_page(window: &mut Window, cx: &mut App) -> AnyElement {
     let theme = cx.theme().clone();
     let search = window.use_keyed_state("scene.settings-page.search", cx, |window, cx| {
-        SearchInput::new("scene.settings-page.query", window, cx).placeholder("Search settings")
+        SearchInput::new("scene.settings-page.query", window, cx)
+            .placeholder("Search settings")
+            .large()
     });
     let category = window.use_keyed_state("scene.settings-page.category", cx, |_, _| {
         SharedString::from("all")
     });
     let selected = category.read(cx).clone();
     let query = search.read(cx).value(cx);
+    let autosave = settings_switch("scene.settings-page.autosave.switch", true, window, cx);
+    let palette = settings_select(
+        "scene.settings-page.theme.select",
+        [
+            SelectOption::new("system", "Follow the system appearance automatically"),
+            SelectOption::new("light", "Studio light"),
+            SelectOption::new("dark", "Studio dark"),
+        ],
+        "system",
+        window,
+        cx,
+    );
+    let density = settings_select(
+        "scene.settings-page.density.select",
+        [
+            SelectOption::new("comfortable", "Comfortable"),
+            SelectOption::new("compact", "Compact"),
+        ],
+        "comfortable",
+        window,
+        cx,
+    );
     let general = SettingsSection::new("scene.settings-page.general", "General")
-        .label_width(px(150.0))
-        .row(SettingsRow::new("scene.settings-page.autosave", "Automatic save").value("On"))
+        .description("Preferences for this workspace")
+        .label_width(px(240.0))
+        .row(
+            SettingsRow::new("scene.settings-page.autosave", "Automatic save")
+                .description("Keep changes on this machine as you work, even while offline.")
+                .switch(autosave),
+        )
         .row(
             SettingsRow::new("scene.settings-page.telemetry", "Usage reporting")
+                .description("Anonymous counts only, never file contents.")
                 .value("Off")
                 .managed("fixture administrator"),
         );
     let appearance = SettingsSection::new("scene.settings-page.appearance", "Appearance")
-        .label_width(px(150.0))
-        .row(SettingsRow::new("scene.settings-page.theme", "Theme").value("Studio"))
-        .row(SettingsRow::new("scene.settings-page.density", "Density").value("Comfortable"));
+        .description("Fixture choices do not change the gallery theme or density.")
+        .label_width(px(240.0))
+        .row(
+            SettingsRow::new("scene.settings-page.theme", "Theme")
+                .description("Use a fixed palette or follow your desktop throughout the day.")
+                .search_terms(["system", "light", "dark"])
+                .select(palette),
+        )
+        .row(
+            SettingsRow::new("scene.settings-page.density", "Density")
+                .description("Choose how much space separates controls and list items.")
+                .search_terms(["comfortable", "compact"])
+                .select(density),
+        );
     let sections = match selected.as_ref() {
         "general" => vec![general],
         "appearance" => vec![appearance],
         _ => vec![general, appearance],
     };
     let header_search = search.clone();
-    stack(&theme).w(px(840.0))
+    stack(&theme).w_full()
         .child(caption(&theme, "Fixture settings page: category navigation and search remain available when there are no matches"))
         .child(SettingsList::new("scene.settings-page.list").query(query).sections(sections)
             .slot("header", move |_, cx| {
@@ -2397,6 +2484,7 @@ pub(super) fn settings_page(window: &mut Window, cx: &mut App) -> AnyElement {
             .slot("sidebar", move |_, _| {
                 let category = category.clone();
                 Sidebar::new("scene.settings-page.categories")
+                    .large()
                     .section(SidebarSection::new("sections").items([
                         SidebarItem::new("all", "All settings"), SidebarItem::new("general", "General"),
                         SidebarItem::new("appearance", "Appearance")]))
@@ -2406,88 +2494,86 @@ pub(super) fn settings_page(window: &mut Window, cx: &mut App) -> AnyElement {
             })
             .slot("footer", move |_, _| {
                 let search = search.clone();
-                Button::new("scene.settings-page.reset").label("Reset search")
-                    .on_click(move |_, cx| search.update(cx, |search, cx| search.set_value("", cx)))
-                    .into_any_element()
+                div().row().justify_end().child(
+                    Button::new("scene.settings-page.reset").label("Reset search").large()
+                        .on_click(move |_, cx| search.update(cx, |search, cx| search.set_value("", cx)))
+                ).into_any_element()
             }))
         .into_any_element()
 }
 
 pub(super) fn settings(window: &mut Window, cx: &mut App) -> AnyElement {
-    if !cx.has_global::<SceneSettingsInputs>() {
-        let inputs = [("name", "Fixture assistant"), ("model", "Local model")]
-            .into_iter()
-            .map(|(id, value)| {
-                cx.new(|cx| {
-                    TextInput::new(format!("scene.settings.fields.{id}.input"), window, cx)
-                        .text(value)
-                        .control_size(ControlSize::Sm)
-                })
-            })
-            .collect();
-        cx.set_global(SceneSettingsInputs(inputs));
-    }
-    let fields = cx.global::<SceneSettingsInputs>().0.clone();
+    let name = window.use_keyed_state("scene.settings.fields.name.input", cx, |window, cx| {
+        TextInput::new("scene.settings.fields.name.input", window, cx)
+            .text("Fixture assistant")
+            .large()
+    });
+    let model = settings_select(
+        "scene.settings.fields.model.select",
+        [
+            SelectOption::new("balanced", "Local model · balanced offline mode"),
+            SelectOption::new("fast", "Local model · quick responses"),
+            SelectOption::new("thorough", "Local model · detailed reasoning"),
+        ],
+        "balanced",
+        window,
+        cx,
+    );
+    let folder = window.use_keyed_state("scene.settings.local.folder.input", cx, |window, cx| {
+        TextInput::new("scene.settings.local.folder.input", window, cx)
+            .text("/fixture/workspace")
+            .large()
+    });
+    let removal = window.use_keyed_state("scene.settings.local.removal", cx, |_, _| false);
+    let removal_requested = *removal.read(cx);
+    let autosave = settings_switch("scene.settings.general.autosave.switch", true, window, cx);
+    let runtime = settings_switch("scene.settings.general.runtime.switch", false, window, cx);
     let theme = cx.theme().clone();
-    let general = || {
-        SettingsSection::new("scene.settings.general", "General")
-            .description("How this workspace behaves")
-            .row(
-                SettingsRow::new("scene.settings.general.autosave", "Save automatically")
-                    .description("Write changes as they happen")
-                    .control(
-                        Switch::new("scene.settings.general.autosave.switch")
-                            .named("Save automatically")
-                            .on(true)
-                            .on_change(|_, _, _| {}),
-                    ),
-            )
-            .row(
-                SettingsRow::new("scene.settings.general.runtime", "Native runtime")
-                    .description("Runs work on this machine instead of a host")
-                    .badge("Requires restart")
-                    .search_terms(["engine", "local executor"])
-                    .control(
-                        Switch::new("scene.settings.general.runtime.switch")
-                            .named("Native runtime")
-                            .on(false)
-                            .on_change(|_, _, _| {}),
-                    ),
-            )
-            .row(
-                SettingsRow::new("scene.settings.general.telemetry", "Usage reporting")
-                    .description("Nobody on this machine can change this")
-                    .value("Off")
-                    .managed("your administrator"),
-            )
-    };
-    let sync = || {
-        SettingsSection::new("scene.settings.sync", "Synchronisation")
-            .description("What travels between machines")
-            .dimmed_by("This workspace is local, so nothing synchronises.")
-            .row(
-                SettingsRow::new("scene.settings.sync.settings", "Sync settings")
-                    .description("Keyboard, theme, and editor preferences")
-                    .value("Off")
-                    .control(
-                        Switch::new("scene.settings.sync.settings.switch")
-                            .named("Sync settings")
-                            .on(false)
-                            .on_change(|_, _, _| {}),
-                    ),
-            )
-            .row(
-                SettingsRow::new("scene.settings.sync.history", "Sync history")
-                    .description("Runs and transcripts from the last 30 days")
-                    .value("Off")
-                    .control(
-                        Switch::new("scene.settings.sync.history.switch")
-                            .named("Sync history")
-                            .on(false)
-                            .on_change(|_, _, _| {}),
-                    ),
-            )
-    };
+    let general = SettingsSection::new("scene.settings.general", "General")
+        .label_width(px(240.0))
+        .description("How this workspace behaves")
+        .row(
+            SettingsRow::new("scene.settings.general.autosave", "Save automatically")
+                .description("Write changes as they happen")
+                .switch(autosave),
+        )
+        .row(
+            SettingsRow::new("scene.settings.general.runtime", "Native runtime")
+                .description("Runs work on this machine instead of a host")
+                .badge("Requires restart")
+                .search_terms(["engine", "local executor"])
+                .switch(runtime),
+        )
+        .row(
+            SettingsRow::new("scene.settings.general.telemetry", "Usage reporting")
+                .description("Nobody on this machine can change this")
+                .value("Off")
+                .managed("your administrator"),
+        );
+    let sync = SettingsSection::new("scene.settings.sync", "Synchronisation")
+        .label_width(px(240.0))
+        .description("What travels between machines")
+        .dimmed_by("This workspace is local, so nothing synchronises.")
+        .row(
+            SettingsRow::new("scene.settings.sync.settings", "Sync settings")
+                .description("Keyboard, theme, and editor preferences")
+                .value("Off")
+                .switch(
+                    Switch::new("scene.settings.sync.settings.switch")
+                        .large()
+                        .on(false),
+                ),
+        )
+        .row(
+            SettingsRow::new("scene.settings.sync.history", "Sync history")
+                .description("Runs and transcripts from the last 30 days")
+                .value("Off")
+                .switch(
+                    Switch::new("scene.settings.sync.history.switch")
+                        .large()
+                        .on(false),
+                ),
+        );
 
     stack(&theme)
         .w_full()
@@ -2505,46 +2591,318 @@ pub(super) fn settings(window: &mut Window, cx: &mut App) -> AnyElement {
                         .min_w_0()
                         .column()
                         .gap_token(&theme, Space::Md)
-                        .child(caption(&theme, "no query, so every section"))
-                        .child(SettingsList::new("scene.settings.all").section(general())),
+                        .child(caption(&theme, "Interactive fixtures · no query"))
+                        .child(SettingsList::new("scene.settings.all").section(general)),
                 )
                 .child(
                     div().flex_1().min_w_0().child(
                         SettingsList::new("scene.settings.filtered")
                             .query("sync")
-                            .section(general())
-                            .section(sync()),
+                            .section(sync),
                     ),
                 ),
         )
         .child(
-            SettingsSection::new(
-                "scene.settings.fields",
-                "Aligned controls and custom blocks",
-            )
-            .description("Descriptions stay under names; controls share the trailing edge")
-            .label_width(px(120.0))
-            .row(
-                SettingsRow::new("scene.settings.fields.name", "Name")
-                    .control(fields[0].clone())
-                    .description("Visible in the workspace"),
-            )
-            .child(
-                crate::display::card::ListRow::new()
-                    .id("scene.settings.fields.device")
-                    .child(crate::foundation::text(
-                        &theme,
-                        TypeScale::Body,
-                        "Fixture device · connected",
-                    )),
-            )
-            .row(
-                SettingsRow::new("scene.settings.fields.model", "Model")
-                    .control(fields[1].clone())
-                    .description("Chosen by the caller"),
-            ),
+            row(&theme)
+                .w_full()
+                .items_start()
+                .child(
+                    div().flex_1().min_w_0().child(
+                        SettingsSection::new(
+                            "scene.settings.fields",
+                            "Aligned controls and custom blocks",
+                        )
+                        .description("Names stay readable; fields wrap below them.")
+                        .label_width(px(240.0))
+                        .row(
+                            SettingsRow::new("scene.settings.fields.name", "Name")
+                                .control_width(px(240.0))
+                                .control(name)
+                                .description("Visible in the workspace"),
+                        )
+                        .child(
+                            crate::display::card::ListRow::new()
+                                .id("scene.settings.fields.device")
+                                .child(crate::foundation::text(
+                                    &theme,
+                                    TypeScale::Body,
+                                    "Fixture device · connected",
+                                )),
+                        )
+                        .row(
+                            SettingsRow::new("scene.settings.fields.model", "Model")
+                                .select(model)
+                                .description("Chosen by the caller, never sent to a host."),
+                        ),
+                    ),
+                )
+                .child(
+                    div().flex_1().min_w_0().child(
+                        SettingsSection::new("scene.settings.local", "Local workspace data")
+                            .description("Fixture actions only · no files are changed.")
+                            .label_width(px(240.0))
+                            .row(
+                                SettingsRow::new("scene.settings.local.data", "Offline data")
+                                    .description(if removal_requested {
+                                        "Removal requested in this fixture. No data was deleted."
+                                    } else {
+                                        "Remove cached copies from this device, not the original workspace."
+                                    })
+                                    .stacked()
+                                    .control(
+                                        Button::new("scene.settings.local.data.remove")
+                                            .label("Remove offline workspace data…")
+                                            .large()
+                                            .danger()
+                                            .on_click(move |_, cx| {
+                                                removal.update(cx, |requested, cx| {
+                                                    *requested = true;
+                                                    cx.notify();
+                                                });
+                                            }),
+                                    ),
+                            )
+                            .row(
+                                SettingsRow::new("scene.settings.local.folder", "Storage folder")
+                                    .description("A narrow composite editor wraps its action, not its input text.")
+                                    .stacked()
+                                    .control_width(px(theme.measures.readable_width))
+                                    .control(
+                                        div()
+                                            .row()
+                                            .flex_wrap()
+                                            .w_full()
+                                            .gap_token(&theme, Space::Sm)
+                                            .child(
+                                                div()
+                                                    .flex_1()
+                                                    .min_w(px(240.0))
+                                                    .max_w_full()
+                                                    .child(folder.clone()),
+                                            )
+                                            .child(
+                                                Button::new("scene.settings.local.folder.reset")
+                                                    .label("Use fixture folder")
+                                                    .large()
+                                                    .on_click(move |_, cx| {
+                                                        folder.update(cx, |input, cx| {
+                                                            input.set_value("/fixture/workspace", cx);
+                                                        });
+                                                    }),
+                                            ),
+                                    ),
+                            ),
+                    ),
+                ),
         )
         .into_any_element()
+}
+
+#[cfg(test)]
+mod settings_tests {
+    use super::*;
+    use gpui_kit_testkit::{audit_or_error, harness::Harness};
+
+    fn canonical(harness: &mut Harness) {
+        harness
+            .context()
+            .simulate_resize(size(px(920.0), px(1000.0)));
+        harness.frame();
+    }
+
+    #[gpui::test]
+    fn settings_exhibits_keep_switch_and_select_choices(cx: &mut gpui::TestAppContext) {
+        for (build, row, select_row, option, expected) in [
+            (
+                settings as fn(&mut Window, &mut App) -> AnyElement,
+                "scene.settings.general.autosave",
+                "scene.settings.fields.model",
+                "fast",
+                "Local model · quick responses",
+            ),
+            (
+                settings_page,
+                "scene.settings-page.autosave",
+                "scene.settings-page.theme",
+                "dark",
+                "Studio dark",
+            ),
+        ] {
+            let mut harness = Harness::new(cx, crate::install, build);
+            canonical(&mut harness);
+            let switch = format!("{row}.switch");
+            assert_eq!(harness.node(&switch).expect("switch").checked, Some(true));
+            for (target, checked) in [("label", false), ("description", true), ("switch", false)] {
+                harness.click(&format!("{row}.{target}"));
+                assert_eq!(
+                    harness.node(&switch).expect("switch").checked,
+                    Some(checked)
+                );
+            }
+            harness.click(&format!("{select_row}.label"));
+            harness.click(&format!("{select_row}.select.{option}"));
+            assert_eq!(
+                harness
+                    .node(&format!("{select_row}.select"))
+                    .expect("select")
+                    .value
+                    .as_deref(),
+                Some(expected),
+            );
+            harness.click(&format!("{select_row}.description"));
+            assert_eq!(
+                harness
+                    .node(&format!("{select_row}.select.{option}"))
+                    .expect("option")
+                    .checked,
+                Some(true),
+            );
+            harness.keystrokes("escape");
+            audit_or_error(&harness.snapshot()).expect("unique, named semantics");
+        }
+    }
+
+    #[gpui::test]
+    fn settings_exhibit_wraps_without_leaving_the_canonical_frame(cx: &mut gpui::TestAppContext) {
+        let mut harness = Harness::new(cx, crate::install, settings);
+        canonical(&mut harness);
+        for theme in ["studio-light", "studio-dark"] {
+            harness.update(|_, cx| assert!(gpui_kit_theme::activate_theme(theme, cx)));
+            audit_or_error(&harness.snapshot()).expect("auditable fixture");
+            for id in [
+                "scene.settings.general",
+                "scene.settings.sync",
+                "scene.settings.fields",
+                "scene.settings.local",
+                "scene.settings.local.data.remove",
+                "scene.settings.local.folder.input",
+                "scene.settings.local.folder.reset",
+            ] {
+                let bounds = harness.bounds(id).expect("visible fixture");
+                assert!(
+                    bounds.left() >= px(0.0) && bounds.right() <= px(920.0),
+                    "{id}"
+                );
+                assert!(
+                    bounds.top() >= px(0.0) && bounds.bottom() <= px(1000.0),
+                    "{id}"
+                );
+            }
+            let names = harness
+                .bounds("scene.settings.fields.model.names")
+                .expect("names");
+            assert!(names.size.width >= px(240.0));
+            let select = harness
+                .bounds("scene.settings.fields.model.select")
+                .expect("select");
+            assert!(
+                select.size.width >= px(240.0),
+                "long choices get room instead of a fixed narrow column"
+            );
+            let row = harness
+                .bounds("scene.settings.fields.model")
+                .expect("model row");
+            assert!(select.left() >= row.left() && select.right() <= row.right());
+            let input = harness
+                .bounds("scene.settings.local.folder.input")
+                .expect("input");
+            let action = harness
+                .bounds("scene.settings.local.folder.reset")
+                .expect("action");
+            assert!(
+                action.top() > input.bottom(),
+                "composite action wraps below input"
+            );
+            let height = harness.update(|_, cx| px(cx.theme().control.lg.height));
+            assert_eq!(input.size.height, height);
+            assert_eq!(action.size.height, height);
+            assert_eq!(select.size.height, height);
+            assert!(
+                harness
+                    .node("scene.settings.general.telemetry")
+                    .expect("managed row")
+                    .disabled
+            );
+            assert!(
+                harness
+                    .node("scene.settings.sync.settings")
+                    .expect("dimmed row")
+                    .disabled
+            );
+            assert!(
+                harness
+                    .node("scene.settings.sync.settings.switch")
+                    .is_none()
+            );
+            assert_eq!(
+                harness
+                    .node("scene.settings.filtered")
+                    .expect("filtered results")
+                    .value
+                    .as_deref(),
+                Some("2")
+            );
+        }
+        harness.click("scene.settings.local.data.remove");
+        assert_eq!(
+            harness
+                .node("scene.settings.local.data.description")
+                .expect("fixture response")
+                .text
+                .as_deref(),
+            Some("Removal requested in this fixture. No data was deleted."),
+        );
+    }
+
+    #[gpui::test]
+    fn settings_page_keeps_choices_across_navigation_and_empty_search(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        let mut harness = Harness::new(cx, crate::install, settings_page);
+        canonical(&mut harness);
+        harness.click("scene.settings-page.autosave.label");
+        harness.click("scene.settings-page.categories.appearance");
+        assert_eq!(
+            harness
+                .node("scene.settings-page.list")
+                .expect("appearance results")
+                .value
+                .as_deref(),
+            Some("2")
+        );
+        harness.click("scene.settings-page.theme.label");
+        harness.click("scene.settings-page.theme.select.dark");
+        harness.click("scene.settings-page.categories.all");
+        harness.click("scene.settings-page.query.query");
+        harness.keystrokes("z z z z z");
+        assert!(harness.node("scene.settings-page.list.empty").is_some());
+        assert!(harness.node("scene.settings-page.categories").is_some());
+        harness.click("scene.settings-page.reset");
+        assert_eq!(
+            harness
+                .node("scene.settings-page.list")
+                .expect("all results")
+                .value
+                .as_deref(),
+            Some("4")
+        );
+        assert_eq!(
+            harness
+                .node("scene.settings-page.autosave.switch")
+                .expect("saved switch")
+                .checked,
+            Some(false)
+        );
+        assert_eq!(
+            harness
+                .node("scene.settings-page.theme.select")
+                .expect("saved selection")
+                .value
+                .as_deref(),
+            Some("Studio dark")
+        );
+        audit_or_error(&harness.snapshot()).expect("auditable page");
+    }
 }
 
 pub(super) fn filter_bar(_window: &mut Window, cx: &mut App) -> AnyElement {
@@ -2721,6 +3079,7 @@ pub(super) fn keymap_editor(window: &mut Window, cx: &mut App) -> AnyElement {
                     .defaults(["ctrl-`"])
                     .bindings([KeymapBinding::new("default", "ctrl-`")])
                     .searchable("Show the integrated terminal", ["panel", "console"]),
+                KeymapCommand::new("workspace.new", "New workspace").context("Workspace"),
                 KeymapCommand::new("policy.locked", "Managed shortcut")
                     .context("Workspace")
                     .defaults(["cmd-l"])
@@ -2734,11 +3093,11 @@ pub(super) fn keymap_editor(window: &mut Window, cx: &mut App) -> AnyElement {
     let theme = cx.theme().clone();
 
     stack(&theme)
-        .w(px(760.0))
+        .w(px(580.0))
         .child(editor)
         .child(caption(
             &theme,
-            "Bindings remain caller-owned; add, remove, and reset are intents.",
+            "Click a shortcut and press new keys. Escape cancels. Changes are caller-owned intents.",
         ))
         .into_any_element()
 }

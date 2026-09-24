@@ -221,10 +221,10 @@ fn settings_rows_stack_descriptions_align_controls_and_keep_blocks(cx: &mut Test
     );
     assert_eq!(first.width, 180.0);
     assert_eq!(second.width, 180.0);
-    assert_eq!(first.x + first.width, first_row.x + first_row.width - 8.0);
+    assert_eq!(first.x + first.width, first_row.x + first_row.width - 16.0);
     assert_eq!(
         second.x + second.width,
-        second_row.x + second_row.width - 8.0
+        second_row.x + second_row.width - 16.0
     );
     assert_eq!(harness.node("editor").expect("editor").bounds.width, 180.0);
     assert_eq!(
@@ -235,7 +235,7 @@ fn settings_rows_stack_descriptions_align_controls_and_keep_blocks(cx: &mut Test
             .width,
         80.0
     );
-    assert_eq!(first_label.x - first_row.x, 8.0);
+    assert_eq!(first_label.x - first_row.x, 16.0);
     let block = harness.node("block").expect("interleaved block").bounds;
     assert!(
         block.y > first.y && block.y < second.y,

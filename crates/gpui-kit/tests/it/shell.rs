@@ -869,6 +869,7 @@ fn keymap_commands() -> Vec<KeymapCommand> {
             .defaults(["cmd-l"])
             .bindings([KeymapBinding::new("managed", "cmd-l")])
             .refused("Managed by the host"),
+        KeymapCommand::new("workspace.new", "New workspace"),
     ]
 }
 
@@ -936,13 +937,56 @@ fn a_keymap_editor_publishes_caller_owned_metadata_and_multiple_bindings(cx: &mu
             .as_deref(),
         Some("Already opens the recent list")
     );
-    assert_eq!(
+    let binding = case
+        .harness
+        .node("keymap.workspace.open.binding.user-primary")
+        .expect("binding group");
+    assert_eq!(binding.role, Role::Group);
+    assert_eq!(binding.value.as_deref(), Some("cmd-shift-o"));
+    assert!(
+        binding
+            .description
+            .as_deref()
+            .expect("caller provenance")
+            .contains("User keymap")
+    );
+    assert!(
         case.harness
             .node("keymap.workspace.open.binding.user-primary.provenance")
-            .expect("caller provenance")
-            .text
-            .as_deref(),
-        Some("User keymap")
+            .is_none()
+    );
+    assert_eq!(
+        case.harness
+            .node("keymap.workspace.open.binding.user-primary.keys")
+            .expect("shortcut label")
+            .role,
+        Role::Text
+    );
+    assert_eq!(
+        case.harness
+            .node("keymap.workspace.open.binding.user-primary.edit")
+            .expect("editable shortcut")
+            .role,
+        Role::Input
+    );
+    assert_eq!(
+        case.harness
+            .node("keymap.workspace.open.binding.user-primary.conflict")
+            .expect("conflict status")
+            .role,
+        Role::Status
+    );
+    assert_eq!(
+        case.harness
+            .node("keymap.workspace.open.effective")
+            .expect("effective group")
+            .role,
+        Role::Group
+    );
+    assert_eq!(
+        case.harness.bounds("keymap.workspace.open.defaults"),
+        case.harness.bounds("keymap.workspace.open.reset"),
+        "default facts annotate reset rather than taking a separate row"
     );
     assert!(
         case.harness
@@ -1048,7 +1092,31 @@ fn remove_reset_refusal_and_disabled_actions_are_truthful(cx: &mut TestAppContex
             .is_none()
     );
 
+    let refused = "keymap.policy.locked.binding.managed.edit";
+    assert!(
+        case.harness
+            .node(refused)
+            .expect("read-only shortcut")
+            .disabled
+    );
+    case.harness.click(refused);
+    case.harness.keystrokes("ctrl-j");
+    assert!(case.harness.node("keymap.recorder").is_none());
+    assert_eq!(case.events.borrow().len(), 2);
+
     let mut disabled = keymap(cx, "", true);
+    let field = "keymap.workspace.open.binding.user-primary.edit";
+    assert!(
+        disabled
+            .harness
+            .node(field)
+            .expect("disabled shortcut")
+            .disabled
+    );
+    disabled.harness.click(field);
+    disabled.harness.keystrokes("ctrl-j");
+    assert!(disabled.harness.node("keymap.recorder").is_none());
+    assert!(disabled.events.borrow().is_empty());
     assert!(disabled.harness.node("keymap.workspace.open.add").is_none());
     assert!(
         disabled
@@ -1065,6 +1133,437 @@ fn remove_reset_refusal_and_disabled_actions_are_truthful(cx: &mut TestAppContex
             .as_deref(),
         Some("cmd-shift-o, ctrl-o")
     );
+}
+
+#[gpui::test]
+fn replacing_a_shortcut_reports_binding_identity_without_changing_host_facts(
+    cx: &mut TestAppContext,
+) {
+    let mut case = keymap(cx, "", false);
+    for (command_id, binding_id, keystroke) in [
+        ("workspace.open", "user-primary", "ctrl-j"),
+        ("workspace.open", "workspace-secondary", "ctrl-k"),
+        ("terminal.toggle", "default", "ctrl-t"),
+    ] {
+        let field = format!("keymap.{command_id}.binding.{binding_id}.edit");
+        assert!(
+            !case
+                .harness
+                .node(&field)
+                .expect("editable shortcut")
+                .disabled
+        );
+        case.harness.click(&field);
+        assert!(
+            case.harness.node(&field).is_none(),
+            "the recorder replaces its field"
+        );
+        let recorder = case
+            .harness
+            .node("keymap.recorder")
+            .expect("inline recorder");
+        assert!(recorder.busy);
+        assert!(recorder.focused);
+        case.harness.update(|_, cx| {
+            assert_eq!(
+                case.editor.read(cx).active_command().map(|id| id.as_ref()),
+                Some(command_id)
+            );
+        });
+        case.harness.keystrokes(keystroke);
+        assert!(case.harness.node("keymap.recorder").is_none());
+        assert!(case.harness.node(&field).is_some());
+        case.harness.update(|_, cx| {
+            assert!(case.editor.read(cx).active_command().is_none());
+            assert_eq!(case.editor.read(cx).current_commands(), keymap_commands());
+        });
+    }
+    assert_eq!(
+        case.events.borrow().as_slice(),
+        [
+            KeymapEditorEvent::ReplaceCaptured {
+                command_id: "workspace.open".into(),
+                binding_id: "user-primary".into(),
+                keystroke: "ctrl-j".into()
+            },
+            KeymapEditorEvent::ReplaceCaptured {
+                command_id: "workspace.open".into(),
+                binding_id: "workspace-secondary".into(),
+                keystroke: "ctrl-k".into()
+            },
+            KeymapEditorEvent::ReplaceCaptured {
+                command_id: "terminal.toggle".into(),
+                binding_id: "default".into(),
+                keystroke: "ctrl-t".into()
+            },
+        ]
+    );
+    assert_eq!(
+        case.harness
+            .node("keymap.workspace.open.effective")
+            .expect("verified effective shortcuts")
+            .value
+            .as_deref(),
+        Some("cmd-shift-o, ctrl-o")
+    );
+    assert_eq!(
+        case.harness
+            .node("keymap.workspace.open.defaults")
+            .expect("verified defaults")
+            .value
+            .as_deref(),
+        Some("cmd-o")
+    );
+    assert_eq!(
+        case.harness
+            .node("keymap.workspace.open.binding.user-primary.conflict")
+            .expect("verified conflict")
+            .text
+            .as_deref(),
+        Some("Already opens the recent list")
+    );
+    assert!(
+        case.harness.node("keymap.terminal.toggle.reset").is_none(),
+        "capture alone does not make a default binding changed"
+    );
+}
+
+#[gpui::test]
+fn adding_an_alternate_or_unbound_shortcut_remains_an_add_intent(cx: &mut TestAppContext) {
+    let mut case = keymap(cx, "", false);
+    for command_id in ["workspace.open", "workspace.new"] {
+        case.harness.click(&format!("keymap.{command_id}.add"));
+        case.harness.keystrokes("ctrl-n");
+        assert!(case.harness.node("keymap.recorder").is_none());
+        case.harness.update(|_, cx| {
+            assert_eq!(case.editor.read(cx).current_commands(), keymap_commands());
+        });
+    }
+    assert_eq!(
+        case.events.borrow().as_slice(),
+        [
+            KeymapEditorEvent::AddCaptured {
+                command_id: "workspace.open".into(),
+                keystroke: "ctrl-n".into()
+            },
+            KeymapEditorEvent::AddCaptured {
+                command_id: "workspace.new".into(),
+                keystroke: "ctrl-n".into()
+            },
+        ]
+    );
+}
+
+#[gpui::test]
+fn default_shortcut_fields_are_keyboard_focusable_and_refused_fields_have_no_actions(
+    cx: &mut TestAppContext,
+) {
+    let mut case = keymap(cx, "", false);
+    let field = "keymap.terminal.toggle.binding.default.edit";
+    let tree = case.harness.accessibility_tree();
+    let native = tree["nodes"]
+        .as_object()
+        .expect("native nodes")
+        .values()
+        .find(|node| node["element_id"] == format!("Name(\"{field}\")"))
+        .expect("native shortcut field");
+    assert!(
+        native["aria"]["on_action"]
+            .as_array()
+            .expect("field actions")
+            .iter()
+            .any(|action| action == "Focus")
+    );
+    for _ in 0..case.harness.snapshot().nodes.len() {
+        case.harness.update(|window, cx| window.focus_next(cx));
+        if case.harness.node(field).expect("default field").focused {
+            break;
+        }
+    }
+    assert!(case.harness.node(field).expect("default field").focused);
+    assert!(
+        case.events.borrow().is_empty(),
+        "focus does not capture or apply a binding"
+    );
+
+    for (disabled, id) in [
+        (false, "keymap.policy.locked.binding.managed.edit"),
+        (true, "keymap.terminal.toggle.binding.default.edit"),
+    ] {
+        let mut case = keymap(cx, "", disabled);
+        let tree = case.harness.accessibility_tree();
+        let native = tree["nodes"]
+            .as_object()
+            .expect("native nodes")
+            .values()
+            .find(|node| node["element_id"] == format!("Name(\"{id}\")"))
+            .expect("native read-only field");
+        assert_eq!(native["aria"]["disabled"], true);
+        assert!(
+            native["aria"]["on_action"]
+                .as_array()
+                .is_none_or(Vec::is_empty),
+            "read-only fields install no actions"
+        );
+    }
+}
+
+#[gpui::test]
+fn escape_abandons_replacement_without_reporting_a_new_shortcut(cx: &mut TestAppContext) {
+    let mut case = keymap(cx, "", false);
+    let field = "keymap.workspace.open.binding.user-primary.edit";
+    case.harness.click(field);
+    case.harness.keystrokes("escape");
+    assert!(case.harness.node("keymap.recorder").is_none());
+    assert_eq!(
+        case.harness
+            .node(field)
+            .expect("original shortcut restored")
+            .value
+            .as_deref(),
+        Some("cmd-shift-o")
+    );
+    case.harness.keystrokes("ctrl-j");
+    assert_eq!(
+        case.events.borrow().as_slice(),
+        [KeymapEditorEvent::RecordingCancelled {
+            command_id: "workspace.open".into()
+        }]
+    );
+    case.harness.update(|_, cx| {
+        assert!(case.editor.read(cx).active_command().is_none());
+        assert_eq!(case.editor.read(cx).current_commands(), keymap_commands());
+    });
+}
+
+#[gpui::test]
+fn switching_between_bindings_and_add_cancels_the_previous_target_once(cx: &mut TestAppContext) {
+    let mut case = keymap(cx, "", false);
+    case.harness
+        .click("keymap.workspace.open.binding.user-primary.edit");
+    case.harness
+        .click("keymap.workspace.open.binding.workspace-secondary.edit");
+    case.harness.keystrokes("ctrl-j");
+    case.harness
+        .click("keymap.workspace.open.binding.user-primary.edit");
+    case.harness.click("keymap.terminal.toggle.add");
+    case.harness.keystrokes("ctrl-k");
+    case.harness.click("keymap.workspace.open.add");
+    case.harness
+        .click("keymap.terminal.toggle.binding.default.edit");
+    case.harness.keystrokes("ctrl-t");
+    assert_eq!(
+        case.events.borrow().as_slice(),
+        [
+            KeymapEditorEvent::RecordingCancelled {
+                command_id: "workspace.open".into()
+            },
+            KeymapEditorEvent::ReplaceCaptured {
+                command_id: "workspace.open".into(),
+                binding_id: "workspace-secondary".into(),
+                keystroke: "ctrl-j".into()
+            },
+            KeymapEditorEvent::RecordingCancelled {
+                command_id: "workspace.open".into()
+            },
+            KeymapEditorEvent::AddCaptured {
+                command_id: "terminal.toggle".into(),
+                keystroke: "ctrl-k".into()
+            },
+            KeymapEditorEvent::RecordingCancelled {
+                command_id: "workspace.open".into()
+            },
+            KeymapEditorEvent::ReplaceCaptured {
+                command_id: "terminal.toggle".into(),
+                binding_id: "default".into(),
+                keystroke: "ctrl-t".into()
+            },
+        ]
+    );
+    assert!(case.harness.node("keymap.recorder").is_none());
+    case.harness
+        .update(|_, cx| assert_eq!(case.editor.read(cx).current_commands(), keymap_commands()));
+}
+
+#[gpui::test]
+fn host_updates_cancel_recording_when_its_target_is_no_longer_actionable(cx: &mut TestAppContext) {
+    for reason in [
+        "filter",
+        "disable",
+        "binding removed",
+        "command removed",
+        "refusal",
+    ] {
+        let mut case = keymap(cx, "", false);
+        case.harness
+            .click("keymap.workspace.open.binding.user-primary.edit");
+        let mut commands = keymap_commands();
+        match reason {
+            "binding removed" => {
+                let remaining = commands[0].effective_bindings()[1..].to_vec();
+                commands[0] = commands[0].clone().bindings(remaining);
+            }
+            "command removed" => {
+                commands.remove(0);
+            }
+            "refusal" => {
+                commands[0] = commands[0].clone().refused("Replacement refused by host");
+            }
+            _ => {}
+        }
+        case.harness.update(|_, cx| {
+            case.editor.update(cx, |editor, cx| match reason {
+                "filter" => editor.set_query("terminal", cx),
+                "disable" => editor.set_disabled(true, cx),
+                _ => editor.set_commands(commands.clone(), cx),
+            });
+        });
+        assert!(case.harness.node("keymap.recorder").is_none(), "{reason}");
+        case.harness.keystrokes("ctrl-j");
+        assert_eq!(
+            case.events.borrow().as_slice(),
+            [KeymapEditorEvent::RecordingCancelled {
+                command_id: "workspace.open".into()
+            }],
+            "{reason}"
+        );
+        case.harness.update(|_, cx| {
+            assert!(case.editor.read(cx).active_command().is_none(), "{reason}");
+            assert_eq!(
+                case.editor.read(cx).current_commands(),
+                commands,
+                "{reason}"
+            );
+        });
+        if reason == "refusal" {
+            assert_eq!(
+                case.harness
+                    .node("keymap.workspace.open.refusal")
+                    .expect("host refusal")
+                    .text
+                    .as_deref(),
+                Some("Replacement refused by host")
+            );
+            let field = "keymap.workspace.open.binding.user-primary.edit";
+            assert!(
+                case.harness
+                    .node(field)
+                    .expect("verified shortcut retained")
+                    .disabled
+            );
+            case.harness.click(field);
+            assert!(case.harness.node("keymap.recorder").is_none());
+            assert_eq!(case.events.borrow().len(), 1);
+        }
+    }
+}
+
+#[gpui::test]
+fn replacement_tracks_binding_identity_across_host_reordering(cx: &mut TestAppContext) {
+    let mut case = keymap(cx, "", false);
+    case.harness
+        .click("keymap.workspace.open.binding.user-primary.edit");
+    let mut commands = keymap_commands();
+    let mut bindings = commands[0].effective_bindings().to_vec();
+    bindings.reverse();
+    commands[0] = commands[0].clone().bindings(bindings);
+    commands.reverse();
+    case.harness.update(|_, cx| {
+        case.editor
+            .update(cx, |editor, cx| editor.set_commands(commands.clone(), cx))
+    });
+    assert!(
+        case.harness
+            .node("keymap.recorder")
+            .expect("same target still recording")
+            .busy
+    );
+    case.harness.keystrokes("ctrl-j");
+    assert_eq!(
+        case.events.borrow().as_slice(),
+        [KeymapEditorEvent::ReplaceCaptured {
+            command_id: "workspace.open".into(),
+            binding_id: "user-primary".into(),
+            keystroke: "ctrl-j".into()
+        }]
+    );
+    case.harness
+        .update(|_, cx| assert_eq!(case.editor.read(cx).current_commands(), commands));
+}
+
+#[gpui::test]
+fn compact_keymap_rows_keep_the_recorder_inline_without_moving_other_targets(
+    cx: &mut TestAppContext,
+) {
+    let mut case = keymap(cx, "", false);
+    let snapshot = case.harness.snapshot();
+    for id in ["keymap.terminal.toggle", "keymap.workspace.new"] {
+        let row = snapshot.find(id).expect("compact row");
+        assert!(
+            row.bounds.height > 0.0 && row.bounds.height <= 80.0,
+            "{id}: {:?}",
+            row.bounds
+        );
+    }
+    let changed = snapshot.find("keymap.workspace.open").expect("changed row");
+    assert!(
+        changed.bounds.height <= 160.0,
+        "two bindings and a conflict remain compact: {:?}",
+        changed.bounds
+    );
+
+    for (row_id, target) in [
+        (
+            "keymap.workspace.open",
+            "keymap.workspace.open.binding.user-primary.edit",
+        ),
+        (
+            "keymap.terminal.toggle",
+            "keymap.terminal.toggle.binding.default.edit",
+        ),
+        ("keymap.workspace.new", "keymap.workspace.new.add"),
+    ] {
+        let before = case.harness.snapshot();
+        let field = before.find(target).expect("idle field").bounds;
+        let row = before.find(row_id).expect("row").bounds;
+        case.harness.click(target);
+        let active = case.harness.snapshot();
+        assert!(
+            active.find(target).is_none(),
+            "the recorder replaces {target}"
+        );
+        let recorder = active.find("keymap.recorder").expect("one inline recorder");
+        assert_eq!(
+            active
+                .nodes
+                .iter()
+                .filter(|node| node.id.as_ref() == "keymap.recorder")
+                .count(),
+            1
+        );
+        assert!(
+            recorder.bounds.overlaps(field),
+            "recorder occupies the selected field"
+        );
+        assert!(
+            recorder.bounds.y >= row.y
+                && recorder.bounds.y + recorder.bounds.height <= row.y + row.height + 1.0,
+            "recorder stays inside its row"
+        );
+        for original in before.nodes.iter().filter(|node| node.role == Role::Row) {
+            let now = active.find(original.id.as_ref()).expect("same row").bounds;
+            assert!(
+                (original.bounds.y - now.y).abs() < 1.0
+                    && (original.bounds.height - now.height).abs() < 1.0,
+                "recording must not move or grow {}: {:?} -> {:?}",
+                original.id,
+                original.bounds,
+                now
+            );
+        }
+        case.harness.keystrokes("escape");
+        assert!(case.harness.node(target).is_some(), "idle target restored");
+    }
 }
 
 #[gpui::test]

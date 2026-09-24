@@ -7450,6 +7450,30 @@
           "keystroke"
         ]
       },
+      "replaceCaptured": {
+        "type": "object",
+        "fields": {
+          "command_id": {
+            "type": "string",
+            "max": 256,
+            "min": 1
+          },
+          "binding_id": {
+            "type": "string",
+            "max": 256,
+            "min": 1
+          },
+          "keystroke": {
+            "type": "string",
+            "max": 16384
+          }
+        },
+        "required": [
+          "command_id",
+          "binding_id",
+          "keystroke"
+        ]
+      },
       "remove": {
         "type": "object",
         "fields": {

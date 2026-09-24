@@ -339,14 +339,15 @@ string_keys! {
     // Inline edit and keybinding recorder.
     InlineEditPlaceholder => "inline-edit.placeholder", "Empty";
     KeybindingUnbound => "keybinding.unbound", "Not bound";
-    KeybindingPrompt => "keybinding.prompt", "Press a shortcut";
-    KeymapAdd => "keymap.add", "Add binding";
+    KeybindingPrompt => "keybinding.prompt", "Press shortcut…";
+    KeymapAdd => "keymap.add", "Add another shortcut";
     KeymapRemove => "keymap.remove", "Remove";
     KeymapReset => "keymap.reset", "Reset to defaults";
     KeymapEffective => "keymap.effective", "Current bindings";
     KeymapDefaults => "keymap.defaults", "Defaults";
     KeymapResultOne => "keymap.result-one", "1 command";
     KeymapResultCount => "keymap.result-count", "{0} commands";
+    KeymapEmpty => "keymap.empty", "No shortcuts to show";
 
     // Number field.
     NumberDecrease => "number.decrease", "Decrease";

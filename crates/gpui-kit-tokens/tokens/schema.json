@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/fran0220/gpui-box/blob/main/crates/gpui-kit-tokens/tokens/schema.json",
   "title": "GPUI Box Kit theme tokens",
   "type": "object",
@@ -54,47 +54,47 @@
         "terminal"
       ],
       "properties": {
-        "onMediaForeground": { "$ref": "#/$defs/color" },
-        "onMediaBackground": { "$ref": "#/$defs/color" },
-        "onMediaHairline": { "$ref": "#/$defs/color" },
-        "palette": { "$ref": "#/$defs/palette" },
-        "paletteSteps": { "$ref": "#/$defs/paletteSteps" },
-        "surface": { "$ref": "#/$defs/surfaceColors" },
-        "text": { "$ref": "#/$defs/textColors" },
-        "interactive": { "$ref": "#/$defs/interactiveColors" },
-        "semantic": { "$ref": "#/$defs/semanticColors" },
-        "sequence": { "$ref": "#/$defs/sequenceColors" },
-        "node": { "$ref": "#/$defs/nodeColors" },
-        "agent": { "$ref": "#/$defs/agentColors" },
+        "onMediaForeground": { "$ref": "#/definitions/color" },
+        "onMediaBackground": { "$ref": "#/definitions/color" },
+        "onMediaHairline": { "$ref": "#/definitions/color" },
+        "palette": { "$ref": "#/definitions/palette" },
+        "paletteSteps": { "$ref": "#/definitions/paletteSteps" },
+        "surface": { "$ref": "#/definitions/surfaceColors" },
+        "text": { "$ref": "#/definitions/textColors" },
+        "interactive": { "$ref": "#/definitions/interactiveColors" },
+        "semantic": { "$ref": "#/definitions/semanticColors" },
+        "sequence": { "$ref": "#/definitions/sequenceColors" },
+        "node": { "$ref": "#/definitions/nodeColors" },
+        "agent": { "$ref": "#/definitions/agentColors" },
         "loader": {
           "type": "object",
           "additionalProperties": false,
           "required": ["mark", "track", "placeholder", "sheen"],
           "properties": {
-            "mark": { "$ref": "#/$defs/color" },
-            "track": { "$ref": "#/$defs/color" },
-            "placeholder": { "$ref": "#/$defs/color" },
-            "sheen": { "$ref": "#/$defs/color" }
+            "mark": { "$ref": "#/definitions/color" },
+            "track": { "$ref": "#/definitions/color" },
+            "placeholder": { "$ref": "#/definitions/color" },
+            "sheen": { "$ref": "#/definitions/color" }
           }
         },
-        "syntax": { "$ref": "#/$defs/syntaxColors" },
-        "terminal": { "$ref": "#/$defs/terminalColors" }
+        "syntax": { "$ref": "#/definitions/syntaxColors" },
+        "terminal": { "$ref": "#/definitions/terminalColors" }
       }
     },
-    "space": { "$ref": "#/$defs/spacing" },
-    "measure": { "$ref": "#/$defs/measure" },
-    "radius": { "$ref": "#/$defs/radii" },
-    "control": { "$ref": "#/$defs/control" },
-    "border": { "$ref": "#/$defs/border" },
-    "opacity": { "$ref": "#/$defs/opacity" },
-    "elevation": { "$ref": "#/$defs/elevation" },
-    "zIndex": { "$ref": "#/$defs/zIndex" },
-    "density": { "$ref": "#/$defs/density" },
-    "typography": { "$ref": "#/$defs/typography" },
-    "motion": { "$ref": "#/$defs/motion" },
-    "effect": { "$ref": "#/$defs/effect" }
+    "space": { "$ref": "#/definitions/spacing" },
+    "measure": { "$ref": "#/definitions/measure" },
+    "radius": { "$ref": "#/definitions/radii" },
+    "control": { "$ref": "#/definitions/control" },
+    "border": { "$ref": "#/definitions/border" },
+    "opacity": { "$ref": "#/definitions/opacity" },
+    "elevation": { "$ref": "#/definitions/elevation" },
+    "zIndex": { "$ref": "#/definitions/zIndex" },
+    "density": { "$ref": "#/definitions/density" },
+    "typography": { "$ref": "#/definitions/typography" },
+    "motion": { "$ref": "#/definitions/motion" },
+    "effect": { "$ref": "#/definitions/effect" }
   },
-  "$defs": {
+  "definitions": {
     "colorLiteral": {
       "type": "string",
       "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
@@ -109,7 +109,7 @@
       "additionalProperties": {
         "type": "object",
         "minProperties": 1,
-        "additionalProperties": { "$ref": "#/$defs/colorLiteral" }
+        "additionalProperties": { "$ref": "#/definitions/colorLiteral" }
       }
     },
     "paletteSteps": {
@@ -117,11 +117,11 @@
       "additionalProperties": false,
       "required": ["filled", "hover", "active", "readableDark", "readableLight"],
       "properties": {
-        "filled": { "$ref": "#/$defs/paletteStepFallback" },
-        "hover": { "$ref": "#/$defs/paletteStepFallback" },
-        "active": { "$ref": "#/$defs/paletteStepFallback" },
-        "readableDark": { "$ref": "#/$defs/paletteStepFallback" },
-        "readableLight": { "$ref": "#/$defs/paletteStepFallback" }
+        "filled": { "$ref": "#/definitions/paletteStepFallback" },
+        "hover": { "$ref": "#/definitions/paletteStepFallback" },
+        "active": { "$ref": "#/definitions/paletteStepFallback" },
+        "readableDark": { "$ref": "#/definitions/paletteStepFallback" },
+        "readableLight": { "$ref": "#/definitions/paletteStepFallback" }
       }
     },
     "paletteStepFallback": {
@@ -138,16 +138,16 @@
       "additionalProperties": false,
       "required": ["backdrop", "canvas", "sunken", "panel", "raised", "overlay", "scrim", "control", "controlHover", "controlPressed"],
       "properties": {
-        "control": { "$ref": "#/$defs/color" },
-        "controlHover": { "$ref": "#/$defs/color" },
-        "controlPressed": { "$ref": "#/$defs/color" },
-        "backdrop": { "$ref": "#/$defs/color" },
-        "canvas": { "$ref": "#/$defs/color" },
-        "sunken": { "$ref": "#/$defs/color" },
-        "panel": { "$ref": "#/$defs/color" },
-        "raised": { "$ref": "#/$defs/color" },
-        "overlay": { "$ref": "#/$defs/color" },
-        "scrim": { "$ref": "#/$defs/color" }
+        "control": { "$ref": "#/definitions/color" },
+        "controlHover": { "$ref": "#/definitions/color" },
+        "controlPressed": { "$ref": "#/definitions/color" },
+        "backdrop": { "$ref": "#/definitions/color" },
+        "canvas": { "$ref": "#/definitions/color" },
+        "sunken": { "$ref": "#/definitions/color" },
+        "panel": { "$ref": "#/definitions/color" },
+        "raised": { "$ref": "#/definitions/color" },
+        "overlay": { "$ref": "#/definitions/color" },
+        "scrim": { "$ref": "#/definitions/color" }
       }
     },
     "textColors": {
@@ -155,13 +155,13 @@
       "additionalProperties": false,
       "required": ["primary", "muted", "faint", "placeholder", "disabled", "onAccent", "onPrimaryFill"],
       "properties": {
-        "primary": { "$ref": "#/$defs/color" },
-        "muted": { "$ref": "#/$defs/color" },
-        "faint": { "$ref": "#/$defs/color" },
-        "placeholder": { "$ref": "#/$defs/color" },
-        "disabled": { "$ref": "#/$defs/color" },
-        "onAccent": { "$ref": "#/$defs/color" },
-        "onPrimaryFill": { "$ref": "#/$defs/color" }
+        "primary": { "$ref": "#/definitions/color" },
+        "muted": { "$ref": "#/definitions/color" },
+        "faint": { "$ref": "#/definitions/color" },
+        "placeholder": { "$ref": "#/definitions/color" },
+        "disabled": { "$ref": "#/definitions/color" },
+        "onAccent": { "$ref": "#/definitions/color" },
+        "onPrimaryFill": { "$ref": "#/definitions/color" }
       }
     },
     "interactiveColors": {
@@ -184,20 +184,20 @@
         "whiteFillActive"
       ],
       "properties": {
-        "controlHairline": { "$ref": "#/$defs/color" },
-        "controlHighlight": { "$ref": "#/$defs/color" },
-        "hover": { "$ref": "#/$defs/color" },
-        "active": { "$ref": "#/$defs/color" },
-        "selected": { "$ref": "#/$defs/color" },
-        "hairline": { "$ref": "#/$defs/color" },
-        "hairlineStrong": { "$ref": "#/$defs/color" },
-        "track": { "$ref": "#/$defs/color" },
-        "divider": { "$ref": "#/$defs/color" },
-        "focus": { "$ref": "#/$defs/color" },
-        "primaryFill": { "$ref": "#/$defs/color" },
-        "whiteFill": { "$ref": "#/$defs/color" },
-        "whiteFillHover": { "$ref": "#/$defs/color" },
-        "whiteFillActive": { "$ref": "#/$defs/color" }
+        "controlHairline": { "$ref": "#/definitions/color" },
+        "controlHighlight": { "$ref": "#/definitions/color" },
+        "hover": { "$ref": "#/definitions/color" },
+        "active": { "$ref": "#/definitions/color" },
+        "selected": { "$ref": "#/definitions/color" },
+        "hairline": { "$ref": "#/definitions/color" },
+        "hairlineStrong": { "$ref": "#/definitions/color" },
+        "track": { "$ref": "#/definitions/color" },
+        "divider": { "$ref": "#/definitions/color" },
+        "focus": { "$ref": "#/definitions/color" },
+        "primaryFill": { "$ref": "#/definitions/color" },
+        "whiteFill": { "$ref": "#/definitions/color" },
+        "whiteFillHover": { "$ref": "#/definitions/color" },
+        "whiteFillActive": { "$ref": "#/definitions/color" }
       }
     },
     "semanticColors": {
@@ -205,12 +205,12 @@
       "additionalProperties": false,
       "required": ["accent", "accentStrong", "danger", "warning", "success", "info"],
       "properties": {
-        "accent": { "$ref": "#/$defs/color" },
-        "accentStrong": { "$ref": "#/$defs/color" },
-        "danger": { "$ref": "#/$defs/color" },
-        "warning": { "$ref": "#/$defs/color" },
-        "success": { "$ref": "#/$defs/color" },
-        "info": { "$ref": "#/$defs/color" }
+        "accent": { "$ref": "#/definitions/color" },
+        "accentStrong": { "$ref": "#/definitions/color" },
+        "danger": { "$ref": "#/definitions/color" },
+        "warning": { "$ref": "#/definitions/color" },
+        "success": { "$ref": "#/definitions/color" },
+        "info": { "$ref": "#/definitions/color" }
       }
     },
     "sequenceColors": {
@@ -222,7 +222,7 @@
           "type": "array",
           "minItems": 8,
           "maxItems": 8,
-          "items": { "$ref": "#/$defs/color" }
+          "items": { "$ref": "#/definitions/color" }
         }
       }
     },
@@ -250,24 +250,24 @@
         "gridAxis"
       ],
       "properties": {
-        "headerWash": { "$ref": "#/$defs/color" },
-        "portIdle": { "$ref": "#/$defs/color" },
-        "portHover": { "$ref": "#/$defs/color" },
-        "portConnected": { "$ref": "#/$defs/color" },
-        "edge": { "$ref": "#/$defs/color" },
-        "edgeTarget": { "$ref": "#/$defs/color" },
-        "edgeActive": { "$ref": "#/$defs/color" },
-        "edgeFlowHighlight": { "$ref": "#/$defs/color" },
-        "edgeFeedback": { "$ref": "#/$defs/color" },
-        "edgeFeedbackActive": { "$ref": "#/$defs/color" },
-        "auraActive": { "$ref": "#/$defs/color" },
-        "auraSuccess": { "$ref": "#/$defs/color" },
-        "auraAttention": { "$ref": "#/$defs/color" },
-        "auraDanger": { "$ref": "#/$defs/color" },
-        "labelWash": { "$ref": "#/$defs/color" },
-        "grid": { "$ref": "#/$defs/color" },
-        "gridStrong": { "$ref": "#/$defs/color" },
-        "gridAxis": { "$ref": "#/$defs/color" }
+        "headerWash": { "$ref": "#/definitions/color" },
+        "portIdle": { "$ref": "#/definitions/color" },
+        "portHover": { "$ref": "#/definitions/color" },
+        "portConnected": { "$ref": "#/definitions/color" },
+        "edge": { "$ref": "#/definitions/color" },
+        "edgeTarget": { "$ref": "#/definitions/color" },
+        "edgeActive": { "$ref": "#/definitions/color" },
+        "edgeFlowHighlight": { "$ref": "#/definitions/color" },
+        "edgeFeedback": { "$ref": "#/definitions/color" },
+        "edgeFeedbackActive": { "$ref": "#/definitions/color" },
+        "auraActive": { "$ref": "#/definitions/color" },
+        "auraSuccess": { "$ref": "#/definitions/color" },
+        "auraAttention": { "$ref": "#/definitions/color" },
+        "auraDanger": { "$ref": "#/definitions/color" },
+        "labelWash": { "$ref": "#/definitions/color" },
+        "grid": { "$ref": "#/definitions/color" },
+        "gridStrong": { "$ref": "#/definitions/color" },
+        "gridAxis": { "$ref": "#/definitions/color" }
       }
     },
     "agentColors": {
@@ -275,12 +275,12 @@
       "additionalProperties": false,
       "required": ["read", "network", "shell", "edit", "external", "evidenceWash"],
       "properties": {
-        "read": { "$ref": "#/$defs/color" },
-        "network": { "$ref": "#/$defs/color" },
-        "shell": { "$ref": "#/$defs/color" },
-        "edit": { "$ref": "#/$defs/color" },
-        "external": { "$ref": "#/$defs/color" },
-        "evidenceWash": { "$ref": "#/$defs/color" }
+        "read": { "$ref": "#/definitions/color" },
+        "network": { "$ref": "#/definitions/color" },
+        "shell": { "$ref": "#/definitions/color" },
+        "edit": { "$ref": "#/definitions/color" },
+        "external": { "$ref": "#/definitions/color" },
+        "evidenceWash": { "$ref": "#/definitions/color" }
       }
     },
     "syntaxColors": {
@@ -299,16 +299,16 @@
         "removedWash"
       ],
       "properties": {
-        "keyword": { "$ref": "#/$defs/color" },
-        "string": { "$ref": "#/$defs/color" },
-        "comment": { "$ref": "#/$defs/color" },
-        "number": { "$ref": "#/$defs/color" },
-        "inline": { "$ref": "#/$defs/color" },
-        "inlineWash": { "$ref": "#/$defs/color" },
-        "added": { "$ref": "#/$defs/color" },
-        "addedWash": { "$ref": "#/$defs/color" },
-        "removed": { "$ref": "#/$defs/color" },
-        "removedWash": { "$ref": "#/$defs/color" }
+        "keyword": { "$ref": "#/definitions/color" },
+        "string": { "$ref": "#/definitions/color" },
+        "comment": { "$ref": "#/definitions/color" },
+        "number": { "$ref": "#/definitions/color" },
+        "inline": { "$ref": "#/definitions/color" },
+        "inlineWash": { "$ref": "#/definitions/color" },
+        "added": { "$ref": "#/definitions/color" },
+        "addedWash": { "$ref": "#/definitions/color" },
+        "removed": { "$ref": "#/definitions/color" },
+        "removedWash": { "$ref": "#/definitions/color" }
       }
     },
     "terminalColors": {
@@ -316,13 +316,13 @@
       "additionalProperties": false,
       "required": ["background", "selection", "ansi"],
       "properties": {
-        "background": { "$ref": "#/$defs/color" },
-        "selection": { "$ref": "#/$defs/color" },
+        "background": { "$ref": "#/definitions/color" },
+        "selection": { "$ref": "#/definitions/color" },
         "ansi": {
           "type": "array",
           "minItems": 16,
           "maxItems": 16,
-          "items": { "$ref": "#/$defs/color" }
+          "items": { "$ref": "#/definitions/color" }
         }
       }
     },
@@ -331,13 +331,13 @@
       "additionalProperties": false,
       "required": ["xxs", "xs", "sm", "md", "lg", "xl", "xxl"],
       "properties": {
-        "xxs": { "$ref": "#/$defs/positiveNumber" },
-        "xs": { "$ref": "#/$defs/positiveNumber" },
-        "sm": { "$ref": "#/$defs/positiveNumber" },
-        "md": { "$ref": "#/$defs/positiveNumber" },
-        "lg": { "$ref": "#/$defs/positiveNumber" },
-        "xl": { "$ref": "#/$defs/positiveNumber" },
-        "xxl": { "$ref": "#/$defs/positiveNumber" }
+        "xxs": { "$ref": "#/definitions/positiveNumber" },
+        "xs": { "$ref": "#/definitions/positiveNumber" },
+        "sm": { "$ref": "#/definitions/positiveNumber" },
+        "md": { "$ref": "#/definitions/positiveNumber" },
+        "lg": { "$ref": "#/definitions/positiveNumber" },
+        "xl": { "$ref": "#/definitions/positiveNumber" },
+        "xxl": { "$ref": "#/definitions/positiveNumber" }
       }
     },
     "measure": {
@@ -377,37 +377,37 @@
         "nodeProgress"
       ],
       "properties": {
-        "settingsLabel": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "readableWidth": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "dialogWidth": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "menuMinWidth": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "compactMenuMinWidth": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "menuMaxHeight": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "compactMenuMaxHeight": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "standaloneIcon": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "scrollbarTrack": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "scrollbarThumb": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "scrollbarMinThumb": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "caretWidth": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "textDecorationWidth": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "progressTrackHeight": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "sliderTrackHeight": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "sliderVerticalHeight": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "containerSmall": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "containerMedium": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "containerLarge": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "containerExtraLarge": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "compactOverlayWidth": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "mediaViewerHeight": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "timelineRailWidth": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "statusMark": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "nodeEdgeWidth": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "nodeEdgeCorner": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "nodeEdgeLead": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "nodeEdgeCorridor": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "nodeEdgeLane": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "nodePort": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "nodeProgress": { "$ref": "#/$defs/strictlyPositiveNumber" }
+        "settingsLabel": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "readableWidth": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "dialogWidth": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "menuMinWidth": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "compactMenuMinWidth": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "menuMaxHeight": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "compactMenuMaxHeight": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "standaloneIcon": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "scrollbarTrack": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "scrollbarThumb": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "scrollbarMinThumb": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "caretWidth": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "textDecorationWidth": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "progressTrackHeight": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "sliderTrackHeight": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "sliderVerticalHeight": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "containerSmall": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "containerMedium": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "containerLarge": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "containerExtraLarge": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "compactOverlayWidth": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "mediaViewerHeight": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "timelineRailWidth": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "statusMark": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "nodeEdgeWidth": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "nodeEdgeCorner": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "nodeEdgeLead": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "nodeEdgeCorridor": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "nodeEdgeLane": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "nodePort": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "nodeProgress": { "$ref": "#/definitions/strictlyPositiveNumber" }
       }
     },
     "radii": {
@@ -415,12 +415,12 @@
       "additionalProperties": false,
       "required": ["small", "control", "card", "dialog", "bubble", "pill"],
       "properties": {
-        "small": { "$ref": "#/$defs/positiveNumber" },
-        "control": { "$ref": "#/$defs/positiveNumber" },
-        "card": { "$ref": "#/$defs/positiveNumber" },
-        "dialog": { "$ref": "#/$defs/positiveNumber" },
-        "bubble": { "$ref": "#/$defs/positiveNumber" },
-        "pill": { "$ref": "#/$defs/positiveNumber" }
+        "small": { "$ref": "#/definitions/positiveNumber" },
+        "control": { "$ref": "#/definitions/positiveNumber" },
+        "card": { "$ref": "#/definitions/positiveNumber" },
+        "dialog": { "$ref": "#/definitions/positiveNumber" },
+        "bubble": { "$ref": "#/definitions/positiveNumber" },
+        "pill": { "$ref": "#/definitions/positiveNumber" }
       }
     },
     "controlStep": {
@@ -428,11 +428,11 @@
       "additionalProperties": false,
       "required": ["height", "paddingX", "gap", "fontSize", "iconSize"],
       "properties": {
-        "height": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "paddingX": { "$ref": "#/$defs/positiveNumber" },
-        "gap": { "$ref": "#/$defs/positiveNumber" },
-        "fontSize": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "iconSize": { "$ref": "#/$defs/strictlyPositiveNumber" }
+        "height": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "paddingX": { "$ref": "#/definitions/positiveNumber" },
+        "gap": { "$ref": "#/definitions/positiveNumber" },
+        "fontSize": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "iconSize": { "$ref": "#/definitions/strictlyPositiveNumber" }
       }
     },
     "control": {
@@ -440,11 +440,11 @@
       "additionalProperties": false,
       "required": ["xs", "sm", "md", "lg", "touch"],
       "properties": {
-        "xs": { "$ref": "#/$defs/controlStep" },
-        "sm": { "$ref": "#/$defs/controlStep" },
-        "md": { "$ref": "#/$defs/controlStep" },
-        "lg": { "$ref": "#/$defs/controlStep" },
-        "touch": { "$ref": "#/$defs/controlStep" }
+        "xs": { "$ref": "#/definitions/controlStep" },
+        "sm": { "$ref": "#/definitions/controlStep" },
+        "md": { "$ref": "#/definitions/controlStep" },
+        "lg": { "$ref": "#/definitions/controlStep" },
+        "touch": { "$ref": "#/definitions/controlStep" }
       }
     },
     "border": {
@@ -452,8 +452,8 @@
       "additionalProperties": false,
       "required": ["hairline", "thick"],
       "properties": {
-        "hairline": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "thick": { "$ref": "#/$defs/strictlyPositiveNumber" }
+        "hairline": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "thick": { "$ref": "#/definitions/strictlyPositiveNumber" }
       }
     },
     "opacity": {
@@ -472,9 +472,9 @@
       "required": ["y", "blur", "spread", "color"],
       "properties": {
         "y": { "type": "number" },
-        "blur": { "$ref": "#/$defs/positiveNumber" },
+        "blur": { "$ref": "#/definitions/positiveNumber" },
         "spread": { "type": "number" },
-        "color": { "$ref": "#/$defs/color" }
+        "color": { "$ref": "#/definitions/color" }
       }
     },
     "elevation": {
@@ -484,19 +484,19 @@
       "properties": {
         "flat": {
           "type": "array",
-          "items": { "$ref": "#/$defs/elevationLayer" }
+          "items": { "$ref": "#/definitions/elevationLayer" }
         },
         "raised": {
           "type": "array",
-          "items": { "$ref": "#/$defs/elevationLayer" }
+          "items": { "$ref": "#/definitions/elevationLayer" }
         },
         "overlay": {
           "type": "array",
-          "items": { "$ref": "#/$defs/elevationLayer" }
+          "items": { "$ref": "#/definitions/elevationLayer" }
         },
         "modal": {
           "type": "array",
-          "items": { "$ref": "#/$defs/elevationLayer" }
+          "items": { "$ref": "#/definitions/elevationLayer" }
         }
       }
     },
@@ -539,8 +539,8 @@
       "additionalProperties": false,
       "required": ["compact", "comfortable"],
       "properties": {
-        "compact": { "$ref": "#/$defs/densityScale" },
-        "comfortable": { "$ref": "#/$defs/referenceDensityScale" }
+        "compact": { "$ref": "#/definitions/densityScale" },
+        "comfortable": { "$ref": "#/definitions/referenceDensityScale" }
       }
     },
     "font": {
@@ -559,8 +559,8 @@
       "additionalProperties": false,
       "required": ["size", "lineHeight", "weight"],
       "properties": {
-        "size": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "lineHeight": { "$ref": "#/$defs/strictlyPositiveNumber" },
+        "size": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "lineHeight": { "$ref": "#/definitions/strictlyPositiveNumber" },
         "weight": { "type": "number", "minimum": 100, "maximum": 900 }
       }
     },
@@ -569,8 +569,8 @@
       "additionalProperties": false,
       "required": ["sans", "mono", "readoutScale", "scale"],
       "properties": {
-        "sans": { "$ref": "#/$defs/font" },
-        "mono": { "$ref": "#/$defs/font" },
+        "sans": { "$ref": "#/definitions/font" },
+        "mono": { "$ref": "#/definitions/font" },
         "readoutScale": { "type": "number", "minimum": 1 },
         "scale": {
           "type": "object",
@@ -585,13 +585,13 @@
             "code"
           ],
           "properties": {
-            "caption": { "$ref": "#/$defs/typeStep" },
-            "label": { "$ref": "#/$defs/typeStep" },
-            "body": { "$ref": "#/$defs/typeStep" },
-            "strong": { "$ref": "#/$defs/typeStep" },
-            "subtitle": { "$ref": "#/$defs/typeStep" },
-            "title": { "$ref": "#/$defs/typeStep" },
-            "code": { "$ref": "#/$defs/typeStep" }
+            "caption": { "$ref": "#/definitions/typeStep" },
+            "label": { "$ref": "#/definitions/typeStep" },
+            "body": { "$ref": "#/definitions/typeStep" },
+            "strong": { "$ref": "#/definitions/typeStep" },
+            "subtitle": { "$ref": "#/definitions/typeStep" },
+            "title": { "$ref": "#/definitions/typeStep" },
+            "code": { "$ref": "#/definitions/typeStep" }
           }
         }
       }
@@ -602,7 +602,7 @@
       "required": ["stiffness", "damping", "mass"],
       "properties": {
         "stiffness": { "type": "number", "exclusiveMinimum": 0 },
-        "damping": { "$ref": "#/$defs/positiveNumber" },
+        "damping": { "$ref": "#/definitions/positiveNumber" },
         "mass": { "type": "number", "exclusiveMinimum": 0 }
       }
     },
@@ -681,15 +681,15 @@
         "settle"
       ],
       "properties": {
-        "linear": { "$ref": "#/$defs/cubicBezier" },
-        "standard": { "$ref": "#/$defs/cubicBezier" },
-        "easeIn": { "$ref": "#/$defs/cubicBezier" },
-        "easeOut": { "$ref": "#/$defs/cubicBezier" },
-        "easeInOut": { "$ref": "#/$defs/cubicBezier" },
-        "emphasized": { "$ref": "#/$defs/cubicBezier" },
-        "overshoot": { "$ref": "#/$defs/cubicBezier" },
-        "exit": { "$ref": "#/$defs/cubicBezier" },
-        "settle": { "$ref": "#/$defs/cubicBezier" }
+        "linear": { "$ref": "#/definitions/cubicBezier" },
+        "standard": { "$ref": "#/definitions/cubicBezier" },
+        "easeIn": { "$ref": "#/definitions/cubicBezier" },
+        "easeOut": { "$ref": "#/definitions/cubicBezier" },
+        "easeInOut": { "$ref": "#/definitions/cubicBezier" },
+        "emphasized": { "$ref": "#/definitions/cubicBezier" },
+        "overshoot": { "$ref": "#/definitions/cubicBezier" },
+        "exit": { "$ref": "#/definitions/cubicBezier" },
+        "settle": { "$ref": "#/definitions/cubicBezier" }
       }
     },
     "motion": {
@@ -706,22 +706,22 @@
         "rubberBandTension"
       ],
       "properties": {
-        "durationMs": { "$ref": "#/$defs/durationMs" },
-        "easing": { "$ref": "#/$defs/easing" },
+        "durationMs": { "$ref": "#/definitions/durationMs" },
+        "easing": { "$ref": "#/definitions/easing" },
         "spring": {
           "type": "object",
           "additionalProperties": false,
           "required": ["snappy", "smooth", "bouncy", "grab"],
           "properties": {
-            "snappy": { "$ref": "#/$defs/spring" },
-            "smooth": { "$ref": "#/$defs/spring" },
-            "bouncy": { "$ref": "#/$defs/spring" },
-            "grab": { "$ref": "#/$defs/spring" }
+            "snappy": { "$ref": "#/definitions/spring" },
+            "smooth": { "$ref": "#/definitions/spring" },
+            "bouncy": { "$ref": "#/definitions/spring" },
+            "grab": { "$ref": "#/definitions/spring" }
           }
         },
         "staggerMaxItems": { "type": "integer", "minimum": 2 },
-        "pressOffsetPx": { "$ref": "#/$defs/positiveNumber" },
-        "hoverLiftPx": { "$ref": "#/$defs/positiveNumber" },
+        "pressOffsetPx": { "$ref": "#/definitions/positiveNumber" },
+        "hoverLiftPx": { "$ref": "#/definitions/positiveNumber" },
         "flickVelocityPxPerSec": { "type": "number", "exclusiveMinimum": 0 },
         "rubberBandTension": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
       }
@@ -811,24 +811,24 @@
       ],
       "properties": {
         "fieldFocus": { "type": "string", "enum": ["ring", "fill"] },
-        "edgeFadeBand": { "$ref": "#/$defs/positiveNumber" },
-        "focusRingWidth": { "$ref": "#/$defs/strictlyPositiveNumber" },
+        "edgeFadeBand": { "$ref": "#/definitions/positiveNumber" },
+        "focusRingWidth": { "$ref": "#/definitions/strictlyPositiveNumber" },
         "focusRingAlpha": { "type": "number", "minimum": 0, "maximum": 1 },
         "glowAlpha": { "type": "number", "minimum": 0, "maximum": 1 },
-        "glowBlur": { "$ref": "#/$defs/positiveNumber" },
+        "glowBlur": { "$ref": "#/definitions/positiveNumber" },
         "glowSpread": { "type": "number" },
         "glassAlpha": { "type": "number", "minimum": 0, "maximum": 1 },
-        "glassLiquidBlur": { "$ref": "#/$defs/positiveNumber" },
-        "glassFrostBlur": { "$ref": "#/$defs/positiveNumber" },
-        "glassSaturation": { "$ref": "#/$defs/positiveNumber" },
+        "glassLiquidBlur": { "$ref": "#/definitions/positiveNumber" },
+        "glassFrostBlur": { "$ref": "#/definitions/positiveNumber" },
+        "glassSaturation": { "$ref": "#/definitions/positiveNumber" },
         "glassWash": { "type": "number", "minimum": 0, "maximum": 1 },
         "glassBevelRatio": { "type": "number", "minimum": 0, "maximum": 1 },
-        "glassBevelMin": { "$ref": "#/$defs/positiveNumber" },
-        "glassBevelMax": { "$ref": "#/$defs/positiveNumber" },
+        "glassBevelMin": { "$ref": "#/definitions/positiveNumber" },
+        "glassBevelMax": { "$ref": "#/definitions/positiveNumber" },
         "glassDimming": { "type": "number", "minimum": 0, "maximum": 1 },
-        "glassFlipMaxExtent": { "$ref": "#/$defs/positiveNumber" },
-        "glassShadowMin": { "$ref": "#/$defs/positiveNumber" },
-        "glassShadowMax": { "$ref": "#/$defs/positiveNumber" },
+        "glassFlipMaxExtent": { "$ref": "#/definitions/positiveNumber" },
+        "glassShadowMin": { "$ref": "#/definitions/positiveNumber" },
+        "glassShadowMax": { "$ref": "#/definitions/positiveNumber" },
         "glassRefraction": { "type": "number" },
         "glassThickness": { "type": "number", "minimum": 0 },
         "glassRefractiveIndex": { "type": "number", "minimum": 1, "maximum": 2.5 },
@@ -837,16 +837,16 @@
         "glassSpecular": { "type": "number", "minimum": 0, "maximum": 1 },
         "glassTransmissionGain": { "type": "number", "minimum": 0, "maximum": 2 },
         "glassOpticalLift": { "type": "number", "minimum": 0, "maximum": 1 },
-        "glassHairline": { "$ref": "#/$defs/positiveNumber" },
+        "glassHairline": { "$ref": "#/definitions/positiveNumber" },
         "glassSpecularSharpness": { "type": "number", "minimum": 1 },
         "glassLightAngle": { "type": "number", "minimum": 0, "maximum": 6.2831854 },
-        "glassMergeDistance": { "$ref": "#/$defs/positiveNumber" },
+        "glassMergeDistance": { "$ref": "#/definitions/positiveNumber" },
         "glassContrastFlipLow": { "type": "number", "minimum": 0, "maximum": 1 },
         "glassContrastFlipHigh": { "type": "number", "minimum": 0, "maximum": 1 },
         "glassPressDepth": { "type": "number", "minimum": 1 },
         "glassPressScale": { "type": "number", "minimum": 1 },
-        "scrollEdgeBand": { "$ref": "#/$defs/positiveNumber" },
-        "scrollEdgeBlur": { "$ref": "#/$defs/positiveNumber" },
+        "scrollEdgeBand": { "$ref": "#/definitions/positiveNumber" },
+        "scrollEdgeBlur": { "$ref": "#/definitions/positiveNumber" },
         "sheenAlpha": { "type": "number", "minimum": 0, "maximum": 1 },
         "areaWashAlpha": { "type": "number", "minimum": 0, "maximum": 1 },
         "headerTintAlpha": { "type": "number", "minimum": 0, "maximum": 1 },
@@ -860,11 +860,11 @@
         "nodeAuraPulseFloorAlpha": { "type": "number", "minimum": 0, "maximum": 1 },
         "nodeAuraPulsePeakAlpha": { "type": "number", "minimum": 0, "maximum": 1 },
         "nodeAuraSettlePeakAlpha": { "type": "number", "minimum": 0, "maximum": 1 },
-        "nodeAuraSettleExpansion": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "nodeEdgeHoverWidthScale": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "nodeEdgeSelectedWidthScale": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "nodeEdgeGlowWidthScale": { "$ref": "#/$defs/strictlyPositiveNumber" },
-        "railWidth": { "$ref": "#/$defs/strictlyPositiveNumber" },
+        "nodeAuraSettleExpansion": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "nodeEdgeHoverWidthScale": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "nodeEdgeSelectedWidthScale": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "nodeEdgeGlowWidthScale": { "$ref": "#/definitions/strictlyPositiveNumber" },
+        "railWidth": { "$ref": "#/definitions/strictlyPositiveNumber" },
         "semanticWashFaintAlpha": { "type": "number", "minimum": 0, "maximum": 1 },
         "semanticWashAlpha": { "type": "number", "minimum": 0, "maximum": 1 },
         "semanticWashStrongAlpha": { "type": "number", "minimum": 0, "maximum": 1 },

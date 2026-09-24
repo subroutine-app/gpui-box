@@ -15,13 +15,16 @@
 use std::rc::Rc;
 
 use gpui::{
-    AnyElement, App, EffectScoped, InteractiveElement, IntoElement, ParentElement, Pixels,
-    RenderOnce, SharedString, Styled, Window, div, prelude::FluentBuilder, px,
+    AnyElement, App, EffectScoped, Entity, InteractiveElement, IntoElement, ParentElement, Pixels,
+    RenderOnce, SharedString, StatefulInteractiveElement, Styled, Window, div,
+    prelude::FluentBuilder, px,
 };
 use gpui_kit_assets::{Icon, icon};
 use gpui_kit_semantics::{NodeSpec, Role, Semantic};
 use gpui_kit_theme::{ActiveTheme, Radius, Space, Surface, Theme, TypeScale};
 
+use super::select::Select;
+use super::toggle::{ActionHandler, Switch};
 use crate::display::badge::Badge;
 use crate::display::empty::{EmptyKind, EmptyState};
 use crate::foundation::direction::{ActiveDirection, DirectionalExt};
@@ -68,7 +71,14 @@ impl Withheld {
     }
 }
 
-/// One setting: what it is called on the left, what it is set to on the right.
+enum RowControl {
+    Custom(AnyElement),
+    Switch(Switch),
+    Select(Entity<Select>),
+}
+
+/// One setting: a wrapping name/description and a trailing control. Controls
+/// move below the name when the available width cannot accommodate both.
 #[derive(IntoElement)]
 pub struct SettingsRow {
     ident: Ident,
@@ -78,7 +88,9 @@ pub struct SettingsRow {
     badge: Option<SharedString>,
     /// What the setting currently holds, in the caller's words.
     value: Option<SharedString>,
-    control: Option<AnyElement>,
+    control: Option<RowControl>,
+    control_width: Option<Pixels>,
+    stacked: bool,
     withheld: Option<Withheld>,
     search_terms: Vec<SharedString>,
 }
@@ -106,6 +118,8 @@ impl SettingsRow {
             badge: None,
             value: None,
             control: None,
+            control_width: None,
+            stacked: false,
             withheld: None,
             search_terms: Vec::new(),
         }
@@ -136,8 +150,43 @@ impl SettingsRow {
         self
     }
 
+    /// Arbitrary content, without label activation. Its column has a readable
+    /// minimum for fill-style inputs, but can grow to fit intrinsic actions.
+    /// Use [`Self::switch`] or [`Self::select`] to bind the name to a control.
     pub fn control(mut self, control: impl IntoElement) -> Self {
-        self.control = Some(control.into_any_element());
+        self.control = Some(RowControl::Custom(control.into_any_element()));
+        self
+    }
+
+    /// Names the switch and makes the name/description focus it and activate
+    /// its existing callback. Disabled, handlerless, and withheld controls get
+    /// no label handler or additional tab stop.
+    pub fn switch(mut self, switch: Switch) -> Self {
+        self.control = Some(RowControl::Switch(switch.named(self.label.clone())));
+        self
+    }
+
+    /// Names the select and makes the name/description open and focus that same
+    /// entity. Its existing selection subscription remains the only callback.
+    /// Unless overridden, the column fits the longest option (up to the row's
+    /// available width), so accepting a different choice does not move it.
+    pub fn select(mut self, select: Entity<Select>) -> Self {
+        self.control = Some(RowControl::Select(select));
+        self
+    }
+
+    /// Overrides the trailing column width, capped by the available row width.
+    /// Without an override switches are intrinsic, and arbitrary controls can
+    /// grow beyond their readable minimum instead of clipping long actions.
+    pub fn control_width(mut self, width: Pixels) -> Self {
+        self.control_width = Some(width.max(px(0.0)));
+        self
+    }
+
+    /// Places a full-width control below the name, for composite editors and
+    /// long action rows. An explicit control width still applies to its content.
+    pub fn stacked(mut self) -> Self {
+        self.stacked = true;
         self
     }
 
@@ -192,10 +241,65 @@ impl SettingsRow {
                 .is_some_and(|withheld| matcher.rank(query, &withheld.sentence(cx)).is_some())
     }
 
-    fn render_in(self, theme: &Theme, cx: &mut App) -> AnyElement {
+    fn render_in(self, theme: &Theme, window: &mut Window, cx: &mut App) -> AnyElement {
         let direction = cx.layout_direction();
         let withheld = self.withheld.clone();
         let ident = self.ident.clone();
+        let fill_control =
+            matches!(self.control, Some(RowControl::Custom(_))) && withheld.is_none();
+        let control_width = self.control_width.or_else(|| {
+            if self.stacked || withheld.is_some() {
+                return None;
+            }
+            match &self.control {
+                Some(RowControl::Select(select)) => {
+                    Some(select.read(cx).preferred_width(window, cx))
+                }
+                _ => None,
+            }
+        });
+        let (control, activation): (Option<AnyElement>, Option<ActionHandler>) =
+            if withheld.is_some() {
+                (None, None)
+            } else {
+                match self.control {
+                    Some(RowControl::Custom(control)) => (Some(control), None),
+                    Some(RowControl::Switch(switch)) => {
+                        if let Some(activate) = switch.activation() {
+                            let focus = window
+                                .use_keyed_state(
+                                    ident.child("switch-focus").element_id(),
+                                    cx,
+                                    |_, cx| cx.focus_handle().tab_stop(true),
+                                )
+                                .read(cx)
+                                .clone();
+                            let switch = switch.with_focus_handle(focus.clone());
+                            let activation = Rc::new(move |window: &mut Window, cx: &mut App| {
+                                window.focus_from_pointer(&focus, cx);
+                                activate(window, cx);
+                            }) as ActionHandler;
+                            (Some(switch.into_any_element()), Some(activation))
+                        } else {
+                            (Some(switch.into_any_element()), None)
+                        }
+                    }
+                    Some(RowControl::Select(select)) => {
+                        select.update(cx, |select, cx| select.set_name(self.label.clone(), cx));
+                        let activation = (!select.read(cx).is_disabled()).then(|| {
+                            let select = select.clone();
+                            Rc::new(move |window: &mut Window, cx: &mut App| {
+                                select.update(cx, |select, cx| select.open(window, cx));
+                            }) as ActionHandler
+                        });
+                        (Some(select.into_any_element()), activation)
+                    }
+                    None => (None, None),
+                }
+            };
+        let label_width = self
+            .label_width
+            .unwrap_or(px(theme.measures.settings_label));
 
         let mut spec = NodeSpec::new(ident.semantic_id(), Role::Row).text(self.label.clone());
         if let Some(value) = self.value.clone() {
@@ -206,21 +310,29 @@ impl SettingsRow {
         }
 
         let names = div()
+            .id(ident.child("names").element_id())
             .column()
-            .flex_1()
-            .min_w(
-                self.label_width
-                    .unwrap_or(px(theme.measures.settings_label)),
-            )
-            .gap(px(theme.space(Space::Xxs)))
+            .flex_grow(1.0)
+            .flex_shrink_0()
+            .flex_basis(label_width)
+            .min_w(label_width)
+            .max_w_full()
+            .when(self.stacked, |names| names.flex_none().w_full())
+            .gap_token(theme, Space::Xs)
+            .when_some(activation, |names, activate| {
+                names
+                    .cursor_pointer()
+                    .on_click(move |_, window, cx| activate(window, cx))
+            })
             .child(
                 div()
                     .row_reading(direction)
                     .w_full()
                     .items_center()
+                    .flex_wrap()
                     .gap_token(theme, Space::Xs)
                     .child(
-                        foundation_text(theme, TypeScale::Label, self.label.clone())
+                        foundation_text(theme, TypeScale::Body, self.label.clone())
                             .min_w_0()
                             .semantic_in(
                                 cx,
@@ -236,7 +348,7 @@ impl SettingsRow {
                     ),
             )
             .children(self.description.clone().map(|description| {
-                foundation_text(theme, TypeScale::Caption, description.clone())
+                foundation_text(theme, TypeScale::Body, description.clone())
                     .w_full()
                     .min_w_0()
                     .text_tone(theme, gpui_kit_theme::TextTone::Muted)
@@ -255,7 +367,7 @@ impl SettingsRow {
 
         // A withheld row shows what is set and who set it. The control never
         // reaches the tree, so nothing can be operated by mistake.
-        let right = match (&withheld, self.control) {
+        let right = match (&withheld, control) {
             (Some(withheld), _) => div()
                 .column()
                 .items_end()
@@ -299,19 +411,29 @@ impl SettingsRow {
 
         div()
             .row_reading(direction)
+            .flex_wrap()
             .w_full()
-            .items_center()
-            .justify_between()
-            .gap_token(theme, Space::Md)
-            .px_token(theme, Space::Sm)
-            .py_token(theme, Space::Xs)
+            .min_w_0()
+            .items_start()
+            .justify_end()
+            .when(direction.is_rtl(), |row| row.justify_start())
+            .gap_token(theme, Space::Lg)
+            .px_token(theme, Space::Lg)
+            .py_token(theme, Space::Md)
             .child(names)
             .child(
                 div()
-                    .flex()
+                    .row_reading(direction)
                     .flex_none()
-                    .w(px(theme.measures.settings_label * 1.5))
+                    .max_w_full()
+                    .when(
+                        fill_control && !self.stacked && self.control_width.is_none(),
+                        |field| field.min_w(px(theme.measures.compact_menu_min_width)),
+                    )
+                    .when(self.stacked, |field| field.w_full())
+                    .when_some(control_width, |field, width| field.w(width))
                     .justify_end()
+                    .when(direction.is_rtl(), |field| field.justify_start())
                     .child(right)
                     .semantic_in(
                         cx,
@@ -325,9 +447,9 @@ impl SettingsRow {
 }
 
 impl RenderOnce for SettingsRow {
-    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.theme().clone();
-        self.render_in(&theme, cx)
+        self.render_in(&theme, window, cx)
     }
 }
 
@@ -483,13 +605,9 @@ impl RenderOnce for SettingsSection {
                     .flex_1()
                     .min_w_0()
                     .gap(px(theme.space(Space::Xxs)))
-                    .child(foundation_text(
-                        &theme,
-                        TypeScale::Label,
-                        self.title.clone(),
-                    ))
+                    .child(foundation_text(&theme, TypeScale::Body, self.title.clone()))
                     .children(self.description.clone().map(|description| {
-                        foundation_text(&theme, TypeScale::Caption, description)
+                        foundation_text(&theme, TypeScale::Body, description)
                             .text_tone(&theme, gpui_kit_theme::TextTone::Muted)
                     })),
             )
@@ -541,8 +659,8 @@ impl RenderOnce for SettingsSection {
                 SectionContent::Block(block) if dimmed.is_none() => div()
                     .w_full()
                     .min_w_0()
-                    .px_token(&theme, Space::Sm)
-                    .py_token(&theme, Space::Xs)
+                    .px_token(&theme, Space::Lg)
+                    .py_token(&theme, Space::Md)
                     .child(block)
                     .into_any_element(),
                 SectionContent::Block(_) => continue,
@@ -551,7 +669,7 @@ impl RenderOnce for SettingsSection {
                 content.push(
                     div()
                         .w_full()
-                        .px_token(&theme, Space::Sm)
+                        .px_token(&theme, Space::Lg)
                         .child(crate::foundation::inset_rule(&theme).w_full())
                         .into_any_element(),
                 );
@@ -562,7 +680,7 @@ impl RenderOnce for SettingsSection {
         div()
             .column()
             .w_full()
-            .gap_token(&theme, Space::Sm)
+            .gap_token(&theme, Space::Md)
             .child(heading)
             .children(reason)
             .child(

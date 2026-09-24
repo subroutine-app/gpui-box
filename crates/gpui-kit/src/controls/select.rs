@@ -9,7 +9,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use gpui::{
-    AnyElement, App, Bounds, Context, Entity, EventEmitter, FocusHandle, Focusable,
+    AnyElement, App, Bounds, Context, Entity, EventEmitter, FocusHandle, Focusable, FontWeight,
     InteractiveElement, IntoElement, KeyDownEvent, MouseButton, ParentElement, Pixels, Render,
     ScrollHandle, SharedString, StatefulInteractiveElement, Styled, Subscription, Window, div,
     prelude::FluentBuilder, px,
@@ -25,7 +25,7 @@ use crate::foundation::{
 use crate::layout::measure;
 use crate::motion;
 use crate::overlay::popover::{self, MenuKey};
-use crate::overlay::{Hang, Placement};
+use crate::overlay::{Hang, Placement, Tooltipped};
 use crate::reactive::Signal;
 use crate::strings::{ActiveStrings, StringKey};
 
@@ -178,8 +178,11 @@ impl Select {
     }
 
     pub fn set_name(&mut self, name: impl Into<SharedString>, cx: &mut Context<Self>) {
-        self.name = name.into();
-        cx.notify();
+        let name = name.into();
+        if self.name != name {
+            self.name = name;
+            cx.notify();
+        }
     }
 
     /// The placeholder the host gave, or the built-in default.
@@ -187,6 +190,53 @@ impl Select {
         self.placeholder
             .clone()
             .unwrap_or_else(|| cx.strings().text(StringKey::SelectPlaceholder))
+    }
+
+    /// The width a settings row can offer without truncating any answer. This
+    /// is opt-in geometry, not a minimum imposed on ordinary fill-style selects.
+    /// Reserve clear affordance space even while empty or disabled so choosing
+    /// an answer does not move the surrounding layout.
+    pub(crate) fn preferred_width(&self, window: &Window, cx: &App) -> Pixels {
+        let theme = cx.theme();
+        let metrics = theme.control.get(self.size);
+        let mut style = window.text_style();
+        style.font_weight = FontWeight(theme.typography.label.weight);
+        style.font_fallbacks = Some(gpui_kit_assets::text_fallbacks());
+        let widest = self
+            .options
+            .iter()
+            .map(|option| option.label.clone())
+            .chain(std::iter::once(self.resolved_placeholder(cx)))
+            .map(|label| {
+                let label = single_line_label(&label);
+                window
+                    .text_system()
+                    .shape_line(
+                        label.clone(),
+                        px(metrics.font_size),
+                        &[style.to_run(label.len())],
+                        None,
+                    )
+                    .width
+            })
+            .fold(px(0.0), Pixels::max);
+        let clear_width = if self.clearable {
+            let target = if self.size == ControlSize::Touch {
+                metrics.height
+            } else {
+                metrics.icon_size * 0.8
+            };
+            target + theme.space(Space::Xs)
+        } else {
+            0.0
+        };
+        px((f32::from(widest).ceil()
+            + 2.0 * (metrics.padding_x + theme.borders.hairline)
+            + theme.space(Space::Sm)
+            + metrics.icon_size * 0.9
+            + clear_width)
+            .ceil()
+            .max(theme.measures.menu_min_width))
     }
 
     pub fn placeholder(mut self, placeholder: impl Into<SharedString>) -> Self {
@@ -351,7 +401,10 @@ impl Select {
         cx.notify();
     }
 
-    fn open_menu(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    /// Opens the picker and focuses its trigger for keyboard navigation.
+    /// Disabled or already-open controls are unchanged; opening never selects
+    /// an option and reports `SelectEvent::Opened` only once.
+    pub fn open(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if self.disabled || self.open {
             return;
         }
@@ -390,7 +443,7 @@ impl Select {
         if self.open {
             self.close_menu(cx);
         } else {
-            self.open_menu(window, cx);
+            self.open(window, cx);
         }
     }
 
@@ -463,7 +516,7 @@ impl Select {
         );
         match (self.open, key) {
             (false, MenuKey::Down | MenuKey::Up | MenuKey::Enter) => {
-                self.open_menu(window, cx);
+                self.open(window, cx);
                 cx.stop_propagation();
             }
             (true, MenuKey::Down) => {
@@ -780,6 +833,9 @@ impl Render for Select {
         .items_center()
         .justify_between()
         .h(px(metrics.height))
+        .when(!self.open, |element| {
+            element.tip(self.ident.clone(), label.clone())
+        })
         .when(!self.disabled, |element| {
             element.cursor_pointer().on_mouse_down(
                 MouseButton::Left,
@@ -787,9 +843,10 @@ impl Render for Select {
             )
         })
         .child(
-            foundation_text(&theme, TypeScale::Label, label)
+            foundation_text(&theme, TypeScale::Label, single_line_label(&label))
                 .flex_1()
                 .min_w_0()
+                .truncate()
                 .text_size(px(metrics.font_size))
                 .text_color(if self.disabled {
                     theme.colors.text_disabled
@@ -797,7 +854,13 @@ impl Render for Select {
                     theme.colors.text_placeholder
                 } else {
                     theme.colors.text
-                }),
+                })
+                .semantic_in(
+                    cx,
+                    NodeSpec::new(self.ident.child("trigger.label").semantic_id(), Role::Text)
+                        .parent(self.ident.semantic_id())
+                        .text(label),
+                ),
         )
         // The two affordances travel together at the trailing edge. Left
         // to a space-between row the clear lands wherever the value
@@ -807,6 +870,12 @@ impl Render for Select {
             div()
                 .row_reading(direction)
                 .flex_none()
+                .debug_selector(|| {
+                    self.ident
+                        .child("trigger.affordances")
+                        .semantic_id()
+                        .to_string()
+                })
                 .gap_token(&theme, Space::Xs)
                 .when(self.clearable && has_choice && !self.disabled, |element| {
                     let clear = self.ident.child("clear");
@@ -867,6 +936,16 @@ impl Render for Select {
             .w_full()
             .child(popover::anchored_slot(placement, hang, trigger, menu))
             .children(self.sheet.as_ref().map(|sheet| sheet.drawer.clone()))
+    }
+}
+
+// A trigger is one line even when a caller-authored option contains a hard
+// break. The option, semantic value, and tooltip retain the original text.
+fn single_line_label(label: &SharedString) -> SharedString {
+    if label.contains(['\r', '\n']) {
+        label.replace(['\r', '\n'], " ").into()
+    } else {
+        label.clone()
     }
 }
 

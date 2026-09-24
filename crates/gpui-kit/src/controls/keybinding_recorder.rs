@@ -18,6 +18,7 @@
 //! a field that eats every key. The cost is that **escape cannot be bound**
 //! through the default recorder. A caller that genuinely needs it turns
 //! [`KeybindingRecorder::allow_escape`] on and provides its own way out.
+//! Clicking outside, losing focus, or deactivating the window also cancels.
 //!
 //! # What it does not do
 //!
@@ -30,8 +31,8 @@
 //!   host found, and nothing else.
 
 use gpui::{
-    App, Context, EventEmitter, FocusHandle, Focusable, InteractiveElement, IntoElement,
-    KeyDownEvent, ParentElement, Render, SharedString, StatefulInteractiveElement, Styled, Window,
+    App, Context, EventEmitter, FocusHandle, Focusable, InteractiveElement, IntoElement, Keystroke,
+    ParentElement, Render, SharedString, StatefulInteractiveElement, Styled, Subscription, Window,
     div, prelude::FluentBuilder, px,
 };
 use gpui_kit_assets::{Icon, icon};
@@ -79,6 +80,8 @@ pub struct KeybindingRecorder {
     size: ControlSize,
     disabled: bool,
     recording: bool,
+    keystroke_interceptor: Option<Subscription>,
+    _subscriptions: Vec<Subscription>,
 }
 
 impl std::fmt::Debug for KeybindingRecorder {
@@ -95,10 +98,22 @@ impl std::fmt::Debug for KeybindingRecorder {
 }
 
 impl KeybindingRecorder {
-    pub fn new(ident: impl Into<Ident>, _window: &mut Window, cx: &mut Context<Self>) -> Self {
+    pub fn new(ident: impl Into<Ident>, window: &mut Window, cx: &mut Context<Self>) -> Self {
+        let focus_handle = cx.focus_handle().tab_stop(true);
+        let subscriptions = vec![
+            cx.on_blur(&focus_handle, window, |recorder, _, cx| {
+                recorder.keystroke_interceptor.take();
+                recorder.cancel(cx);
+            }),
+            cx.observe_window_activation(window, |recorder, window, cx| {
+                if !window.is_window_active() {
+                    recorder.cancel(cx);
+                }
+            }),
+        ];
         Self {
             ident: ident.into(),
-            focus_handle: cx.focus_handle(),
+            focus_handle,
             label: None,
             placeholder: None,
             binding: None,
@@ -107,6 +122,8 @@ impl KeybindingRecorder {
             size: ControlSize::Md,
             disabled: false,
             recording: false,
+            keystroke_interceptor: None,
+            _subscriptions: subscriptions,
         }
     }
 
@@ -184,7 +201,9 @@ impl KeybindingRecorder {
     /// Refuses input and cancels any active recording; reenabling does not start one.
     pub fn set_disabled(&mut self, disabled: bool, cx: &mut Context<Self>) {
         self.disabled = disabled;
+        self.focus_handle = self.focus_handle.clone().tab_stop(!disabled);
         if disabled {
+            self.keystroke_interceptor.take();
             self.cancel(cx);
         }
         cx.notify();
@@ -196,8 +215,10 @@ impl KeybindingRecorder {
 
     /// Updates presentation without replacing the focus handle or recording session.
     pub fn set_control_size(&mut self, size: ControlSize, cx: &mut Context<Self>) {
-        self.size = size;
-        cx.notify();
+        if self.size != size {
+            self.size = size;
+            cx.notify();
+        }
     }
 
     pub fn is_recording(&self) -> bool {
@@ -208,13 +229,15 @@ impl KeybindingRecorder {
         self.binding.as_ref()
     }
 
-    /// Begins recording and takes the keyboard.
+    /// Begins recording and takes the keyboard until capture or cancellation.
+    /// Leaving the field or deactivating its window cancels the session.
     pub fn start(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if self.disabled || self.recording {
             return;
         }
         self.recording = true;
         window.focus(&self.focus_handle, cx);
+        self.intercept_keystrokes(window, cx);
         cx.emit(KeybindingRecorderEvent::Started);
         cx.notify();
     }
@@ -229,15 +252,49 @@ impl KeybindingRecorder {
         cx.notify();
     }
 
-    fn capture(&mut self, event: &KeyDownEvent, cx: &mut Context<Self>) -> bool {
+    fn intercept_keystrokes(&mut self, window: &Window, cx: &mut Context<Self>) {
+        if self.keystroke_interceptor.is_some() {
+            return;
+        }
+        let entity = cx.weak_entity();
+        let owner = window.window_handle().window_id();
+        // Element key listeners (including capture_key_down) run after keymap
+        // dispatch. Intercept first so bound app actions cannot consume the key.
+        self.keystroke_interceptor = Some(cx.intercept_keystrokes(move |event, window, cx| {
+            if window.window_handle().window_id() != owner {
+                return;
+            }
+            entity
+                .update(cx, |recorder, cx| {
+                    if recorder.disabled || !recorder.focus_handle.is_focused(window) {
+                        return;
+                    }
+                    let consumed = if recorder.recording {
+                        recorder.capture(&event.keystroke, cx)
+                    } else if !event.keystroke.modifiers.modified()
+                        && matches!(event.keystroke.key.as_str(), "enter" | "space")
+                    {
+                        recorder.start(window, cx);
+                        true
+                    } else {
+                        false
+                    };
+                    if consumed {
+                        window.prevent_default();
+                        cx.stop_propagation();
+                    }
+                })
+                .ok();
+        }));
+    }
+
+    fn capture(&mut self, keystroke: &Keystroke, cx: &mut Context<Self>) -> bool {
         if !self.recording {
             return false;
         }
-        let key = event.keystroke.key.as_str();
+        let key = keystroke.key.as_str();
         if key == "escape" && !self.allow_escape {
-            self.recording = false;
-            cx.emit(KeybindingRecorderEvent::Cancelled);
-            cx.notify();
+            self.cancel(cx);
             return true;
         }
         // A modifier on its own is a hand resting on the keyboard, not a
@@ -247,7 +304,7 @@ impl KeybindingRecorder {
         }
         self.recording = false;
         cx.emit(KeybindingRecorderEvent::Captured(SharedString::from(
-            event.keystroke.unparse(),
+            keystroke.unparse(),
         )));
         cx.notify();
         true
@@ -258,6 +315,7 @@ impl Disableable for KeybindingRecorder {
     /// Refuses the recorder. A refused recorder installs no handler at all.
     fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self.focus_handle = self.focus_handle.clone().tab_stop(!disabled);
         self
     }
 }
@@ -299,7 +357,12 @@ pub fn is_modifier(key: &str) -> bool {
 }
 
 impl Render for KeybindingRecorder {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if !self.disabled && self.focus_handle.is_focused(window) {
+            self.intercept_keystrokes(window, cx);
+        } else {
+            self.keystroke_interceptor.take();
+        }
         let theme = cx.theme().clone();
         let metrics = theme.control.get(self.size);
         let recording = self.recording && !self.disabled;
@@ -322,6 +385,21 @@ impl Render for KeybindingRecorder {
                     icon(Icon::Keyboard)
                         .size(px(metrics.icon_size))
                         .text_color(theme.colors.accent),
+                )
+                .child(
+                    foundation_text(
+                        &theme,
+                        TypeScale::Label,
+                        cx.strings().text(StringKey::KeybindingPrompt),
+                    )
+                    .text_size(px(metrics.font_size))
+                    .text_color(theme.colors.accent)
+                    .semantic_in(
+                        cx,
+                        NodeSpec::new(self.ident.child("prompt").semantic_id(), Role::Status)
+                            .parent(self.ident.semantic_id())
+                            .text(cx.strings().text(StringKey::KeybindingPrompt)),
+                    ),
                 )
                 .child(motion::breathe(
                     caret,
@@ -410,20 +488,9 @@ impl Render for KeybindingRecorder {
         if actionable {
             field = field
                 .on_click(cx.listener(|recorder, _, window, cx| recorder.start(window, cx)))
-                .on_key_down(cx.listener(|recorder, event: &KeyDownEvent, _, cx| {
-                    // While recording, the keystroke belongs to the recorder
-                    // and to nothing else on the way up.
-                    if recorder.capture(event, cx) {
-                        cx.stop_propagation();
-                        return;
-                    }
-                    if matches!(event.keystroke.key.as_str(), "enter" | "space") {
-                        recorder.recording = true;
-                        cx.emit(KeybindingRecorderEvent::Started);
-                        cx.notify();
-                        cx.stop_propagation();
-                    }
-                }));
+                .when(recording, |field| {
+                    field.on_mouse_down_out(cx.listener(|recorder, _, _, cx| recorder.cancel(cx)))
+                });
         }
 
         let mut spec = NodeSpec::new(self.ident.semantic_id(), Role::Input)

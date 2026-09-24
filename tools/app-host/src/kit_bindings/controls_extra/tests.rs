@@ -823,6 +823,48 @@ fn typed_button_group_uses_guarded_child_actions_and_refuses_stale_context(
     });
 }
 
+#[test]
+fn keymap_capture_payloads_distinguish_replacement_from_addition() {
+    let schemas: Value =
+        serde_json::from_str(include_str!("../schemas.json")).expect("Kit schemas");
+    let events = &schemas["KeymapEditor"]["events"];
+    let replace = &events["replaceCaptured"];
+    let add = &events["addCaptured"];
+    let payload = json!({"command_id":"save","binding_id":"custom","keystroke":"ctrl-j"});
+    super::super::validation::validate(&payload, replace).expect("replacement payload");
+    super::super::validation::validate(&json!({"command_id":"save","keystroke":"ctrl-j"}), add)
+        .expect("addition payload");
+    assert!(super::super::validation::validate(&payload, add).is_err());
+    for field in ["command_id", "binding_id", "keystroke"] {
+        let mut missing = payload.clone();
+        missing
+            .as_object_mut()
+            .expect("payload object")
+            .remove(field);
+        assert!(
+            super::super::validation::validate(&missing, replace).is_err(),
+            "missing {field}"
+        );
+        let mut wrong_type = payload.clone();
+        wrong_type[field] = json!(0);
+        assert!(
+            super::super::validation::validate(&wrong_type, replace).is_err(),
+            "numeric {field}"
+        );
+    }
+    for invalid in [
+        json!({"command_id":"save","binding_id":"","keystroke":"ctrl-j"}),
+        json!({"command_id":"","binding_id":"custom","keystroke":"ctrl-j"}),
+        json!({"command_id":"save","index":0,"keystroke":"ctrl-j"}),
+        json!({"command_id":"save","binding_id":"custom","keystroke":"ctrl-j","index":0}),
+    ] {
+        assert!(
+            super::super::validation::validate(&invalid, replace).is_err(),
+            "{invalid}"
+        );
+    }
+}
+
 #[gpui::test]
 fn keymap_reports_native_identities_and_keeps_recording_until_hidden(cx: &mut TestAppContext) {
     let state = Rc::new(KitState::default());
@@ -834,7 +876,7 @@ fn keymap_reports_native_identities_and_keeps_recording_until_hidden(cx: &mut Te
         "KeymapEditor",
         "keymap",
         json!({"commands":commands}),
-        json!({"remove":"remove","reset":"reset","addCaptured":"add","recordingCancelled":"cancel"}),
+        json!({"remove":"remove","reset":"reset","addCaptured":"add","replaceCaptured":"replace","recordingCancelled":"cancel"}),
     )));
     let events = Rc::new(RefCell::new(Vec::new()));
     let (build_state, build_node, output) = (state.clone(), descriptor.clone(), events.clone());
@@ -850,7 +892,27 @@ fn keymap_reports_native_identities_and_keeps_recording_until_hidden(cx: &mut Te
             Rc::new(move |action, value| output.borrow_mut().push((action.to_owned(), value))),
         )
     });
-    assert!(harness.node("keymap.locked.add").is_none());
+    let original = harness.update(|window, cx| {
+        state
+            .invoke(
+                &descriptor.borrow(),
+                "current_commands",
+                &json!({}),
+                true,
+                window,
+                cx,
+            )
+            .expect("caller facts")
+    });
+    let refused = harness
+        .node("keymap.locked.add")
+        .expect("refused unbound field remains visible");
+    assert_eq!(refused.role, gpui_kit_semantics::Role::Input);
+    assert!(refused.disabled);
+    harness.click("keymap.locked.add");
+    harness.keystrokes("ctrl-j");
+    assert!(harness.node("keymap.recorder").is_none());
+    assert!(events.borrow().is_empty());
     harness.click("keymap.save.binding.custom.remove");
     harness.click("keymap.save.reset");
     assert_eq!(
@@ -863,7 +925,7 @@ fn keymap_reports_native_identities_and_keeps_recording_until_hidden(cx: &mut Te
             ("reset".into(), json!({"command_id":"save"}))
         ]
     );
-    harness.click("keymap.save.add");
+    harness.click("keymap.save.binding.custom.edit");
     harness.update(|window,cx| {
         assert_eq!(state.invoke(&descriptor.borrow(),"active_command",&json!({}),true,window,cx).expect("active"),json!("save"));
         let result = state.invoke(&descriptor.borrow(),"current_commands",&json!({}),true,window,cx).expect("commands");
@@ -911,6 +973,64 @@ fn keymap_reports_native_identities_and_keeps_recording_until_hidden(cx: &mut Te
             json!({"command_id":"save","keystroke":"ctrl-k"})
         ))
     );
+    harness.click("keymap.save.binding.custom.edit");
+    harness.keystrokes("ctrl-j");
+    assert_eq!(
+        events.borrow().as_slice(),
+        [
+            (
+                "remove".into(),
+                json!({"command_id":"save","binding_id":"custom"})
+            ),
+            ("reset".into(), json!({"command_id":"save"})),
+            ("cancel".into(), json!({"command_id":"save"})),
+            (
+                "add".into(),
+                json!({"command_id":"save","keystroke":"ctrl-k"})
+            ),
+            (
+                "replace".into(),
+                json!({"command_id":"save","binding_id":"custom","keystroke":"ctrl-j"})
+            ),
+        ]
+    );
+    assert!(harness.node("keymap.recorder").is_none());
+    assert_eq!(
+        harness
+            .node("keymap.save.binding.custom.edit")
+            .expect("unchanged field")
+            .value
+            .as_deref(),
+        Some("ctrl-shift-s")
+    );
+    harness.update(|window, cx| {
+        assert_eq!(
+            state
+                .invoke(
+                    &descriptor.borrow(),
+                    "current_commands",
+                    &json!({}),
+                    true,
+                    window,
+                    cx
+                )
+                .expect("unchanged facts"),
+            original
+        );
+        assert_eq!(
+            state
+                .invoke(
+                    &descriptor.borrow(),
+                    "active_command",
+                    &json!({}),
+                    true,
+                    window,
+                    cx
+                )
+                .expect("finished capture"),
+            Value::Null
+        );
+    });
     harness.update(|window, cx| {
         state
             .invoke(
@@ -949,6 +1069,17 @@ fn keymap_reports_native_identities_and_keeps_recording_until_hidden(cx: &mut Te
         );
     });
     assert!(harness.node("keymap.save.add").is_none());
+    let emitted = events.borrow().len();
+    assert!(
+        harness
+            .node("keymap.save.binding.custom.edit")
+            .expect("disabled field")
+            .disabled
+    );
+    harness.click("keymap.save.binding.custom.edit");
+    harness.keystrokes("ctrl-l");
+    assert!(harness.node("keymap.recorder").is_none());
+    assert_eq!(events.borrow().len(), emitted);
     *descriptor.borrow_mut() = node("Button", "replacement", json!({}), json!({}));
     harness.update(|_, cx| {
         state.reconcile(&descriptor.borrow(), cx);

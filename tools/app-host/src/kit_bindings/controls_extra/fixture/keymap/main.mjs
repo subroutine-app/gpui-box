@@ -8,7 +8,8 @@ gpui.mount(() => gpui.column('keymap.fixture', [
   gpui.kit.KeymapEditor('keymap.ready', { commands }, {
     remove: value => last.set(`Removal refused for ${value.command_id}/${value.binding_id}`),
     reset: value => last.set(`Reset requested for ${value.command_id}`),
-    addCaptured: value => last.set(`Captured ${value.keystroke} for ${value.command_id}`),
+    addCaptured: value => last.set(`Add requested: ${value.keystroke} for ${value.command_id}; fixture bindings unchanged`),
+    replaceCaptured: value => last.set(`Replace requested: ${value.command_id}/${value.binding_id} with ${value.keystroke}; fixture bindings unchanged`),
     recordingCancelled: value => last.set(`Recording cancelled for ${value.command_id}`),
   }),
   gpui.text('keymap.last', last.get()),

@@ -7,7 +7,7 @@
 use std::rc::Rc;
 
 use gpui::{
-    AnyElement, App, Hsla, InteractiveElement, IntoElement, ParentElement, RenderOnce,
+    AnyElement, App, FocusHandle, Hsla, InteractiveElement, IntoElement, ParentElement, RenderOnce,
     SharedString, Styled, Window, div, point, prelude::FluentBuilder, px,
 };
 use gpui_kit_semantics::{NodeSpec, Role, Semantic};
@@ -21,7 +21,7 @@ use crate::motion::{self, Interpolate, MotionPolicy, MotionRole};
 use crate::reactive::Binding;
 
 type ToggleHandler = Rc<dyn Fn(bool, &mut Window, &mut App)>;
-type ActionHandler = Rc<dyn Fn(&mut Window, &mut App)>;
+pub(crate) type ActionHandler = Rc<dyn Fn(&mut Window, &mut App)>;
 
 /// A box that reports one of on, off, or partly on.
 ///
@@ -363,6 +363,7 @@ pub struct Switch {
     disabled: bool,
     invalid: bool,
     size: ControlSize,
+    focus_handle: Option<FocusHandle>,
     on_change: Option<ToggleHandler>,
 }
 
@@ -390,6 +391,7 @@ impl Switch {
             disabled: false,
             invalid: false,
             size: ControlSize::Md,
+            focus_handle: None,
             on_change: None,
         }
     }
@@ -438,6 +440,24 @@ impl Switch {
         self.on(on)
             .on_change(move |next, _window, cx| binding.set(cx, next))
     }
+
+    /// Let a containing row forward label focus to this control's single tab
+    /// stop. Inert switches never attach the handle or publish it as focusable.
+    pub(crate) fn with_focus_handle(mut self, focus_handle: FocusHandle) -> Self {
+        self.focus_handle = Some(focus_handle);
+        self
+    }
+
+    /// Share the control's exact intent with an external label, never an inert
+    /// or disabled control. The host still owns acceptance and the next value.
+    pub(crate) fn activation(&self) -> Option<ActionHandler> {
+        if self.disabled {
+            return None;
+        }
+        let handler = self.on_change.clone()?;
+        let next = !self.on;
+        Some(Rc::new(move |window, cx| handler(next, window, cx)))
+    }
 }
 
 impl Disableable for Switch {
@@ -458,10 +478,12 @@ impl RenderOnce for Switch {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.theme().clone();
         let metrics = theme.control.get(self.size);
-        let actionable = !self.disabled && self.on_change.is_some();
-        let height = px(metrics.icon_size);
+        let activation = self.activation();
+        let actionable = activation.is_some();
+        let height = px(metrics.height - metrics.gap);
         let width = height * 1.8;
-        let knob = height - px(4.0);
+        let inset = px(theme.space(Space::Xxs).max(theme.borders.hairline));
+        let knob = height - inset * 2.0;
 
         // The knob is placed by margin rather than by a relative offset, so
         // the switch is the same size at every point of the slide.
@@ -482,9 +504,7 @@ impl RenderOnce for Switch {
             .rounded_full()
             .border(px(theme.borders.hairline))
             .border_color(theme.colors.control_hairline)
-            .p(px(
-                (theme.space(Space::Xxs) - theme.borders.hairline).max(0.0)
-            ))
+            .p(inset - px(theme.borders.hairline))
             .bg(theme.colors.active.lerp(theme.colors.accent, drawn))
             .when(self.invalid, |track| {
                 track.shadow(theme.glow(theme.colors.danger))
@@ -495,10 +515,21 @@ impl RenderOnce for Switch {
                     .rounded_full()
                     .bg(theme.colors.white_fill)
                     .elevation(&theme, Elevation::Raised)
-                    .ml((width - knob - px(4.0)) * drawn),
-            );
-
-        let next = !self.on;
+                    .ml((width - knob - inset * 2.0) * drawn),
+            )
+            .debug_selector(|| self.ident.child("track").semantic_id().to_string());
+        let focus_handle = self.focus_handle.as_ref().filter(|_| actionable);
+        let mut node = spec(
+            &self.ident,
+            Role::Switch,
+            self.label.clone().or_else(|| self.name.clone()),
+            self.disabled,
+        )
+        .invalid(self.invalid)
+        .checked(self.on);
+        if let Some(focus_handle) = focus_handle {
+            node = node.focus(focus_handle);
+        }
         choice_row(
             &theme,
             cx,
@@ -509,22 +540,15 @@ impl RenderOnce for Switch {
             metrics.font_size,
             self.disabled,
             actionable,
-            self.on_change.clone().map(move |handler| {
-                Rc::new(move |window: &mut Window, cx: &mut App| handler(next, window, cx))
-                    as ActionHandler
-            }),
+            activation,
         )
-        .semantic_in(
-            cx,
-            spec(
-                &self.ident,
-                Role::Switch,
-                self.label.clone().or_else(|| self.name.clone()),
-                self.disabled,
-            )
-            .invalid(self.invalid)
-            .checked(self.on),
-        )
+        .min_h(px(metrics.height))
+        .min_w(px(metrics.height))
+        .items_center()
+        .when_some(focus_handle, |row, focus_handle| {
+            row.track_focus(focus_handle)
+        })
+        .semantic_in(cx, node)
     }
 }
 

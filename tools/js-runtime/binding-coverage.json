@@ -12319,6 +12319,31 @@
       }
     },
     {
+      "name": "GlassFrame",
+      "source": "crates/gpui-kit/src/overlay/glass.rs",
+      "path": "gpui_kit::overlay::GlassFrame",
+      "binding": {
+        "status": "unbound",
+        "reason": "Native adapter and behavioral tests not implemented"
+      },
+      "rustSignatures": {
+        "construct": [
+          "new(frame: Stateful<Div>) -> Self"
+        ],
+        "options": [
+          "glass(configure: impl FnOnce(Glass) -> Glass) -> Self",
+          "glass_surface(surface: Surface) -> Self",
+          "glass_preset(preset: GlassPreset) -> Self",
+          "glass_radius(radius: Radius) -> Self",
+          "glass_radius_px(radius: f32) -> Self",
+          "glass_blur(blur: f32) -> Self"
+        ],
+        "commands": [],
+        "queries": [],
+        "slots": []
+      }
+    },
+    {
       "name": "GlassGroup",
       "source": "crates/gpui-kit/src/overlay/glass.rs",
       "path": "gpui_kit::overlay::GlassGroup",
@@ -13359,10 +13384,15 @@
       },
       "rustSignatures": {
         "construct": [
-          "new(keystroke: impl Into<SharedString>) -> Self"
+          "new(keystroke: impl Into<SharedString>) -> Self",
+          "binding_for_action(action: &dyn Action, context: Option<&str>, window: &Window) -> Option<Self>",
+          "binding_for_action_in(action: &dyn Action, focus_handle: &FocusHandle, window: &Window) -> Option<Self>",
+          "format(keystroke: &Keystroke) -> String"
         ],
         "options": [
-          "id(ident: impl Into<Ident>) -> Self"
+          "id(ident: impl Into<Ident>) -> Self",
+          "appearance(appearance: bool) -> Self",
+          "outline() -> Self"
         ],
         "commands": [],
         "queries": [
@@ -13625,7 +13655,7 @@
       },
       "rustSignatures": {
         "construct": [
-          "new(ident: impl Into<Ident>, _window: &mut Window, cx: &mut Context<Self>) -> Self"
+          "new(ident: impl Into<Ident>, window: &mut Window, cx: &mut Context<Self>) -> Self"
         ],
         "options": [
           "label(label: impl Into<SharedString>) -> Self",
@@ -13667,6 +13697,7 @@
         ],
         "events": [
           "addCaptured",
+          "replaceCaptured",
           "remove",
           "reset",
           "recordingCancelled"
@@ -29284,6 +29315,7 @@
           "left(fade: bool) -> Self",
           "right(fade: bool) -> Self",
           "band(band: f32) -> Self",
+          "text_only() -> Self",
           "fit_height() -> Self",
           "child(child: impl IntoElement) -> Self"
         ],
@@ -30312,6 +30344,7 @@
           "set_options(options: Vec<SelectOption>, cx: &mut Context<Self>)",
           "set_selected(id: Option<SharedString>, cx: &mut Context<Self>)",
           "set_disabled(disabled: bool, cx: &mut Context<Self>)",
+          "open(window: &mut Window, cx: &mut Context<Self>)",
           "close(cx: &mut Context<Self>)"
         ],
         "queries": [
@@ -30437,6 +30470,10 @@
           "badge(badge: impl Into<SharedString>) -> Self",
           "value(value: impl Into<SharedString>) -> Self",
           "control(control: impl IntoElement) -> Self",
+          "switch(switch: Switch) -> Self",
+          "select(select: Entity<Select>) -> Self",
+          "control_width(width: Pixels) -> Self",
+          "stacked() -> Self",
           "search_terms(terms: impl IntoIterator<Item = impl Into<SharedString>>) -> Self",
           "managed(controller: impl Into<SharedString>) -> Self"
         ],

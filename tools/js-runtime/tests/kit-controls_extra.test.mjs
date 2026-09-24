@@ -6,7 +6,8 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { familySchemas, familyMethods, validateFamilyProps } from '../kit-controls_extra-schema.mjs';
-import { validateValue } from '../kit-schema.mjs';
+import { validateValue, validateKitDescriptor } from '../kit-schema.mjs';
+import { createKitBindings } from '../kit-bindings.mjs';
 
 test('rich text contracts preserve complete documents and reject fake editor snapshots',()=>{
  const document={blocks:[{id:'first',text:'AλZ',styles:[{range:{start:1,end:3},style:{bold:true,link:'caller:destination'}}],paragraph:{alignment:'center',list:{kind:'ordered',depth:2}}}]};
@@ -200,6 +201,60 @@ test('keymap metadata is closed and command and binding identities cannot collid
   assert.throws(() => validateValue({ query: '' }, familyMethods.KeymapEditor.query.current_commands.args));
 });
 
+test('keymap replacement payloads preserve binding identity and leave caller facts unchanged', () => {
+  const actions = new Map();
+  const kit = createKitBindings((id, event, handler) => {
+    const action = `${id}.${event}`;
+    actions.set(action, handler);
+    return action;
+  });
+  const commands = [{ id: 'save', label: 'Save', context: 'Editor', defaults: ['ctrl-s'], bindings: [{ id: 'custom', keystroke: 'ctrl-shift-s', conflict: 'Other action', provenance: 'Fixture' }] }];
+  const original = structuredClone(commands);
+  const received = [];
+  const handlers = Object.fromEntries(['addCaptured', 'replaceCaptured', 'remove', 'reset', 'recordingCancelled'].map(event => [event, value => received.push([event, value])]));
+  const node = kit.KeymapEditor('keymap', { commands }, handlers);
+  validateKitDescriptor(node);
+  assert.deepEqual(Object.keys(node.events).sort(), Object.keys(familySchemas.KeymapEditor.events).sort());
+  const replacement = { command_id: 'save', binding_id: 'custom', keystroke: 'ctrl-j' };
+  const addition = { command_id: 'save', keystroke: 'ctrl-k' };
+  const expected = [
+    ['replaceCaptured', replacement],
+    ['addCaptured', addition],
+    ['remove', { command_id: 'save', binding_id: 'custom' }],
+    ['reset', { command_id: 'save' }],
+    ['recordingCancelled', { command_id: 'save' }],
+  ];
+  for (const [event, payload] of expected) actions.get(node.events[event])(payload);
+  assert.deepEqual(received, expected);
+  assert.deepEqual(commands, original);
+  assert.deepEqual(node.props.commands, original);
+
+  const replace = actions.get(node.events.replaceCaptured);
+  assert.throws(() => replace(addition));
+  assert.throws(() => actions.get(node.events.addCaptured)(replacement));
+  for (const field of ['command_id', 'binding_id', 'keystroke']) {
+    const missing = { ...replacement };
+    delete missing[field];
+    assert.throws(() => replace(missing), `missing ${field}`);
+    assert.throws(() => replace({ ...replacement, [field]: 0 }), `numeric ${field}`);
+  }
+  for (const invalid of [
+    { ...replacement, command_id: '' },
+    { ...replacement, binding_id: '' },
+    { ...replacement, binding_id: 'x'.repeat(257) },
+    { ...replacement, keystroke: 'x'.repeat(16385) },
+    { command_id: 'save', index: 0, keystroke: 'ctrl-j' },
+    { ...replacement, index: 0 },
+  ]) assert.throws(() => replace(invalid));
+  assert.deepEqual(received, expected, 'invalid payloads never reach caller handlers');
+
+  const registered = actions.size;
+  const disabled = kit.KeymapEditor('disabled', { commands, disabled: true }, handlers);
+  validateKitDescriptor(disabled);
+  assert.deepEqual(disabled.events, {});
+  assert.equal(actions.size, registered, 'disabled editors register no callbacks');
+});
+
 test('number options and named command/query arguments reject nonfinite and unbounded data', () => {
   validateValue({ value: -4.25, min: 9, max: -3, step: 0.25, precision: 2 }, familySchemas.NumberInput.props);
   for (const props of [{value: NaN}, {value: Infinity}, {step: 0}, {pageStep: -1}, {precision: 1.5}, {precision: 13}, {bind: {signal: 2}}]) {
@@ -287,7 +342,30 @@ kit.ButtonGroup('group', {size:'sm'}, {}, {buttons:[kit.Button('child', {label:'
 kit.ButtonGroup('bad', {}, {}, {buttons:[{kind:'text',id:'wrong'}]});
 // @ts-expect-error group actions belong to each button
 kit.ButtonGroup('bad', {}, {click() {}});
-kit.KeymapEditor('keys', {commands:[{id:'save',label:'Save',bindings:[{id:'custom',keystroke:'ctrl-k'}]}]}, {remove(value) { const id: string = value.binding_id; }});
+kit.KeymapEditor('keys', {commands:[{id:'save',label:'Save',bindings:[{id:'custom',keystroke:'ctrl-k'}]}]}, {
+  replaceCaptured(value) { const command: string = value.command_id; const binding: string = value.binding_id; const keystroke: string = value.keystroke; },
+  addCaptured(value) {
+    const command: string = value.command_id; const keystroke: string = value.keystroke;
+    // @ts-expect-error addition does not identify an existing binding
+    const binding: string = value.binding_id;
+  },
+  remove(value) { const id: string = value.binding_id; },
+  reset(value) { const id: string = value.command_id; },
+  recordingCancelled(value) { const id: string = value.command_id; },
+});
+type KeymapEvents = NonNullable<Parameters<ControlsExtraFactories['KeymapEditor']>[2]>;
+type Replacement = Parameters<NonNullable<KeymapEvents['replaceCaptured']>>[0];
+const replacement: Replacement = {command_id:'save',binding_id:'custom',keystroke:'ctrl-j'};
+// @ts-expect-error replacement requires binding identity
+const missingBinding: Replacement = {command_id:'save',keystroke:'ctrl-j'};
+// @ts-expect-error replacement requires the captured shortcut
+const missingKeystroke: Replacement = {command_id:'save',binding_id:'custom'};
+// @ts-expect-error replacement requires command identity
+const missingCommand: Replacement = {binding_id:'custom',keystroke:'ctrl-j'};
+// @ts-expect-error replacement uses binding identity, not position
+kit.KeymapEditor('bad', {}, {replaceCaptured(value:{command_id:string;index:number;keystroke:string}) {}});
+// @ts-expect-error binding identities are strings
+const numericBinding: Replacement = {command_id:'save',binding_id:0,keystroke:'ctrl-j'};
 type KeymapMethods = ControlsExtraMethodContracts['KeymapEditor']['invoke'];
 const keymapValues: { [K in keyof KeymapMethods]: KeymapMethods[K]['args'] } = {set_commands:{commands:[]},set_query:{query:'save'},set_disabled:{disabled:true}};
 // @ts-expect-error remove uses binding identity, not position
