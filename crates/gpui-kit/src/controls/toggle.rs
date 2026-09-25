@@ -177,7 +177,6 @@ impl RenderOnce for Checkbox {
         let next = !on;
         choice_row(
             &theme,
-            cx,
             self.ident.clone(),
             mark.into_any_element(),
             self.label.clone(),
@@ -190,6 +189,7 @@ impl RenderOnce for Checkbox {
                     as ActionHandler
             }),
         )
+        .when(actionable, |row| row.pressable(cx))
         .semantic_in(
             cx,
             spec(
@@ -329,7 +329,6 @@ impl RenderOnce for Radio {
 
         choice_row(
             &theme,
-            cx,
             self.ident.clone(),
             mark.into_any_element(),
             self.label.clone(),
@@ -339,6 +338,7 @@ impl RenderOnce for Radio {
             actionable,
             self.on_select.clone(),
         )
+        .when(actionable, |row| row.pressable(cx))
         .semantic_in(
             cx,
             spec(&self.ident, Role::Radio, self.label.clone(), self.disabled)
@@ -480,7 +480,9 @@ impl RenderOnce for Switch {
         let metrics = theme.control.get(self.size);
         let activation = self.activation();
         let actionable = activation.is_some();
-        let height = px(metrics.height - metrics.gap);
+        // Keep the track between icon-sized and full-control-sized, without
+        // shrinking the hit area or the text alongside it.
+        let height = px(((metrics.height - metrics.gap + metrics.icon_size) * 0.5).round());
         let width = height * 1.8;
         let inset = px(theme.space(Space::Xxs).max(theme.borders.hairline));
         let knob = height - inset * 2.0;
@@ -532,7 +534,6 @@ impl RenderOnce for Switch {
         }
         choice_row(
             &theme,
-            cx,
             self.ident.clone(),
             track.into_any_element(),
             self.label.clone(),
@@ -567,7 +568,6 @@ fn spec(ident: &Ident, role: Role, label: Option<SharedString>, disabled: bool) 
 #[allow(clippy::too_many_arguments)]
 fn choice_row(
     theme: &Theme,
-    cx: &App,
     ident: Ident,
     mark: AnyElement,
     label: Option<SharedString>,
@@ -591,11 +591,7 @@ fn choice_row(
         .gap(px(theme.space(gpui_kit_theme::Space::Sm)))
         .when(disabled, |element| element.opacity(theme.opacity.disabled))
         .when(actionable, |element| {
-            element
-                .cursor_pointer()
-                .tab_index(0)
-                .focus_ring(theme)
-                .pressable(cx)
+            element.cursor_pointer().tab_index(0).focus_ring(theme)
         })
         .child(div().mt(px(theme.space(Space::Xxs) / 2.0)).child(mark))
         .when_some(label, |element, label| {

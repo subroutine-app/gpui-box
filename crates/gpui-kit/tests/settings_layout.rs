@@ -593,14 +593,111 @@ fn disabled_and_managed_select_labels_never_open_a_picker(cx: &mut TestAppContex
 }
 
 #[gpui::test]
-fn switch_track_and_hit_area_scale_with_control_metrics(cx: &mut TestAppContext) {
-    let mut previous = px(0.0);
+fn switch_press_keeps_the_track_anchored_while_the_value_changes(cx: &mut TestAppContext) {
     for size in [
-        ControlSize::Xs,
         ControlSize::Sm,
         ControlSize::Md,
         ControlSize::Lg,
         ControlSize::Touch,
+    ] {
+        for reduced in [false, true] {
+            let on = Rc::new(Cell::new(false));
+            let current = on.clone();
+            let calls: Calls<bool> = Rc::default();
+            let sink = calls.clone();
+            let mut harness = Harness::new(
+                cx,
+                move |cx| {
+                    gpui_kit::install(cx);
+                    cx.set_reduce_motion(reduced);
+                },
+                move |_, _| {
+                    let switch = |id| {
+                        let sink = sink.clone();
+                        Switch::new(id)
+                            .control_size(size)
+                            .on(current.get())
+                            .on_change(move |next, _, _| sink.borrow_mut().push(next))
+                    };
+                    div()
+                        .column()
+                        .w(px(420.0))
+                        .p(px(24.0))
+                        .child(switch("standalone").label("Enable previews"))
+                        .child(
+                            SettingsRow::new("setting", "Enable previews")
+                                .switch(switch("setting.switch")),
+                        )
+                        .into_any_element()
+                },
+            );
+            for (id, selector) in [
+                ("standalone", "standalone.track"),
+                ("setting.switch", "setting.switch.track"),
+            ] {
+                let bounds = harness.bounds(id).expect("switch target");
+                let track = harness
+                    .context()
+                    .debug_bounds(selector)
+                    .expect("switch track");
+                let at = harness.point_in(id);
+                harness.context().simulate_mouse_down(
+                    at,
+                    gpui::MouseButton::Left,
+                    Modifiers::none(),
+                );
+                for elapsed in [0, 80] {
+                    harness.advance(Duration::from_millis(elapsed));
+                    assert_eq!(
+                        harness.bounds(id),
+                        Some(bounds),
+                        "pressed target must stay still"
+                    );
+                    assert_eq!(
+                        harness.context().debug_bounds(selector),
+                        Some(track),
+                        "pressed track must stay still"
+                    );
+                }
+                assert!(calls.borrow().is_empty(), "holding is not a toggle");
+                harness
+                    .context()
+                    .simulate_mouse_up(at, gpui::MouseButton::Left, Modifiers::none());
+                harness.frame();
+                let next = !on.get();
+                assert_eq!(calls.borrow_mut().drain(..).collect::<Vec<_>>(), [next]);
+                harness.update(|_, cx| {
+                    on.set(next);
+                    cx.refresh_windows();
+                });
+                for elapsed in [0, 80, 300] {
+                    harness.advance(Duration::from_millis(elapsed));
+                    assert_eq!(
+                        harness.bounds(id),
+                        Some(bounds),
+                        "accepted toggle keeps its hit area"
+                    );
+                    assert_eq!(
+                        harness.context().debug_bounds(selector),
+                        Some(track),
+                        "only the thumb should move"
+                    );
+                }
+                assert_eq!(harness.node(id).expect("switch").checked, Some(next));
+            }
+        }
+    }
+}
+
+#[gpui::test]
+fn switch_track_and_hit_area_scale_with_control_metrics(cx: &mut TestAppContext) {
+    let mut previous = px(0.0);
+    for (size, expected_track_height) in [
+        (ControlSize::Xs, 14.0),
+        (ControlSize::Sm, 17.0),
+        (ControlSize::Md, 19.0),
+        (ControlSize::Lg, 22.0),
+        (ControlSize::Touch, 30.0),
     ] {
         let mut harness = Harness::new(cx, gpui_kit::install, move |_, _| {
             div()
@@ -620,7 +717,11 @@ fn switch_track_and_hit_area_scale_with_control_metrics(cx: &mut TestAppContext)
             let metrics = cx.theme().control.get(size);
             (metrics.height, metrics.gap)
         });
-        assert_eq!(track.size.height, px(height - gap));
+        assert_eq!(track.size.height, px(expected_track_height));
+        assert!(
+            track.size.height < px(height - gap),
+            "visual track is smaller without shrinking the target"
+        );
         assert!(track.size.height > previous);
         previous = track.size.height;
         assert!(target.size.height >= px(height));

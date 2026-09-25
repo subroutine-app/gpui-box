@@ -30322,7 +30322,7 @@
       },
       "rustSignatures": {
         "construct": [
-          "new(ident: impl Into<Ident>, _window: &mut Window, cx: &mut Context<Self>) -> Self",
+          "new(ident: impl Into<Ident>, window: &mut Window, cx: &mut Context<Self>) -> Self",
           "bind(select: &Entity<Self>, signal: &Signal<Option<SharedString>>, cx: &mut App) -> Vec<Subscription>"
         ],
         "options": [
@@ -30345,7 +30345,8 @@
           "set_selected(id: Option<SharedString>, cx: &mut Context<Self>)",
           "set_disabled(disabled: bool, cx: &mut Context<Self>)",
           "open(window: &mut Window, cx: &mut Context<Self>)",
-          "close(cx: &mut Context<Self>)"
+          "close(cx: &mut Context<Self>)",
+          "toggle(window: &mut Window, cx: &mut Context<Self>)"
         ],
         "queries": [
           "selected_id() -> Option<&SharedString>",

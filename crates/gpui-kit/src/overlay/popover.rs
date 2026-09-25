@@ -9,16 +9,16 @@
 use std::rc::Rc;
 
 use gpui::{
-    Anchor, AnyElement, App, Bounds, Context, ElementId, EventEmitter, FocusHandle, Focusable,
-    InteractiveElement, IntoElement, KeyDownEvent, ParentElement, Pixels, Point, Render,
-    SharedString, Styled, Window, div, prelude::*, px,
+    Anchor, AnyElement, App, Bounds, Context, ElementId, EntityId, EventEmitter, FocusHandle,
+    Focusable, InteractiveElement, IntoElement, KeyDownEvent, ParentElement, Pixels, Point, Render,
+    SharedString, Styled, Window, WindowId, div, prelude::*, px,
 };
 use gpui_kit_assets::Icon;
 use gpui_kit_semantics::{NodeSpec, Role, Semantic};
 use gpui_kit_theme::{ActiveTheme, Space, TextTone, Theme, TypeScale};
 
 use crate::controls::button::Button;
-use crate::foundation::{Ident, StyledExt, text};
+use crate::foundation::{Ident, StyledExt, text, window_state};
 use crate::layout::ScrollFade;
 use crate::overlay::focus::FocusTrap;
 use crate::overlay::layer::{Hang, Overlay, OverlaySurface, Placement, surface};
@@ -27,6 +27,49 @@ use crate::overlay::positioner::Positioner;
 use crate::motion;
 use crate::motion::{MotionRole, Phase, Presenting};
 use crate::strings::{ActiveSearch, EnglishSearch, SearchMatcher};
+
+type DismissPicker = Rc<dyn Fn(&mut App)>;
+
+#[derive(Default)]
+struct ActivePicker(Option<(EntityId, DismissPicker)>);
+
+/// Independent anchored pickers opt into one owner per window. This is not the
+/// modal stack or a submenu stack: a nested menu tree remains one surface.
+/// Callbacks must retain their owner weakly, and never restore the old focus.
+/// Close the previous owner outside the registry borrow so its release cannot
+/// remove the newly installed owner or reenter borrowed window state.
+pub(crate) fn claim_picker(
+    window: WindowId,
+    owner: EntityId,
+    dismiss: impl Fn(&mut App) + 'static,
+    cx: &mut App,
+) {
+    let previous = window_state::with(window, cx, |state: &mut ActivePicker| {
+        if state
+            .0
+            .as_ref()
+            .is_some_and(|(current, _)| *current == owner)
+        {
+            return None;
+        }
+        state.0.replace((owner, Rc::new(dismiss)))
+    });
+    if let Some((_, dismiss)) = previous {
+        dismiss(cx);
+    }
+}
+
+pub(crate) fn release_picker(window: WindowId, owner: EntityId, cx: &mut App) {
+    window_state::with(window, cx, |state: &mut ActivePicker| {
+        if state
+            .0
+            .as_ref()
+            .is_some_and(|(current, _)| *current == owner)
+        {
+            state.0 = None;
+        }
+    });
+}
 
 /// How an existing picker presents its choices. The caller chooses from its
 /// measured layout; this policy never guesses an operating system or viewport.

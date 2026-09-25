@@ -5,14 +5,14 @@
 //! renders whatever the owner decides is current, so a host that rejects a
 //! choice keeps showing the one that still holds.
 
-use std::cell::Cell;
-use std::rc::Rc;
+use std::cell::{Cell, RefCell};
+use std::rc::{Rc, Weak};
 
 use gpui::{
     AnyElement, App, Bounds, Context, Entity, EventEmitter, FocusHandle, Focusable, FontWeight,
-    InteractiveElement, IntoElement, KeyDownEvent, MouseButton, ParentElement, Pixels, Render,
-    ScrollHandle, SharedString, StatefulInteractiveElement, Styled, Subscription, Window, div,
-    prelude::FluentBuilder, px,
+    Hitbox, HitboxBehavior, InteractiveElement, IntoElement, KeyDownEvent, MouseButton,
+    ParentElement, Pixels, Render, ScrollHandle, SharedString, StatefulInteractiveElement, Styled,
+    Subscription, Window, WindowId, div, prelude::FluentBuilder, px,
 };
 use gpui_kit_assets::{Icon, icon};
 use gpui_kit_semantics::{NodeSpec, Role, Semantic};
@@ -106,6 +106,11 @@ pub struct Select {
     menu_geometry: Option<popover::MenuGeometry>,
     presentation: popover::PickerPresentation,
     sheet: Option<popover::PickerSheet>,
+    window_id: WindowId,
+    picker_window: Option<WindowId>,
+    trigger_hitbox: Rc<RefCell<Option<Hitbox>>>,
+    label_hitbox: Weak<RefCell<Option<Hitbox>>>,
+    _focus_out: Subscription,
 }
 
 impl std::fmt::Debug for Select {
@@ -122,10 +127,16 @@ impl std::fmt::Debug for Select {
 }
 
 impl Select {
-    pub fn new(ident: impl Into<Ident>, _window: &mut Window, cx: &mut Context<Self>) -> Self {
+    pub fn new(ident: impl Into<Ident>, window: &mut Window, cx: &mut Context<Self>) -> Self {
+        let focus_handle = cx.focus_handle();
+        let focus_out = cx.on_focus_out(&focus_handle, window, |select, _, _, cx| {
+            if select.presentation == popover::PickerPresentation::Anchored {
+                select.close_menu(cx);
+            }
+        });
         Self {
             ident: ident.into(),
-            focus_handle: cx.focus_handle(),
+            focus_handle,
             options: Vec::new(),
             selected: None,
             name: SharedString::default(),
@@ -142,6 +153,11 @@ impl Select {
             menu_geometry: None,
             presentation: popover::PickerPresentation::Anchored,
             sheet: None,
+            window_id: window.window_handle().window_id(),
+            picker_window: None,
+            trigger_hitbox: Rc::default(),
+            label_hitbox: Weak::new(),
+            _focus_out: focus_out,
         }
     }
 
@@ -157,8 +173,14 @@ impl Select {
         presentation: popover::PickerPresentation,
         cx: &mut Context<Self>,
     ) {
-        self.presentation = presentation;
-        cx.notify();
+        if self.presentation != presentation {
+            self.release_picker(cx);
+            self.presentation = presentation;
+            if self.open {
+                self.claim_picker(cx);
+            }
+            cx.notify();
+        }
     }
 
     pub fn options(mut self, options: impl IntoIterator<Item = SelectOption>) -> Self {
@@ -297,10 +319,8 @@ impl Select {
         if self.disabled || !self.clearable || self.selected.is_none() {
             return;
         }
-        self.open = false;
-        self.active = None;
         cx.emit(SelectEvent::Cleared);
-        cx.emit(SelectEvent::Closed);
+        self.close_menu(cx);
         cx.notify();
     }
 
@@ -396,7 +416,7 @@ impl Select {
     pub fn set_disabled(&mut self, disabled: bool, cx: &mut Context<Self>) {
         self.disabled = disabled;
         if disabled {
-            self.open = false;
+            self.close_menu(cx);
         }
         cx.notify();
     }
@@ -408,6 +428,8 @@ impl Select {
         if self.disabled || self.open {
             return;
         }
+        self.window_id = window.window_handle().window_id();
+        self.claim_picker(cx);
         self.open = true;
         // The keyboard starts on what is already chosen, so the first arrow
         // key moves from the current answer rather than from the top.
@@ -435,16 +457,65 @@ impl Select {
         }
         self.open = false;
         self.active = None;
+        self.release_picker(cx);
         cx.emit(SelectEvent::Closed);
         cx.notify();
     }
 
-    fn toggle(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    /// Toggles the picker through the same interaction as its trigger.
+    /// Disabled controls remain closed and do not replace another picker.
+    pub fn toggle(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.disabled {
+            return;
+        }
         if self.open {
             self.close_menu(cx);
         } else {
             self.open(window, cx);
         }
+    }
+
+    fn claim_picker(&mut self, cx: &mut Context<Self>) {
+        if self.presentation != popover::PickerPresentation::Anchored {
+            return;
+        }
+        let window_id = self.window_id;
+        let owner = cx.entity_id();
+        let picker = cx.weak_entity();
+        popover::claim_picker(
+            window_id,
+            owner,
+            move |cx| {
+                let _ = picker.update(cx, |picker, cx| picker.close_menu(cx));
+            },
+            cx,
+        );
+        self.picker_window = Some(window_id);
+    }
+
+    fn release_picker(&mut self, cx: &mut Context<Self>) {
+        if let Some(window) = self.picker_window.take() {
+            popover::release_picker(window, cx.entity_id(), cx);
+        }
+    }
+
+    /// The settings label's rendered handler owns this region. Retaining only
+    /// a weak reference prevents an unmounted label from exempting stale bounds.
+    pub(crate) fn set_label_hitbox(&mut self, hitbox: Weak<RefCell<Option<Hitbox>>>) {
+        self.label_hitbox = hitbox;
+    }
+
+    fn is_trigger_point(&self, position: &gpui::Point<Pixels>) -> bool {
+        self.trigger_hitbox
+            .borrow()
+            .as_ref()
+            .is_some_and(|hitbox| hitbox.contains(position))
+            || self.label_hitbox.upgrade().is_some_and(|hitbox| {
+                hitbox
+                    .borrow()
+                    .as_ref()
+                    .is_some_and(|hitbox| hitbox.contains(position))
+            })
     }
 
     /// The next option that can actually be chosen, skipping refusals.
@@ -497,11 +568,8 @@ impl Select {
             return;
         }
         let id = option.id.clone();
-        self.open = false;
-        self.active = None;
         cx.emit(SelectEvent::Selected(id));
-        cx.emit(SelectEvent::Closed);
-        cx.notify();
+        self.close_menu(cx);
     }
 
     fn on_key_down(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
@@ -605,6 +673,11 @@ impl Select {
             .w(px(geometry.width))
             .max_h(px(geometry.max_height))
             .id(self.ident.child("menu").element_id())
+            .on_mouse_down_out(cx.listener(|select, event: &gpui::MouseDownEvent, _, cx| {
+                if !select.is_trigger_point(&event.position) {
+                    select.close_menu(cx);
+                }
+            }))
             .child(popover::menu_body(
                 &self.ident.child("menu.fade"),
                 &self.scroll,
@@ -746,6 +819,7 @@ impl Render for Select {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.theme().clone();
         let bottom = self.presentation == popover::PickerPresentation::Bottom;
+
         if bottom && self.sheet.is_none() {
             let picker = cx.weak_entity();
             self.sheet = Some(popover::PickerSheet::new(
@@ -922,11 +996,14 @@ impl Render for Select {
         )
         .semantic_in(cx, spec);
         let measured = Rc::clone(&self.trigger_bounds);
+        let hitbox = self.trigger_hitbox.clone();
         let trigger = div()
             .w_full()
             .on_children_prepainted(move |bounds, window, _| {
                 if let Some(trigger) = bounds.first() {
                     measure::record(&measured, *trigger, window);
+                    *hitbox.borrow_mut() =
+                        Some(window.insert_hitbox(*trigger, HitboxBehavior::Normal));
                 }
             })
             .child(trigger)

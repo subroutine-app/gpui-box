@@ -1422,7 +1422,7 @@
           "features": []
         }
       ],
-      "symbolCount": 4702
+      "symbolCount": 4703
     },
     {
       "name": "gpui-box-kit-assets",
@@ -69543,7 +69543,7 @@
       "source": "crates/gpui-kit/src/controls/select.rs",
       "summary": "A closed list of options with one answer.",
       "documentation": "A closed list of options with one answer.\n\nThe select owns only whether its menu is open. It reports the option that\nwas picked and draws whatever the caller says is current, so a refused\nchoice is visible as the checkmark not moving.",
-      "signature": "# [doc = \" A closed list of options with one answer.\"] # [doc = \"\"] # [doc = \" The select owns only whether its menu is open. It reports the option that\"] # [doc = \" was picked and draws whatever the caller says is current, so a refused\"] # [doc = \" choice is visible as the checkmark not moving.\"] pub struct Select { ident : Ident, focus_handle : FocusHandle, options : Vec<SelectOption>, selected : Option<SharedString>, name : SharedString, placeholder : Option<SharedString>, size : ControlSize, disabled : bool, invalid : bool, open : bool, clearable : bool, # [doc = \" Which row the keyboard is on, which is not a choice until it is taken.\"] active : Option<usize>, scroll : ScrollHandle, trigger_bounds : Rc<Cell<Bounds<Pixels>>>, reveal_active : bool, menu_geometry : Option<popover::MenuGeometry>, presentation : popover::PickerPresentation, sheet : Option<popover::PickerSheet>, }",
+      "signature": "# [doc = \" A closed list of options with one answer.\"] # [doc = \"\"] # [doc = \" The select owns only whether its menu is open. It reports the option that\"] # [doc = \" was picked and draws whatever the caller says is current, so a refused\"] # [doc = \" choice is visible as the checkmark not moving.\"] pub struct Select { ident : Ident, focus_handle : FocusHandle, options : Vec<SelectOption>, selected : Option<SharedString>, name : SharedString, placeholder : Option<SharedString>, size : ControlSize, disabled : bool, invalid : bool, open : bool, clearable : bool, # [doc = \" Which row the keyboard is on, which is not a choice until it is taken.\"] active : Option<usize>, scroll : ScrollHandle, trigger_bounds : Rc<Cell<Bounds<Pixels>>>, reveal_active : bool, menu_geometry : Option<popover::MenuGeometry>, presentation : popover::PickerPresentation, sheet : Option<popover::PickerSheet>, window_id : WindowId, picker_window : Option<WindowId>, trigger_hitbox : Rc<RefCell<Option<Hitbox>>>, label_hitbox : Weak<RefCell<Option<Hitbox>>>, _focus_out : Subscription, }",
       "cfg": []
     },
     {
@@ -69662,7 +69662,7 @@
       "source": "crates/gpui-kit/src/controls/select.rs",
       "summary": "",
       "documentation": "",
-      "signature": "pub fn new (ident : impl Into<Ident>, _window : & mut Window, cx : & mut Context<Self>) -> Self",
+      "signature": "pub fn new (ident : impl Into<Ident>, window : & mut Window, cx : & mut Context<Self>) -> Self",
       "cfg": [],
       "target": "Select"
     },
@@ -69903,6 +69903,21 @@
       "summary": "",
       "documentation": "",
       "signature": "pub fn set_selected (& mut self, id : Option<SharedString>, cx : & mut Context<Self>)",
+      "cfg": [],
+      "target": "Select"
+    },
+    {
+      "id": "gpui_kit::controls::select::Select::toggle",
+      "name": "toggle",
+      "kind": "method",
+      "package": "gpui-box-kit",
+      "crate": "gpui_kit",
+      "module": "controls::select",
+      "path": "gpui_kit::controls::select",
+      "source": "crates/gpui-kit/src/controls/select.rs",
+      "summary": "Toggles the picker through the same interaction as its trigger. Disabled controls remain closed and do not replace another picker.",
+      "documentation": "Toggles the picker through the same interaction as its trigger.\nDisabled controls remain closed and do not replace another picker.",
+      "signature": "pub fn toggle (& mut self, window : & mut Window, cx : & mut Context<Self>)",
       "cfg": [],
       "target": "Select"
     },
@@ -70211,8 +70226,8 @@
       "module": "controls::settings_row",
       "path": "gpui_kit::controls::settings_row",
       "source": "crates/gpui-kit/src/controls/settings_row.rs",
-      "summary": "Names the select and makes the name/description open and focus that same entity. Its existing selection subscription remains the only callback. Unless overridden, the column fits the longest option (up to the row's available width), so accepting a different choice does not move it.",
-      "documentation": "Names the select and makes the name/description open and focus that same\nentity. Its existing selection subscription remains the only callback.\nUnless overridden, the column fits the longest option (up to the row's\navailable width), so accepting a different choice does not move it.",
+      "summary": "Names the select and makes the name/description toggle that same entity. Opening focuses it; its selection subscription remains the only callback. Unless overridden, the column fits the longest option (up to the row's available width), so accepting a different choice does not move it.",
+      "documentation": "Names the select and makes the name/description toggle that same entity.\nOpening focuses it; its selection subscription remains the only callback.\nUnless overridden, the column fits the longest option (up to the row's\navailable width), so accepting a different choice does not move it.",
       "signature": "pub fn select (mut self, select : Entity<Select>) -> Self",
       "cfg": [],
       "target": "SettingsRow"
@@ -136045,7 +136060,7 @@
       "source": "crates/gpui-kit/src/controls/select.rs",
       "summary": "A closed list of options with one answer.",
       "construct": [
-        "new(ident: impl Into<Ident>, _window: &mut Window, cx: &mut Context<Self>) -> Self",
+        "new(ident: impl Into<Ident>, window: &mut Window, cx: &mut Context<Self>) -> Self",
         "bind(select: &Entity<Self>, signal: &Signal<Option<SharedString>>, cx: &mut App) -> Vec<Subscription>"
       ],
       "options": [
@@ -136068,7 +136083,8 @@
         "set_selected(id: Option<SharedString>, cx: &mut Context<Self>)",
         "set_disabled(disabled: bool, cx: &mut Context<Self>)",
         "open(window: &mut Window, cx: &mut Context<Self>)",
-        "close(cx: &mut Context<Self>)"
+        "close(cx: &mut Context<Self>)",
+        "toggle(window: &mut Window, cx: &mut Context<Self>)"
       ],
       "queries": [
         "selected_id() -> Option<&SharedString>",

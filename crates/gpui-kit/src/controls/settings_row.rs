@@ -12,6 +12,7 @@
 //! no-match state. The caller still owns the query and commonly gets it from a
 //! [`SearchField`](crate::controls::search::SearchField).
 
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use gpui::{
@@ -166,8 +167,8 @@ impl SettingsRow {
         self
     }
 
-    /// Names the select and makes the name/description open and focus that same
-    /// entity. Its existing selection subscription remains the only callback.
+    /// Names the select and makes the name/description toggle that same entity.
+    /// Opening focuses it; its selection subscription remains the only callback.
     /// Unless overridden, the column fits the longest option (up to the row's
     /// available width), so accepting a different choice does not move it.
     pub fn select(mut self, select: Entity<Select>) -> Self {
@@ -245,6 +246,9 @@ impl SettingsRow {
         let direction = cx.layout_direction();
         let withheld = self.withheld.clone();
         let ident = self.ident.clone();
+        let select_label =
+            matches!(self.control, Some(RowControl::Select(_))) && withheld.is_none();
+        let label_hitbox = Rc::new(RefCell::new(None));
         let fill_control =
             matches!(self.control, Some(RowControl::Custom(_))) && withheld.is_none();
         let control_width = self.control_width.or_else(|| {
@@ -285,11 +289,14 @@ impl SettingsRow {
                         }
                     }
                     Some(RowControl::Select(select)) => {
-                        select.update(cx, |select, cx| select.set_name(self.label.clone(), cx));
+                        select.update(cx, |select, cx| {
+                            select.set_name(self.label.clone(), cx);
+                            select.set_label_hitbox(Rc::downgrade(&label_hitbox));
+                        });
                         let activation = (!select.read(cx).is_disabled()).then(|| {
                             let select = select.clone();
                             Rc::new(move |window: &mut Window, cx: &mut App| {
-                                select.update(cx, |select, cx| select.open(window, cx));
+                                select.update(cx, |select, cx| select.toggle(window, cx));
                             }) as ActionHandler
                         });
                         (Some(select.into_any_element()), activation)
@@ -320,9 +327,19 @@ impl SettingsRow {
             .when(self.stacked, |names| names.flex_none().w_full())
             .gap_token(theme, Space::Xs)
             .when_some(activation, |names, activate| {
-                names
-                    .cursor_pointer()
-                    .on_click(move |_, window, cx| activate(window, cx))
+                let names = names.cursor_pointer();
+                if select_label {
+                    let hitbox = label_hitbox.clone();
+                    names.on_mouse_down(gpui::MouseButton::Left, move |_, window, cx| {
+                        // Keep the exemption alive exactly as long as this mounted
+                        // activation handler. Toggle before pointer focus leaves it.
+                        let _keep_alive = hitbox.clone();
+                        activate(window, cx);
+                        cx.stop_propagation();
+                    })
+                } else {
+                    names.on_click(move |_, window, cx| activate(window, cx))
+                }
             })
             .child(
                 div()
@@ -441,6 +458,14 @@ impl SettingsRow {
                             .parent(ident.semantic_id()),
                     ),
             )
+            .when(select_label, |row| {
+                row.on_children_prepainted(move |bounds, window, _| {
+                    if let Some(names) = bounds.first() {
+                        *label_hitbox.borrow_mut() =
+                            Some(window.insert_hitbox(*names, gpui::HitboxBehavior::Normal));
+                    }
+                })
+            })
             .semantic_in(cx, spec)
             .into_any_element()
     }
