@@ -5766,10 +5766,6 @@ impl Window {
     ) -> Result<()> {
         self.invalidator.debug_assert_paint();
 
-        let element_opacity = self.element_opacity_for_bounds(&Bounds {
-            origin,
-            size: size(font_size * 0.6, font_size),
-        });
         let scale_factor = self.scale_factor();
         let glyph_origin = self.visual_transform.map_point(origin).scale(scale_factor);
 
@@ -5811,6 +5807,10 @@ impl Window {
                 size: tile.bounds.size.map(Into::into),
             };
             let bounds = self.unmap_raster_bounds(bounds);
+            // Fade in logical window coordinates using the snapped sprite, not a
+            // font-size rectangle extending downward from the glyph's baseline.
+            let element_opacity =
+                self.element_opacity_for_bounds(&bounds.map(|p| px(p.0 / scale_factor)));
             let content_mask = self.snapped_content_mask();
 
             if subpixel_rendering {
@@ -5916,10 +5916,7 @@ impl Window {
             };
             let bounds = self.unmap_raster_bounds(bounds);
             let content_mask = self.snapped_content_mask();
-            let opacity = self.element_opacity_for_bounds(&Bounds {
-                origin,
-                size: size(font_size * 0.6, font_size),
-            });
+            let opacity = self.element_opacity_for_bounds(&bounds.map(|p| px(p.0 / scale_factor)));
 
             self.next_frame.scene.insert_primitive(PolychromeSprite {
                 clip_id: crate::ClipId::NONE,
@@ -9451,6 +9448,299 @@ mod tests {
             assert!(stops.iter().any(|stop| stop.color.a > 0.0));
             assert!(stops.iter().any(|stop| stop.color.a == 0.0));
         });
+    }
+
+    mod edge_fade_tests {
+        use super::*;
+        use crate::{
+            DevicePixels, Font, FontMetrics, FontRun, GlyphId, LineLayout, NoopTextSystem,
+            PlatformTextSystem, RenderGlyphParams, ScaledPixels, Size, TextRun, TextSystem,
+            UnderlineStyle, VisualTransform, WindowTextSystem,
+        };
+        use std::{borrow::Cow, sync::Arc};
+
+        // NoopTextSystem shapes deterministic runs but emits no raster sprites.
+        // Supply baseline-relative ink and real atlas sizes without native fonts.
+        struct RasterTextSystem;
+
+        impl PlatformTextSystem for RasterTextSystem {
+            fn add_fonts(&self, fonts: Vec<Cow<'static, [u8]>>) -> anyhow::Result<()> {
+                NoopTextSystem.add_fonts(fonts)
+            }
+
+            fn all_font_names(&self) -> Vec<String> {
+                NoopTextSystem.all_font_names()
+            }
+
+            fn font_id(&self, font: &Font) -> anyhow::Result<FontId> {
+                NoopTextSystem.font_id(font)
+            }
+
+            fn font_metrics(&self, font: FontId) -> FontMetrics {
+                FontMetrics {
+                    ascent: 750.,
+                    descent: 250.,
+                    ..NoopTextSystem.font_metrics(font)
+                }
+            }
+
+            fn typographic_bounds(
+                &self,
+                font: FontId,
+                glyph: GlyphId,
+            ) -> anyhow::Result<Bounds<f32>> {
+                NoopTextSystem.typographic_bounds(font, glyph)
+            }
+
+            fn advance(&self, font: FontId, glyph: GlyphId) -> anyhow::Result<Size<f32>> {
+                NoopTextSystem.advance(font, glyph)
+            }
+
+            fn glyph_for_char(&self, font: FontId, ch: char) -> Option<GlyphId> {
+                NoopTextSystem.glyph_for_char(font, ch)
+            }
+
+            fn glyph_raster_bounds(
+                &self,
+                params: &RenderGlyphParams,
+            ) -> anyhow::Result<Bounds<DevicePixels>> {
+                if params.glyph_id == GlyphId(0) {
+                    return Ok(Bounds::default());
+                }
+                let (origin, size) = if params.is_emoji {
+                    (point(-1., -13.), size(16., 16.))
+                } else {
+                    (point(-2., -12.), size(10., 14.))
+                };
+                let scale = params.font_size.0 / 16. * params.scale_factor;
+                Ok(Bounds::new(
+                    origin.map(|p| DevicePixels((p * scale).floor() as i32)),
+                    size.map(|p| DevicePixels((p * scale).ceil() as i32)),
+                ))
+            }
+
+            fn rasterize_glyph(
+                &self,
+                params: &RenderGlyphParams,
+                bounds: Bounds<DevicePixels>,
+            ) -> anyhow::Result<(Size<DevicePixels>, Vec<u8>)> {
+                // Subpixel raster padding must participate in the opacity sample;
+                // using just glyph_raster_bounds.size would miss this pixel.
+                let padding = i32::from(params.subpixel_variant.x != 0);
+                let size = bounds.size.map(|p| DevicePixels(p.0 + padding));
+                let channels = if params.is_emoji || params.subpixel_rendering {
+                    4
+                } else {
+                    1
+                };
+                Ok((
+                    size,
+                    vec![255; (size.width.0 * size.height.0 * channels) as usize],
+                ))
+            }
+
+            fn layout_line(&self, text: &str, font_size: Pixels, runs: &[FontRun]) -> LineLayout {
+                let mut line = NoopTextSystem.layout_line(text, font_size, runs);
+                let metrics = self.font_metrics(FontId(0));
+                line.ascent = metrics.ascent(font_size);
+                line.descent = metrics.descent(font_size);
+                line
+            }
+
+            fn recommended_rendering_mode(&self, _: FontId, _: Pixels) -> TextRenderingMode {
+                TextRenderingMode::Grayscale
+            }
+        }
+
+        fn install_raster_text(window: &mut Window) {
+            window.text_system = Arc::new(WindowTextSystem::new(Arc::new(TextSystem::new(
+                Arc::new(RasterTextSystem),
+            ))));
+        }
+
+        fn assert_close(actual: f32, expected: f32) {
+            assert!((actual - expected).abs() < 0.0001, "{actual} != {expected}");
+        }
+
+        fn logical_bounds(window: &Window, bounds: Bounds<ScaledPixels>) -> Bounds<Pixels> {
+            // Sprite geometry is already unmapped; the scene stores its visual
+            // transform separately (unlike the baked underline bounds).
+            bounds.map(|p| px(p.0 / window.scale_factor()))
+        }
+
+        #[gpui::test]
+        fn edge_fade_painted_line_keeps_glyphs_and_underline_visible(cx: &mut TestAppContext) {
+            let cx = cx.add_empty_window();
+            cx.update(|window, _| {
+                install_raster_text(window);
+                window
+                    .platform_window
+                    .as_test()
+                    .expect("edge-fade tests require a test platform window")
+                    .set_subpixel_rendering_supported(true);
+            });
+            let viewport = Bounds::new(point(px(32.), px(60.)), size(px(140.), px(20.)));
+            let origin = point(px(40.375), px(60.375));
+            let baseline = origin.y + px(14.); // 12 px ascent + 2 px line padding.
+            let underline_y = baseline + px(4. * 0.618);
+            assert!(baseline + px(16.) > viewport.bottom());
+            assert!(underline_y < viewport.bottom());
+
+            for subpixel in [false, true] {
+                cx.update(|_, app| {
+                    app.set_text_rendering_mode(if subpixel {
+                        TextRenderingMode::Subpixel
+                    } else {
+                        TextRenderingMode::Grayscale
+                    })
+                });
+                for dpi in [1., 1.25, 2.] {
+                    cx.update(|window, _| window.set_scale_factor(dpi));
+                    for scale in [1., 1.5] {
+                        for target in [
+                            super::super::EdgeFadeTarget::All,
+                            super::super::EdgeFadeTarget::Text,
+                        ] {
+                            for enabled in [false, true, false] {
+                                cx.draw(viewport.origin, viewport.size, move |window, _| {
+                                    let line = window.text_system().shape_line(
+                                        "ab😀".into(), px(16.),
+                                        &[TextRun {
+                                            len: "ab😀".len(),
+                                            color: white().opacity(0.8),
+                                            underline: Some(UnderlineStyle { thickness: px(1.), color: None, wavy: false }),
+                                            ..Default::default()
+                                        }], None,
+                                    );
+                                    canvas(|_, _, _| (), move |_, _, window, app| {
+                                        window.with_visual_scale(scale, viewport.origin, |window| {
+                                            window.with_content_mask(Some(ContentMask { bounds: viewport }), |window| {
+                                                window.with_element_opacity(Some(0.5), |window| {
+                                                    let fade = EdgeFade { bounds: viewport, band: px(16.), top: false, bottom: true, left: false, right: false };
+                                                    window.with_edge_fade_target(enabled.then_some(fade), target, |window| {
+                                                        let before = window.next_frame.scene.monochrome_sprites.len() + window.next_frame.scene.subpixel_sprites.len();
+                                                        let emoji_before = window.next_frame.scene.polychrome_sprites.len();
+                                                        let underline_before = window.next_frame.scene.underlines.len();
+                                                        line.paint(origin, px(20.), crate::TextAlign::Left, None, window, app).expect("the deterministic underlined line should paint successfully");
+                                                        let scene = &window.next_frame.scene;
+                                                        assert_eq!(scene.monochrome_sprites.len() + scene.subpixel_sprites.len(), before + 2, "dpi={dpi}, scale={scale}, subpixel={subpixel}, fade={enabled}");
+                                                        assert_eq!(scene.polychrome_sprites.len(), emoji_before + 1);
+                                                        assert_eq!(scene.underlines.len(), underline_before + 1);
+                                                        let glyphs = if subpixel {
+                                                            scene.subpixel_sprites.iter().rev().take(2).map(|s| (s.bounds, s.color.a)).collect::<Vec<_>>()
+                                                        } else {
+                                                            scene.monochrome_sprites.iter().rev().take(2).map(|s| (s.bounds, s.color.a)).collect::<Vec<_>>()
+                                                        };
+                                                        assert_eq!(glyphs.len(), 2, "must exercise the requested sprite path");
+                                                        let emoji = scene.polychrome_sprites.last().expect("the painted line should emit an emoji sprite");
+                                                        for (bounds, alpha, authored_alpha) in glyphs.into_iter().map(|(b, a)| (b, a, 0.4)).chain([(emoji.bounds, emoji.opacity, 0.5)]) {
+                                                            let logical = logical_bounds(window, bounds);
+                                                            assert!(logical.top() < baseline && logical.bottom() > baseline);
+                                                            assert!(logical.bottom() < viewport.bottom());
+                                                            let ramp = if enabled { (viewport.bottom() - logical.bottom()).0 / 16. } else { 1. };
+                                                            assert_close(alpha, authored_alpha * ramp);
+                                                            assert!(alpha > 0., "visible raster ink must not disappear while its underline survives");
+                                                        }
+                                                        let underline = scene.underlines.last().expect("the painted line should emit an underline");
+                                                        let ramp = if enabled { (viewport.bottom() - underline_y).0 / 16. } else { 1. };
+                                                        assert_close(underline.color.a, 0.4 * ramp);
+                                                        let expected_y = window.visual_transform().map_point(point(origin.x, px(super::super::round_to_device_pixel(underline_y.0, dpi) / dpi))).y;
+                                                        assert_close(underline.bounds.origin.y.0 / dpi, expected_y.0);
+                                                    });
+                                                });
+                                            });
+                                        });
+                                        assert_eq!(window.visual_transform(), VisualTransform::default());
+                                        assert!(window.edge_fade.is_none());
+                                        assert_close(window.element_opacity(), 1.);
+                                    }).size_full().into_any_element()
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        fn paint_raster_pair(
+            window: &mut Window,
+            origin: Point<Pixels>,
+        ) -> [(Bounds<ScaledPixels>, f32); 2] {
+            window
+                .paint_glyph(origin, FontId(0), GlyphId(1), px(16.), white())
+                .expect("the deterministic monochrome glyph should paint successfully");
+            window
+                .paint_emoji(origin, FontId(0), GlyphId(2), px(16.))
+                .expect("the deterministic emoji glyph should paint successfully");
+            let scene = &window.next_frame.scene;
+            let glyph = scene
+                .monochrome_sprites
+                .last()
+                .expect("the painted raster pair should emit a monochrome sprite");
+            let emoji = scene
+                .polychrome_sprites
+                .last()
+                .expect("the painted raster pair should emit an emoji sprite");
+            [(glyph.bounds, glyph.color.a), (emoji.bounds, emoji.opacity)]
+        }
+
+        #[gpui::test]
+        fn edge_fade_raster_bounds_cover_all_edges_and_empty_glyphs(cx: &mut TestAppContext) {
+            let cx = cx.add_empty_window();
+            cx.update(|window, app| {
+                install_raster_text(window);
+                app.set_text_rendering_mode(TextRenderingMode::Grayscale);
+            });
+            for dpi in [1., 1.25, 2.] {
+                cx.update(|window, _| window.set_scale_factor(dpi));
+                for scale in [1., 1.5] {
+                    cx.draw(point(px(30.), px(40.)), size(px(200.), px(200.)), move |_, _| {
+                        canvas(|_, _, _| (), move |_, _, window, _| {
+                            window.with_visual_scale(scale, point(px(20.), px(30.)), |window| {
+                                let origin = point(px(70.375), px(80.625));
+                                let unfaded = paint_raster_pair(window, origin);
+                                let ink = logical_bounds(window, unfaded[0].0);
+                                for edge in 0..4 {
+                                    for distance in [16., 8., 0., -1.] {
+                                        let mut bounds = Bounds::new(ink.origin - point(px(32.), px(32.)), ink.size + size(px(64.), px(64.)));
+                                        match edge {
+                                            0 => { bounds.origin.y = ink.top() - px(distance); }
+                                            1 => { bounds.size.height = ink.bottom() + px(distance) - bounds.top(); }
+                                            2 => { bounds.origin.x = ink.left() - px(distance); }
+                                            _ => { bounds.size.width = ink.right() + px(distance) - bounds.left(); }
+                                        }
+                                        let fade = EdgeFade { bounds, band: px(16.), top: edge == 0, bottom: edge == 1, left: edge == 2, right: edge == 3 };
+                                        window.with_edge_fade(Some(fade), |window| {
+                                            let faded = paint_raster_pair(window, origin);
+                                            for ((bounds, alpha), (original_bounds, original_alpha)) in faded.into_iter().zip(unfaded) {
+                                                assert_eq!(bounds, original_bounds, "fade must not move or resize the raster sprite");
+                                                assert_close(original_alpha, 1.);
+                                                let logical = logical_bounds(window, bounds);
+                                                let gap = match edge {
+                                                    0 => logical.top() - fade.bounds.top(),
+                                                    1 => fade.bounds.bottom() - logical.bottom(),
+                                                    2 => logical.left() - fade.bounds.left(),
+                                                    _ => fade.bounds.right() - logical.right(),
+                                                };
+                                                assert_close(alpha, (gap.0 / 16.).clamp(0., 1.));
+                                            }
+                                            assert_close(faded[0].1, (distance / 16.).clamp(0., 1.));
+                                        });
+                                    }
+                                }
+                                let before = (window.next_frame.scene.monochrome_sprites.len(), window.next_frame.scene.polychrome_sprites.len());
+                                window.with_edge_fade(Some(EdgeFade { bounds: ink, band: px(16.), top: true, bottom: true, left: true, right: true }), |window| {
+                                    window.paint_glyph(origin, FontId(0), GlyphId(0), px(16.), white()).expect("an empty monochrome glyph should succeed without emitting a sprite");
+                                    window.paint_emoji(origin, FontId(0), GlyphId(0), px(16.)).expect("an empty emoji glyph should succeed without emitting a sprite");
+                                });
+                                assert_eq!(before, (window.next_frame.scene.monochrome_sprites.len(), window.next_frame.scene.polychrome_sprites.len()));
+                                assert_eq!(paint_raster_pair(window, origin), unfaded, "leaving the fade scope restores the original primitives");
+                            });
+                        }).size_full().into_any_element()
+                    });
+                }
+            }
+        }
     }
 
     struct CountRenders(Rc<Cell<usize>>);

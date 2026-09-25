@@ -24,6 +24,10 @@ the notices below and introduce no additional third-party source or licenses.
 Text-targeted edge fading and its separation of glyph decoration opacity from
 surfaces, paths, images, icons, shadows, sprites, and glass are original GPUI
 Box work without new third-party source, dependencies, or shader imports.
+The subsequent glyph/emoji edge-fade correction samples actual snapped raster
+sprite bounds instead of a baseline-anchored font-size rectangle. It is an
+original GPUI Box bugfix, with no source, font, shader, or dependency import;
+both frozen historical receipts and existing attributions remain unchanged.
 
 Source-line projection, projected editable geometry, disjoint accessibility
 regions and Kit fold policy are original GPUI Box work without new third-party

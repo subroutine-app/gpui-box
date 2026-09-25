@@ -361,6 +361,30 @@ larger than the band sample at the center of the portion inside the fade
 region. Atomic primitives no larger than the band, including glyphs, retain
 nearest-edge fading so they disappear before clipping can slice them.
 
+Glyphs (monochrome and subpixel) and emoji sample this uniform nearest-edge
+opacity from their actual snapped raster sprite bounds: baseline plus raster
+bearing and atlas tile size, inverse-mapped through the current visual transform
+and divided by display DPI into the fade scope's logical window coordinates.
+They do not treat the baseline as the top of a font-size rectangle. Underlines
+and strikethroughs retain their existing position sampling; they need not have
+the same alpha as the glyphs. This corrects premature disappearance of visible
+text in a one-line bottom fade without changing rasterization, clipping, scene
+primitive formats, shaders, or public APIs. It does not turn text fading into a
+per-pixel mask or change caller-owned viewport/band geometry.
+
+Focused `window.rs` scene tests use a deterministic test text system to exercise
+painted baseline-relative glyphs, emoji, subpixel sprites, raster padding,
+underlines, fractional origins, display DPI, visual scaling/translation, and
+fade scope restoration. These are shared CPU geometry/opacity assertions, not
+native-font or GPU pixel evidence. Native Metal, Linux/WGPU, and Windows
+headless review and dependency validation remain separate acceptance work; this
+bugfix does not claim fresh platform validation from those unit tests.
+The existing scene-level monochrome/subpixel culling path still compares the
+sprite's unmapped bounds with the displayed content mask, unlike polychrome
+sprites' transformed cull bounds. A transform that separates those rectangles
+can therefore cull text independently of fade opacity. That separate limitation
+is not repaired or certified by this opacity-only correction.
+
 Read-only `StyledText` selection is a framework primitive rather than a Kit
 gesture. A window-owned coordinator joins separately mounted participants in
 caller-declared reading order, while stable business keys keep a selection on

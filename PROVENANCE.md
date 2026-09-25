@@ -50,7 +50,11 @@ Text-targeted edge fading, including the separation between text decorations
 and non-text surfaces, paths, images, icons, shadows, sprites, and glass, is
 original GPUI Box framework and Kit work. It extends the existing local edge
 fade scope without importing renderer code, changing a native shader ABI, or
-altering the frozen historical receipt.
+altering the frozen historical receipt. The baseline-relative glyph/emoji fade
+correction in `crates/gpui/src/window.rs` is an original GPUI Box bugfix: opacity
+uses the snapped raster sprite bounds, inverse-mapped through the visual
+transform and converted from device to logical window coordinates. It imports
+no source, shader, font, or dependency and leaves both frozen receipts untouched.
 
 The source-line projection index, projected editable geometry, and disjoint
 painted accessibility regions are original GPUI Box framework work. Editor
