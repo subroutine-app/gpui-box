@@ -1054,53 +1054,80 @@ pub(super) fn chart(_window: &mut Window, cx: &mut App) -> AnyElement {
 pub(super) fn metric_card(_window: &mut Window, cx: &mut App) -> AnyElement {
     let theme = cx.theme().clone();
     stack(&theme)
-        .w(px(420.0))
+        .w(px(760.0))
         .child(caption(
             &theme,
             "a KPI keeps the last verified reading when a refresh fails",
         ))
-        .child(MetricCard::new(
-            "scene.metric.ready",
-            "Tokens",
-            MetricState::Ready(
-                MetricReading::new("12.4k")
-                    .delta("+8%", Tone::Success)
-                    .trend([
-                        SparklinePoint::new(0.0, 0.30),
-                        SparklinePoint::new(0.35, 0.55),
-                        SparklinePoint::new(0.70, 0.48),
-                        SparklinePoint::new(1.0, 0.72),
-                    ]),
-            ),
-        ))
-        .child(MetricCard::new(
-            "scene.metric.loading",
-            "Tokens",
-            MetricState::Loading,
-        ))
-        .child(MetricCard::new(
-            "scene.metric.empty",
-            "Tokens",
-            MetricState::Empty,
-        ))
-        .child(MetricCard::new(
-            "scene.metric.unavailable",
-            "Tokens",
-            MetricState::Unavailable("The meter host is offline.".into()),
-        ))
-        .child(MetricCard::new(
-            "scene.metric.error",
-            "Tokens",
-            MetricState::Error("The meter returned an invalid reading.".into()),
-        ))
-        .child(MetricCard::new(
-            "scene.metric.stale",
-            "Tokens",
-            MetricState::Stale {
-                reading: MetricReading::new("12.4k").delta("+8%", Tone::Warning),
-                reason: "Refresh failed; showing last verified reading".into(),
-            },
-        ))
+        .child(
+            div()
+                .row()
+                .items_start()
+                .gap_token(&theme, Space::Md)
+                .child(
+                    div()
+                        .column()
+                        .w(px(240.0))
+                        .gap_token(&theme, Space::Md)
+                        .child(MetricCard::new(
+                            "scene.metric.ready",
+                            "Verified session throughput across all connected regions",
+                            MetricState::Ready(
+                                MetricReading::new("sessionthroughputwithoutabreak12.4k")
+                                    .delta("+8%", Tone::Success)
+                                    .trend([
+                                        SparklinePoint::new(0.0, 0.30),
+                                        SparklinePoint::new(0.35, 0.55),
+                                        SparklinePoint::new(0.70, 0.48),
+                                        SparklinePoint::new(1.0, 0.72),
+                                    ]),
+                            ),
+                        ))
+                        .child(MetricCard::new(
+                            "scene.metric.loading",
+                            "Tokens",
+                            MetricState::Loading,
+                        )),
+                )
+                .child(
+                    div()
+                        .column()
+                        .w(px(240.0))
+                        .gap_token(&theme, Space::Md)
+                        .child(MetricCard::new(
+                            "scene.metric.empty",
+                            "Tokens",
+                            MetricState::Empty,
+                        ))
+                        .child(MetricCard::new(
+                            "scene.metric.unavailable",
+                            "Tokens",
+                            MetricState::Unavailable(
+                                "gatewayadminofflinewithoutabreakortruncationmarker".into(),
+                            ),
+                        )),
+                )
+                .child(
+                    div()
+                        .column()
+                        .w(px(240.0))
+                        .gap_token(&theme, Space::Md)
+                        .child(MetricCard::new(
+                            "scene.metric.error",
+                            "Tokens",
+                            MetricState::Error("计量服务返回了无效读数，最后确认的数值会继续保留；接続が回復するまで最後に確認された値は保持されます。计量服务返回了无效读数，最后确认的数值会继续保留。".into()),
+                        ))
+                        .child(MetricCard::new(
+                            "scene.metric.stale",
+                            "Tokens",
+                            MetricState::Stale {
+                                reading: MetricReading::new("12.4k")
+                                    .delta("+8%", Tone::Warning),
+                                reason: "Gateway refresh failed while offline; showing the last verified reading until a connection is restored".into(),
+                            },
+                        )),
+                ),
+        )
         .into_any_element()
 }
 
@@ -1152,6 +1179,142 @@ pub(super) fn trace(_window: &mut Window, cx: &mut App) -> AnyElement {
                 .current("generate")
                 .on_select(|_, _, _| {}),
         )
+        .into_any_element()
+}
+
+#[derive(Clone)]
+struct TemporalScene {
+    domain: [f64; 2],
+    collapsed: std::collections::HashSet<SharedString>,
+    selected: SharedString,
+    time_selection: Option<[f64; 2]>,
+    accepts_time_selection: bool,
+}
+impl Global for TemporalScene {}
+
+/// Raw time, partial intervals, virtual rows and controlled hierarchy.
+pub(super) fn trace_time(_window: &mut Window, cx: &mut App) -> AnyElement {
+    if !cx.has_global::<TemporalScene>() {
+        cx.set_global(TemporalScene {
+            domain: [1_700_000_000_200., 1_700_000_001_000.],
+            collapsed: std::collections::HashSet::from(["request.birch".into()]),
+            selected: "request.atlas.decode".into(),
+            time_selection: Some([1_700_000_000_420., 1_700_000_000_655.]),
+            accepts_time_selection: true,
+        });
+    }
+    let state = cx.global::<TemporalScene>().clone();
+    let theme = cx.theme().clone();
+    let mut spans = vec![];
+    for request in [
+        "atlas", "birch", "cedar", "delta", "elm", "fjord", "grove", "harbor", "iris", "jade",
+        "kelp", "lagoon", "maple", "north", "oak", "pine", "quartz", "reed", "spruce", "tide",
+        "umber", "vale", "willow", "yarrow",
+    ] {
+        spans.push(
+            TraceSpan::new(
+                format!("request.{request}"),
+                format!("Request {request}"),
+                0.,
+                1.,
+            )
+            .time(1_700_000_000_100., 1_700_000_001_200.)
+            .state(SpanState::Succeeded)
+            .duration("1.1 s"),
+        );
+        for (child, stage) in ["prepare", "fetch", "decode", "render", "commit"]
+            .into_iter()
+            .enumerate()
+        {
+            let start = 1_700_000_000_100. + child as f64 * 160.;
+            spans.push(
+                TraceSpan::new(format!("request.{request}.{stage}"), stage, 0., 1.)
+                    .time(start, start + 235.)
+                    .depth(1)
+                    .state(SpanState::Succeeded)
+                    .duration("235 ms"),
+            );
+        }
+    }
+    let spans = std::rc::Rc::new(spans);
+    stack(&theme).w(px(760.)).child(caption(&theme, "Fixture raw UTC milliseconds · Ctrl-wheel zoom · Shift-wheel pan · disclosure / arrow keys"))
+        .child(div().row().gap_token(&theme, Space::Sm)
+            .child(Button::new("scene.trace-time.zoom-in").label("Zoom in").secondary().small()
+                .on_click(|_, cx| {
+                    cx.update_global::<TemporalScene, ()>(|s, _| {
+                        use crate::display::chart::scale::{NumericScale, ScaleKind};
+                        if let Ok(scale) = NumericScale::new(ScaleKind::Time, s.domain).and_then(|scale| scale.zoom(0.5, 1.5)) {
+                            s.domain = scale.domain();
+                        }
+                    }); cx.refresh_windows();
+                }))
+            .child(Button::new("scene.trace-time.later").label("Later").secondary().small()
+                .on_click(|_, cx| {
+                    cx.update_global::<TemporalScene, ()>(|s, _| {
+                        use crate::display::chart::scale::{NumericScale, ScaleKind};
+                        if let Ok(scale) = NumericScale::new(ScaleKind::Time, s.domain).and_then(|scale| scale.pan(0.2)) {
+                            s.domain = scale.domain();
+                        }
+                    }); cx.refresh_windows();
+                }))
+            .child(Button::new("scene.trace-time.reset").label("Reset window").secondary().small()
+                .on_click(|_, cx| {
+                    cx.update_global::<TemporalScene, ()>(|s, _| s.domain = [1_700_000_000_200., 1_700_000_001_000.]);
+                    cx.refresh_windows();
+                }))
+            .child(Button::new("scene.trace-time.clear-range").label("Clear range").secondary().small()
+                .on_click(|_,cx| {
+                    cx.update_global::<TemporalScene, ()>(|s,_| s.time_selection = None);
+                    cx.refresh_windows();
+                }))
+            .child(Button::new("scene.trace-time.zoom-range").label("Zoom to range").secondary().small()
+                .disabled(state.time_selection.is_none())
+                .on_click(|_,cx| {
+                    cx.update_global::<TemporalScene, ()>(|s,_| {
+                        use crate::display::chart::scale::{NumericScale,ScaleKind};
+                        if let Some(range) = s.time_selection && let Ok(scale) = NumericScale::new(ScaleKind::Time,range) {
+                            s.domain = scale.domain();
+                        }
+                    });
+                    cx.refresh_windows();
+                }))
+            .child(Button::new("scene.trace-time.accept-range").label(if state.accepts_time_selection {"Refuse edits"} else {"Accept edits"}).secondary().small()
+                .on_click(|_,cx| {
+                    cx.update_global::<TemporalScene, ()>(|s,_| s.accepts_time_selection = !s.accepts_time_selection);
+                    cx.refresh_windows();
+                })))
+        .child(TraceView::new("scene.trace-time.tree", "144 spans · eight-row viewport")
+            .shared_spans(spans.clone()).time_viewport(state.domain).expect("valid time window")
+            .selected_time(state.time_selection).expect("valid selection")
+            .on_time_selection(|event,_,cx| {
+                use crate::interaction::range::RangeEvent;
+                cx.update_global::<TemporalScene, ()>(|s,_| {
+                    if s.accepts_time_selection && let RangeEvent::Update {value,..} | RangeEvent::Commit {value,..} = event {
+                        s.time_selection = Some(value);
+                    }
+                });
+                cx.refresh_windows();
+            })
+            .format_time(|time| format!("{:.0} ms", time - 1_700_000_000_000.).into())
+            .visible_rows(8).collapsed(state.collapsed.clone()).current(state.selected.clone())
+            .on_viewport(|scale, _, cx| { cx.update_global::<TemporalScene, ()>(|s, _| s.domain = scale.domain()); cx.refresh_windows(); })
+            .on_toggle(|id, expanded, _, cx| {
+                cx.update_global::<TemporalScene, ()>(|s, _| {
+                    if expanded {
+                        s.collapsed.remove(&id);
+                    } else {
+                        s.collapsed.insert(id);
+                    }
+                });
+                cx.refresh_windows();
+            })
+            .on_select(|id, _, cx| { cx.update_global::<TemporalScene, ()>(|s, _| s.selected = id); cx.refresh_windows(); }))
+        .child(SpanTimeline::new("scene.trace-time.timeline", "Same caller-owned time window")
+            .shared_spans(spans).time_viewport(state.domain).expect("valid time window")
+            .selected_time(state.time_selection).expect("valid selection")
+            .format_time(|time| format!("{:.0} ms", time - 1_700_000_000_000.).into())
+            .visible_rows(4).collapsed(state.collapsed).current(state.selected)
+            .on_viewport(|scale, _, cx| { cx.update_global::<TemporalScene, ()>(|s, _| s.domain = scale.domain()); cx.refresh_windows(); }))
         .into_any_element()
 }
 

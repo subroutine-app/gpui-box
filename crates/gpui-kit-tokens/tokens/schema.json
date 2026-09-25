@@ -168,6 +168,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "choiceIndicator",
         "controlHairline",
         "controlHighlight",
         "hover",
@@ -184,6 +185,7 @@
         "whiteFillActive"
       ],
       "properties": {
+        "choiceIndicator": { "$ref": "#/definitions/color" },
         "controlHairline": { "$ref": "#/definitions/color" },
         "controlHighlight": { "$ref": "#/definitions/color" },
         "hover": { "$ref": "#/definitions/color" },

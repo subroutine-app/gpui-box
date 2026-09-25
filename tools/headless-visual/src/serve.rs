@@ -9,6 +9,11 @@
 //! Omitted dimensions retain the canonical 920×1000 defaults; this does not
 //! change the capture/check baseline viewport. The reply reports the actual
 //! logical viewport and scale factor, not a claim about a native mobile device.
+//! Local-only playback: `motion {session,reduced_motion:false}` opts one session
+//! into motion. `frame {session,ms,path?}` advances exactly that simulated duration
+//! and captures the resulting draw without settling. The application clock and
+//! reduced-motion setting are global, so playback requires one exclusive session.
+//! Normal `open`/`screenshot` and catalog baselines retain their settling defaults.
 
 use std::collections::HashMap;
 use std::io::{self, BufRead, Write};
@@ -19,7 +24,8 @@ use std::time::Duration;
 use anyhow::{Context as _, Result, bail};
 use gpui::{
     AnyWindowHandle, App, Context, HeadlessAppContext, InputEvent, IntoElement, Keystroke,
-    Modifiers, MouseButton, MouseDownEvent, MouseUpEvent, Render, ScrollDelta, ScrollWheelEvent,
+    Modifiers, MouseButton, MouseCancelEvent, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
+    NavigationDirection, PlatformInput, Render, ScrollDelta, ScrollWheelEvent, TouchEvent, TouchId,
     TouchPhase, Window, div, point, prelude::*, px, size,
 };
 use gpui_kit::prelude::set_layout_direction;
@@ -91,6 +97,8 @@ struct Server {
     cx: HeadlessAppContext,
     sessions: HashMap<String, Session>,
     next_id: u64,
+    playback: Option<String>,
+    time_ms: u64,
     _diagnostics: DiagnosticArm,
 }
 
@@ -113,6 +121,8 @@ impl Server {
             cx,
             sessions: HashMap::new(),
             next_id: 1,
+            playback: None,
+            time_ms: 0,
             _diagnostics: diagnostics,
         })
     }
@@ -123,6 +133,8 @@ impl Server {
             "snapshot" => self.snapshot(params),
             "act" => self.act(params),
             "advance" => self.advance(params),
+            "motion" => self.motion(params),
+            "frame" => self.frame(params),
             "screenshot" => self.screenshot(params),
             "audit" => self.audit(params),
             "close" => self.close(params),
@@ -132,6 +144,10 @@ impl Server {
     }
 
     fn open(&mut self, params: &Value) -> Result<Value> {
+        anyhow::ensure!(
+            self.playback.is_none(),
+            "close the playback session or restore reduced motion before opening another session"
+        );
         let viewport = requested_viewport(params)?;
         let scene = required_str(params, "scene")?;
         let theme = match params.get("theme").and_then(Value::as_str).unwrap_or("") {
@@ -201,6 +217,18 @@ impl Server {
             .and_then(Value::as_str)
             .context("act needs a type")?;
         match kind {
+            "pointer_move" | "pointer_down" | "pointer_up" | "pointer_cancel" | "wheel"
+            | "touch" => {
+                let event = raw_input(action)?;
+                self.cx.update_window(session.window, |_, window, cx| {
+                    window.dispatch_event(event, cx);
+                })?;
+            }
+            "touch_cancel_all" => {
+                self.cx.update_window(session.window, |_, window, cx| {
+                    window.cancel_touch_input(cx);
+                })?;
+            }
             "click" => {
                 let id = required_str(action, "id")?;
                 let at = self.point_in(session.window, id)?;
@@ -266,13 +294,14 @@ impl Server {
                     .get("pixels")
                     .and_then(Value::as_f64)
                     .context("scroll needs pixels")?;
+                let modifiers = input_modifiers(action)?;
                 let at = self.point_in(session.window, id)?;
                 self.cx.update_window(session.window, |_, window, cx| {
                     window.dispatch_event(
                         ScrollWheelEvent {
                             position: at,
                             delta: ScrollDelta::Pixels(point(px(0.0), px(-(pixels as f32)))),
-                            modifiers: Modifiers::none(),
+                            modifiers,
                             touch_phase: TouchPhase::Moved,
                         }
                         .to_platform_input(),
@@ -280,7 +309,7 @@ impl Server {
                     );
                 })?;
             }
-            other => bail!("unknown action {other:?}: expected click, keystrokes, text, or scroll"),
+            other => bail!("unknown action {other:?}"),
         }
         self.cx.run_until_parked();
         self.draw(session.window)?;
@@ -294,6 +323,10 @@ impl Server {
             .and_then(Value::as_u64)
             .context("advance needs ms")?;
         self.activate(&session.scene, &session.theme)?;
+        self.time_ms = self
+            .time_ms
+            .checked_add(ms)
+            .context("simulated clock overflow")?;
         self.cx.advance_clock(Duration::from_millis(ms));
         self.cx.update_window(session.window, |_, window, cx| {
             window.simulate_next_frame(cx);
@@ -307,6 +340,54 @@ impl Server {
         let session = self.lookup(params)?;
         self.activate(&session.scene, &session.theme)?;
         let frame = self.settled_image(session.window)?;
+        Self::save_image(params, &frame)
+    }
+
+    fn motion(&mut self, params: &Value) -> Result<Value> {
+        let session = self.lookup(params)?;
+        let reduced = params
+            .get("reduced_motion")
+            .and_then(Value::as_bool)
+            .context("motion needs boolean reduced_motion")?;
+        anyhow::ensure!(
+            reduced || self.sessions.len() == 1,
+            "motion playback requires exactly one open session; use a separate serve process for concurrent playback"
+        );
+        self.playback = if reduced {
+            None
+        } else {
+            Some(required_str(params, "session")?.to_owned())
+        };
+        self.activate(&session.scene, &session.theme)?;
+        self.cx.update(|cx| cx.set_reduce_motion(reduced));
+        self.draw(session.window)?;
+        Ok(
+            json!({"time_ms":self.time_ms,"reduced_motion":reduced,"generation":self.generation(session.window)?}),
+        )
+    }
+
+    fn frame(&mut self, params: &Value) -> Result<Value> {
+        let session = self.lookup(params)?;
+        // Reuse scheduling, never settled_image: intermediate pixels are the
+        // result being requested, not a failure to wait for identical images.
+        self.advance(params)?;
+        let frame = self.cx.capture_screenshot(session.window)?;
+        let mut result = Self::save_image(params, &frame)?;
+        result["time_ms"] = json!(self.time_ms);
+        result["reduced_motion"] = json!(self.cx.update(|cx| cx.reduce_motion()));
+        result["generation"] = json!(self.generation(session.window)?);
+        result["snapshot"] = self.cx.update(|cx| {
+            serde_json::to_value(
+                SemanticCoordinator::global(cx)
+                    .snapshot(session.window.window_id())
+                    .expect("sampled frame published semantics")
+                    .redacted(),
+            )
+        })?;
+        Ok(result)
+    }
+
+    fn save_image(params: &Value, frame: &image::RgbaImage) -> Result<Value> {
         let path = match params.get("path").and_then(Value::as_str) {
             Some(path) => {
                 let requested = PathBuf::from(path);
@@ -367,6 +448,10 @@ impl Server {
         };
         self.cx
             .update_window(session.window, |_, window, _| window.remove_window())?;
+        if self.playback.as_deref() == Some(&id) {
+            self.playback = None;
+            self.cx.update(|cx| cx.set_reduce_motion(true));
+        }
         Ok(json!({}))
     }
 
@@ -445,6 +530,117 @@ impl Server {
     }
 }
 
+// Logical window coordinates may lie outside the viewport while captured.
+// Bound conversion before f64 -> f32; invalid requests never dispatch input.
+fn bounded_pixel(value: &Value, key: &str) -> Result<f32> {
+    let number = value
+        .get(key)
+        .and_then(Value::as_f64)
+        .with_context(|| format!("{key} needs a number"))?;
+    anyhow::ensure!(
+        number.is_finite() && number.abs() <= 16384.,
+        "{key} must be finite and within -16384..=16384 logical pixels"
+    );
+    Ok(number as f32)
+}
+
+fn input_modifiers(value: &Value) -> Result<Modifiers> {
+    let mut modifiers = Modifiers::none();
+    if let Some(names) = value.get("modifiers") {
+        for name in names.as_array().context("modifiers needs an array")? {
+            match name.as_str() {
+                Some("shift") => modifiers.shift = true,
+                Some("control") => modifiers.control = true,
+                Some("alt") => modifiers.alt = true,
+                Some("platform") => modifiers.platform = true,
+                Some("function") => modifiers.function = true,
+                _ => bail!("unknown modifier {name}"),
+            }
+        }
+    }
+    Ok(modifiers)
+}
+
+fn input_button(value: &Value, key: &str) -> Result<MouseButton> {
+    match required_str(value, key)? {
+        "left" => Ok(MouseButton::Left),
+        "right" => Ok(MouseButton::Right),
+        "middle" => Ok(MouseButton::Middle),
+        "back" => Ok(MouseButton::Navigate(NavigationDirection::Back)),
+        "forward" => Ok(MouseButton::Navigate(NavigationDirection::Forward)),
+        other => bail!("unknown button {other}"),
+    }
+}
+
+fn raw_input(action: &Value) -> Result<PlatformInput> {
+    let kind = required_str(action, "type")?;
+    if kind == "pointer_cancel" {
+        return Ok(MouseCancelEvent.to_platform_input());
+    }
+    let position = point(
+        px(bounded_pixel(action, "x")?),
+        px(bounded_pixel(action, "y")?),
+    );
+    let modifiers = input_modifiers(action)?;
+    Ok(match kind {
+        "pointer_move" => MouseMoveEvent {
+            position,
+            modifiers,
+            pressed_button: action
+                .get("pressed_button")
+                .filter(|v| !v.is_null())
+                .map(|_| input_button(action, "pressed_button"))
+                .transpose()?,
+        }
+        .to_platform_input(),
+        "pointer_down" => MouseDownEvent {
+            position,
+            modifiers,
+            button: input_button(action, "button")?,
+            click_count: 1,
+            first_mouse: false,
+        }
+        .to_platform_input(),
+        "pointer_up" => MouseUpEvent {
+            position,
+            modifiers,
+            button: input_button(action, "button")?,
+            click_count: 1,
+        }
+        .to_platform_input(),
+        "wheel" => ScrollWheelEvent {
+            position,
+            modifiers,
+            delta: ScrollDelta::Pixels(point(
+                px(bounded_pixel(action, "delta_x")?),
+                px(bounded_pixel(action, "delta_y")?),
+            )),
+            touch_phase: TouchPhase::Moved,
+        }
+        .to_platform_input(),
+        "touch" => TouchEvent {
+            id: TouchId(
+                action
+                    .get("touch_id")
+                    .and_then(Value::as_u64)
+                    .context("touch_id needs u64")?,
+            ),
+            phase: match required_str(action, "phase")? {
+                "started" => TouchPhase::Started,
+                "moved" => TouchPhase::Moved,
+                "ended" => TouchPhase::Ended,
+                "cancelled" => TouchPhase::Cancelled,
+                other => bail!("unknown touch phase {other}"),
+            },
+            position,
+            predicted_position: None,
+            force: None,
+        }
+        .to_platform_input(),
+        other => bail!("unknown raw input {other}"),
+    })
+}
+
 fn requested_viewport(params: &Value) -> Result<gpui::Size<gpui::Pixels>> {
     let dimension = |key: &str, default: f32| -> Result<gpui::Pixels> {
         let Some(value) = params.get(key) else {
@@ -501,6 +697,341 @@ fn base64(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn motion_restores_selected_session_theme_before_drawing() -> Result<()> {
+        let mut server = Server::new()?;
+        let dark = server.open(&json!({"scene":"divider","theme":"studio-dark"}))?;
+        let dark_session = server.lookup(&json!({"session":dark["session"]}))?;
+        let expected = server.cx.capture_screenshot(dark_session.window)?;
+        let light = server.open(&json!({"scene":"divider","theme":"studio-light"}))?;
+        let light_session = server.lookup(&json!({"session":light["session"]}))?;
+        let different = server.cx.capture_screenshot(light_session.window)?;
+        assert_ne!(expected.as_raw(), different.as_raw());
+        server.motion(&json!({"session":dark["session"],"reduced_motion":true}))?;
+        assert_eq!(
+            server.cx.capture_screenshot(dark_session.window)?.as_raw(),
+            expected.as_raw()
+        );
+        server.snapshot(&json!({"session":light["session"]}))?;
+        server.close(&json!({"session":light["session"]}))?;
+        server.motion(&json!({"session":dark["session"],"reduced_motion":false}))?;
+        assert_eq!(
+            server.cx.capture_screenshot(dark_session.window)?.as_raw(),
+            expected.as_raw()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn raw_coordinates_buttons_modifiers_and_touch_are_explicit() -> Result<()> {
+        let event = raw_input(&json!({"type":"wheel","x":-43.5,"y":701.25,
+            "delta_x":17,"delta_y":-83,"modifiers":["control","shift"]}))?;
+        let PlatformInput::ScrollWheel(event) = event else {
+            panic!("wheel event")
+        };
+        assert_eq!(event.position, point(px(-43.5), px(701.25)));
+        assert_eq!(event.delta.pixel_delta(px(20.)), point(px(17.), px(-83.)));
+        assert!(event.modifiers.control && event.modifiers.shift && !event.modifiers.alt);
+        let PlatformInput::MouseMove(event) = raw_input(
+            &json!({"type":"pointer_move","x":16384,"y":-16384,"pressed_button":"right"}),
+        )?
+        else {
+            panic!("move event")
+        };
+        assert_eq!(event.pressed_button, Some(MouseButton::Right));
+        for action in [
+            json!({"type":"pointer_move","x":16385,"y":0}),
+            json!({"type":"pointer_move","x":0,"y":-16385}),
+            json!({"type":"pointer_move","x":"1","y":0}),
+            json!({"type":"pointer_down","x":0,"y":0,"button":"unknown"}),
+            json!({"type":"pointer_move","x":0,"y":0,"modifiers":["ctrl"]}),
+            json!({"type":"touch","x":0,"y":0,"touch_id":-1,"phase":"started"}),
+        ] {
+            assert!(raw_input(&action).is_err(), "{action}");
+        }
+        let PlatformInput::Touch(event) = raw_input(
+            &json!({"type":"touch","x":31,"y":79,"touch_id":18446744073709551615u64,"phase":"cancelled"}),
+        )?
+        else {
+            panic!("touch event")
+        };
+        assert_eq!(event.id, TouchId(u64::MAX));
+        assert_eq!(event.phase, TouchPhase::Cancelled);
+        assert!(event.force.is_none() && event.predicted_position.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn raw_dispatch_captures_outside_releases_cancels_and_respects_refusal() -> Result<()> {
+        use gpui_kit::display::chart::{
+            cartesian::{CartesianChart, CartesianEvent},
+            data::{ChartScale, ChartValue, RawPoint, RawSeries, SeriesMark, ValueAxis},
+            scale::{NumericScale, ScaleKind},
+        };
+        use std::{cell::RefCell, rc::Rc};
+        struct Probe(Rc<RefCell<Vec<CartesianEvent>>>);
+        impl Render for Probe {
+            fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+                SemanticCoordinator::global(cx).begin_frame(window);
+                let events = self.0.clone();
+                let scale =
+                    NumericScale::new(ScaleKind::Linear, [0., 100.]).expect("fixture domain");
+                div().w(px(300.)).child(
+                    CartesianChart::new(
+                        "probe",
+                        "Probe",
+                        ChartScale::Numeric(scale),
+                        [ValueAxis {
+                            id: "y".into(),
+                            label: "Units".into(),
+                            scale,
+                        }],
+                    )
+                    .series([RawSeries::new("readings", "y", SeriesMark::Scatter)
+                        .points([RawPoint::new("west", ChartValue::Number(25.), Some(40.))
+                            .text("West", "40")])])
+                    .on_event(move |event, _, _| events.borrow_mut().push(event)),
+                )
+            }
+        }
+        let mut server = Server::new()?;
+        let events = Rc::new(RefCell::new(Vec::new()));
+        let logging = events.clone();
+        let window = server
+            .cx
+            .open_window(size(px(400.), px(350.)), move |_, cx| {
+                cx.new(|_| Probe(logging))
+            })?
+            .into();
+        server.sessions.insert(
+            "probe".into(),
+            Session {
+                window,
+                scene: "button".into(),
+                theme: "studio-light".into(),
+            },
+        );
+        server.draw(window)?;
+        server.draw(window)?;
+        let at = server.point_in(window, "probe.series.readings.point.west")?;
+        let x = f32::from(at.x);
+        let y = f32::from(at.y);
+        let send = |server: &mut Server, mut action: Value| -> Result<()> {
+            action["session"] = json!("probe");
+            server.act(&action)?;
+            Ok(())
+        };
+        send(&mut server, json!({"type":"pointer_move","x":x,"y":y}))?;
+        assert!(
+            events
+                .borrow()
+                .iter()
+                .any(|e| matches!(e, CartesianEvent::Hover(Some(_))))
+        );
+        send(
+            &mut server,
+            json!({"type":"wheel","x":x,"y":y,"delta_x":17,"delta_y":-83,"modifiers":["control"]}),
+        )?;
+        assert!(
+            events
+                .borrow()
+                .iter()
+                .any(|e| matches!(e, CartesianEvent::Viewport(_)))
+        );
+        assert_eq!(
+            server.point_in(window, "probe.series.readings.point.west")?,
+            at,
+            "host refused viewport; source geometry unchanged"
+        );
+        events.borrow_mut().clear();
+        send(
+            &mut server,
+            json!({"type":"pointer_down","x":x,"y":y,"button":"left"}),
+        )?;
+        send(
+            &mut server,
+            json!({"type":"pointer_move","x":-73,"y":-39,"pressed_button":"left"}),
+        )?;
+        assert!(
+            events
+                .borrow()
+                .iter()
+                .any(|e| matches!(e, CartesianEvent::Viewport(_)))
+        );
+        assert_eq!(
+            server.point_in(window, "probe.series.readings.point.west")?,
+            at,
+            "refused pan redraw remains controlled"
+        );
+        send(
+            &mut server,
+            json!({"type":"pointer_up","x":-73,"y":-39,"button":"right"}),
+        )?;
+        assert!(
+            server
+                .cx
+                .update_window(window, |_, w, _| w.captured_hitbox().is_some())?,
+            "unrelated release must not end left capture"
+        );
+        send(&mut server, json!({"type":"pointer_cancel"}))?;
+        assert!(
+            !server
+                .cx
+                .update_window(window, |_, w, _| w.captured_hitbox().is_some())?
+        );
+        events.borrow_mut().clear();
+        for cancel in [false, true] {
+            send(
+                &mut server,
+                json!({"type":"pointer_down","x":x,"y":y,"button":"left","modifiers":["shift"]}),
+            )?;
+            send(
+                &mut server,
+                json!({"type":"pointer_move","x":900,"y":700,"pressed_button":"left","modifiers":["shift"]}),
+            )?;
+            assert!(
+                server
+                    .cx
+                    .update_window(window, |_, w, _| w.captured_hitbox().is_some())?
+            );
+            let preview = server.frame(
+                &json!({"session":"probe","ms":0,"path":"target/sessions/raw-input-preview.png"}),
+            )?;
+            assert!(
+                preview["snapshot"]["nodes"]
+                    .as_array()
+                    .expect("nodes")
+                    .iter()
+                    .any(|n| n["id"] == "probe.brush-preview")
+            );
+            if cancel {
+                send(&mut server, json!({"type":"pointer_cancel"}))?;
+            }
+            send(
+                &mut server,
+                json!({"type":"pointer_up","x":900,"y":700,"button":"left"}),
+            )?;
+            assert!(
+                !server
+                    .cx
+                    .update_window(window, |_, w, _| w.captured_hitbox().is_some())?
+            );
+            let brushes = events
+                .borrow()
+                .iter()
+                .filter(|e| matches!(e, CartesianEvent::Brush(_)))
+                .count();
+            assert_eq!(
+                brushes,
+                usize::from(!cancel),
+                "cancellation never commits even with a later release"
+            );
+            if !cancel {
+                let logged = events.borrow();
+                let Some(CartesianEvent::Brush(
+                    [ChartValue::Number(start), ChartValue::Number(end)],
+                )) = logged
+                    .iter()
+                    .find(|e| matches!(e, CartesianEvent::Brush(_)))
+                else {
+                    panic!("numeric brush proposal")
+                };
+                assert!((*start - 25.).abs() < 0.1);
+                assert_eq!(
+                    *end, 100.,
+                    "component bounds brush, not harness coordinates"
+                );
+            }
+            events.borrow_mut().clear();
+        }
+        for phase in ["started", "cancelled"] {
+            send(
+                &mut server,
+                json!({"type":"touch","x":x,"y":y,"touch_id":53,"phase":phase}),
+            )?;
+        }
+        send(&mut server, json!({"type":"touch_cancel_all"}))?;
+        assert!(!events.borrow().iter().any(|e| matches!(
+            e,
+            CartesianEvent::Select(Some(_)) | CartesianEvent::Brush(_)
+        )));
+        Ok(())
+    }
+
+    #[test]
+    fn playback_samples_interruption_and_reduced_motion_without_settling() -> Result<()> {
+        let mut server = Server::new()?;
+        let opened = server.open(&json!({"scene":"motion-primitives", "theme":"studio-light"}))?;
+        let id = &opened["session"];
+        let click = |target: &str| json!({"session":id,"type":"click","id":target});
+        server.act(&click("scene.motion.tabs.spring"))?;
+        let indicator_x = |snapshot: &Value| -> f64 {
+            snapshot["nodes"]
+                .as_array()
+                .expect("semantic nodes")
+                .iter()
+                .find(|node| node["id"] == "scene.motion.spring.indicator")
+                .expect("spring indicator")["bounds"]["x"]
+                .as_f64()
+                .expect("indicator x")
+        };
+        let left = indicator_x(&server.snapshot(&json!({"session":id}))?);
+        server.act(&click("scene.motion.spring.timeline"))?;
+        let right = indicator_x(&server.snapshot(&json!({"session":id}))?);
+        assert!(
+            (right - left - 120.0).abs() < 0.1,
+            "default reduced motion settles immediately"
+        );
+        let params = |ms| json!({"session":id,"ms":ms,"path":"target/sessions/playback-test.png"});
+        let default = server.frame(&params(0))?;
+        assert_eq!(default["reduced_motion"], true);
+        assert_eq!(default["time_ms"], 0);
+        server.motion(&json!({"session":id,"reduced_motion":false}))?;
+        assert!(server.open(&json!({"scene":"button"})).is_err());
+        server.act(&click("scene.motion.spring.queue"))?;
+        let start = server.frame(&params(0))?;
+        assert_eq!(indicator_x(&start["snapshot"]), right);
+        let moving = server.frame(&params(80))?;
+        let middle = indicator_x(&moving["snapshot"]);
+        assert!(
+            middle > left && middle < right,
+            "intermediate geometry {left} < {middle} < {right}"
+        );
+        assert_ne!(
+            start["png_base64"], moving["png_base64"],
+            "actual rendered intermediate frame"
+        );
+        assert_eq!(moving["time_ms"], 80);
+        server.act(&click("scene.motion.spring.timeline"))?;
+        let interrupted = server.frame(&params(0))?;
+        assert!(
+            (indicator_x(&interrupted["snapshot"]) - middle).abs() < 0.1,
+            "retarget preserves current geometry"
+        );
+        let resumed = server.frame(&params(80))?;
+        assert_eq!(resumed["time_ms"], 160);
+        assert_ne!(resumed["png_base64"], interrupted["png_base64"]);
+        server.motion(&json!({"session":id,"reduced_motion":true}))?;
+        let settled = server.frame(&params(0))?;
+        assert_eq!(indicator_x(&settled["snapshot"]), right);
+        assert_eq!(
+            settled["time_ms"], 160,
+            "reduced motion does not secretly advance time"
+        );
+        assert_eq!(settled["reduced_motion"], true);
+        let other = server.open(&json!({"scene":"button"}))?;
+        assert!(
+            server
+                .motion(&json!({"session":id,"reduced_motion":false}))
+                .is_err()
+        );
+        server.close(&json!({"session":other["session"]}))?;
+        server.motion(&json!({"session":id,"reduced_motion":false}))?;
+        server.close(&json!({"session":id}))?;
+        assert!(server.cx.update(|cx| cx.reduce_motion()));
+        Ok(())
+    }
 
     #[test]
     fn base64_matches_the_specification() {

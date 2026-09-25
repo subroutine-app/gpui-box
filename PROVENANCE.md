@@ -4,6 +4,40 @@ GPUI Box is an independent derivative project, not an official Zed project.
 Provenance applies to imported and translated source as well as linked assets.
 The machine-readable release record is `provenance.toml`.
 
+Frozen paint recordings, per-allocation atlas leases, capture revision/reset
+fences, and callback-free replay are original GPUI Box framework work. They
+extend this tree's Scene, clipping, and native atlas implementations without
+new source imports, dependency authority changes, or historical receipt edits.
+The dynamic offscreen demonstrator uses existing bundled fonts and a synthetic
+two-color image. Native Metal and Direct3D acceptance remains pending.
+
+Calendar tick generation and source-traceable chart transforms are original
+GPUI Box work. Calendar resolution uses the existing Chrono public TimeZone API;
+the caller supplies production timezone policy. chrono-tz is a test-only
+dependency for independent DST/date-line fixtures. No calendar source or timezone
+database is copied into Kit, and DateAdapter ownership is unchanged.
+
+Pointer-capture retirement and cached-hitbox identity retention are original local
+GPUI Box framework changes. A vanished capture is cancelled before the previous
+frame's listeners retire; no imported platform source or historical receipt is
+changed. Portable framework tests cover cached redraw, unmount and reinsertion.
+
+Assigned border-box root layout and configurable FLIP position/size timing are
+original GPUI Box framework and Kit work. They reuse the local Taffy authority;
+no source was imported or translated, no dependency authority changed, and the
+historical import receipt remains frozen. The root assignment is invocation-local:
+authored constraints return for natural measurement, while descendants, clipping,
+pointer input and accessibility use the actual displayed layout.
+
+The local geographic visualization family and synthetic exhibit are original
+GPUI Box work. Projection formulas were checked against
+[PROJ's Web Mercator definition](https://proj.org/en/stable/operations/projections/webmerc.html),
+and the explicit ring/antimeridian subset against
+[RFC 7946](https://www.rfc-editor.org/rfc/rfc7946). No source or geographic
+dataset was copied or translated. Existing GPUI/Lyon path filling is reused;
+there are no provider assets, new dependencies, or historical receipt changes.
+`crates/docs/geography.md` records the deliberately bounded projected-edge contract.
+
 Portable multi-contact arbitration, captured pan/pinch ownership, residual
 scroll-to-manipulation handoff, interrupted-input cleanup, and the mobile
 keyboard/inset/native text query contracts are original GPUI Box framework
@@ -1107,6 +1141,68 @@ from 24 px Frost. Callstack's container spacing informed the review of optical
 grouping versus child layout; GPUI Box retains and documents its own polynomial
 smooth-union coefficient rather than claiming UIKit's private merge geometry.
 No dependency, source import, or frozen receipt changed.
+
+### Raw Cartesian coordinates and composition
+
+`crates/gpui-kit/src/display/chart/{scale,data,cartesian}.rs` and the original
+Cartesian fixtures are independently authored GPUI Box Kit code. Recharts and
+ECharts are capability references, not source dependencies or compatibility
+targets. The monotone Hermite implementation uses the mathematical
+sign-preservation and radius-three tangent constraint described at
+https://en.wikipedia.org/wiki/Monotone_cubic_interpolation (consulted 2026-09-13);
+no example implementation or third-party source was copied. Time coordinates
+are UTC Unix milliseconds with fixed-duration ticks, not a copied calendar
+implementation. Existing GPUI layout, clipping, text measurement and pointer
+capture are reused. No framework package or historical import receipt changes.
+The sibling `cartesian_layout.rs` and `cartesian_motion.rs` implement original
+shared orientation mapping and keyed f64 geometry using Kit's existing Transition
+primitive. Caller tick lists and bounded custom painters add no imported source
+or calendar policy. English and Chinese chart state strings are original text.
+`cartesian_performance.rs`, its rectangle tree, immutable projection cache and
+pixel-column extrema reduction, and the chart performance fixtures are original
+Kit implementations. No external sampling or spatial-index source was copied.
+
+### Balanced framework bounds index
+
+The equal-leaf-depth overflow splitting, index-owned traversal and focused
+workload/oracle tests in `crates/gpui/src/bounds_tree.rs` and its `bounds_tree/`
+test directory are independently authored GPUI Box changes to the imported
+framework index. No third-party R-tree implementation was copied. The original
+file's upstream attribution and frozen historical import receipt remain intact;
+no package authority, renderer ABI or dependency source changed.
+
+### Measured descriptive semantic leaves
+
+`crates/gpui-kit-semantics/src/measured.rs` and its mounted tests are original
+GPUI Box work. They reuse the installed semantic coordinator and GPUI's existing
+synthetic AccessKit children, identity hashing, visual transform and conservative
+clip authority; no external implementation or additional registry was imported.
+The accessibility debug JSON bounds field exposes already committed geometry
+for verification without changing native publication. Package authority,
+upstream attribution and frozen historical import receipts remain unchanged.
+
+### Virtual-root layout placement
+
+Window placement metadata, UniformList publication of its actual row slots,
+and FLIP content-space sampling are original GPUI Box work. They distinguish
+layout movement from ambient scroll/ancestor slides without a second renderer,
+input transform or imported implementation. Frozen import receipts and package
+authority remain unchanged.
+
+### Atlas lease thread confinement
+
+Target-specific release bounds preserve native cross-thread GPU completion
+while keeping Wasm GPU resources thread-confined. The bound and native final-drop
+test are original GPUI Box work; no unsafe Send wrapper, external source or new
+dependency is introduced. Frozen import receipts remain unchanged.
+
+### Focusable tooltip lifecycle
+
+The focus-or-hover tooltip lifecycle, focus-tenure Escape dismissal and
+displayed-bounds anchor are original GPUI Box framework work. They reuse GPUI's
+existing focus, visual-transform and tooltip authorities without importing an
+implementation, adding a dependency or changing the frozen historical import
+receipt.
 
 ## P21: gpui-ce transition coordinate rebasing
 

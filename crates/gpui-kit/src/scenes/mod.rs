@@ -23,6 +23,7 @@ mod support;
 
 mod agent;
 mod canvas;
+mod cartesian;
 mod compositions;
 mod content;
 mod controls;
@@ -31,13 +32,18 @@ mod data;
 mod datetime;
 mod display;
 mod effects;
+mod flip_configuration;
 mod game;
+mod geography;
+mod heatmap;
 mod interaction;
 mod layout;
 mod media;
 mod motion;
 mod navigation;
 mod overlay;
+mod plot;
+mod specialized;
 mod structured;
 
 use gpui::{AnyElement, App, Window};
@@ -49,7 +55,14 @@ use agent::{
     artifact_preview, clarification, cost_meter, feedback_rating, offering_catalog,
     permission_matrix, persona, prompt_builder, server_list, thinking, tool_call,
 };
-use canvas::{canvas_regions, canvas_tools, node_graph, node_graph_motion};
+use canvas::{
+    canvas_regions, canvas_tools, node_graph, node_graph_layout, node_graph_motion,
+    node_graph_routing,
+};
+use cartesian::{
+    cartesian, cartesian_dense, cartesian_layout, cartesian_lifecycle, cartesian_linked,
+    cartesian_states,
+};
 use compositions::{motion_flip, motion_state, reading_direction};
 #[cfg(all(feature = "terminal", not(target_family = "wasm")))]
 use content::terminal;
@@ -75,10 +88,13 @@ use display::{
     animated_number, attachment, avatar, badge, banner, bubble, card, chart, detail, divider,
     empty_state, failure_panel, heatmap, icon, loading, metric_card, outcome_panel,
     performance_hud, plot, progress_bar, progress_circle, rating, sparkline, stage_progress,
-    state_ladder, status, tag, trace,
+    state_ladder, status, tag, trace, trace_time,
 };
 use effects::{cinematic_effects, visual_effects};
+use flip_configuration::flip_configuration;
 use game::game_ui;
+use geography::{geography, geography_scale};
+use heatmap::{continuous_heatmap, continuous_heatmap_transition, heatmap_reordering};
 use interaction::{pull_to_refresh, swipe_actions};
 use layout::{
     aspect_ratio, container, desktop_titlebar, dock_floating, dock_tree, grid, ide_shell,
@@ -89,14 +105,16 @@ use media::{audio_player, audio_waveform, model_viewer, video_player};
 use motion::{micro, motion_primitives};
 use navigation::{
     accordion, adaptive_navigation, anchor_list, bottom_navigation, breadcrumb, carousel,
-    collapsible, document_tabs, nav_back_preview, nav_stack, pagination, sidebar, tabs,
-    undo_history, wizard,
+    collapsible, document_tabs, nav_back_preview, nav_stack, pagination, sidebar, sidebar_overflow,
+    tabs, undo_history, wizard,
 };
 use overlay::{
     action_sheet, bottom_sheet, command_palette, context_menu, dialog, drawer, frost, glass,
     glass_materials, glass_optics, hover_card, kbd, media_caption, menu, menubar,
     notification_center, overlay, popover, toast, tooltip,
 };
+use plot::{raw_candlestick, sankey_layout, sankey_motion};
+use specialized::{specialized, specialized_distribution, specialized_exploration};
 use structured::{json_view, schema_form};
 
 /// What a rendering exists to show.
@@ -601,6 +619,11 @@ pub fn catalog() -> Vec<Scene> {
             shows: Shows::Subjects(&["Sidebar"]),
         },
         Scene {
+            name: "sidebar-overflow",
+            build: sidebar_overflow,
+            shows: Shows::Subjects(&["Sidebar"]),
+        },
+        Scene {
             name: "pagination",
             build: pagination,
             shows: Shows::Subjects(&["Pagination"]),
@@ -614,6 +637,11 @@ pub fn catalog() -> Vec<Scene> {
             name: "motion-flip",
             build: motion_flip,
             shows: Shows::Composition(&["Button", "Card", "ListRow"]),
+        },
+        Scene {
+            name: "flip-configuration",
+            build: flip_configuration,
+            shows: Shows::Composition(&["Button"]),
         },
         Scene {
             name: "motion-state",
@@ -875,6 +903,16 @@ pub fn catalog() -> Vec<Scene> {
             shows: Shows::Subjects(&["GraphNode", "NodeGraph"]),
         },
         Scene {
+            name: "node-graph-layout",
+            build: node_graph_layout,
+            shows: Shows::Subjects(&["GraphNode", "NodeGraph"]),
+        },
+        Scene {
+            name: "node-graph-routing",
+            build: node_graph_routing,
+            shows: Shows::Subjects(&["GraphNode", "NodeGraph"]),
+        },
+        Scene {
             name: "node-graph-motion",
             build: node_graph_motion,
             shows: Shows::Subjects(&["GraphNode", "NodeGraph"]),
@@ -1039,9 +1077,94 @@ pub fn catalog() -> Vec<Scene> {
             ]),
         },
         Scene {
+            name: "cartesian",
+            build: cartesian,
+            shows: Shows::Subjects(&["CartesianChart"]),
+        },
+        Scene {
+            name: "cartesian-linked",
+            build: cartesian_linked,
+            shows: Shows::Subjects(&["CartesianChart"]),
+        },
+        Scene {
+            name: "cartesian-layout",
+            build: cartesian_layout,
+            shows: Shows::Subjects(&["CartesianChart"]),
+        },
+        Scene {
+            name: "cartesian-lifecycle",
+            build: cartesian_lifecycle,
+            shows: Shows::Subjects(&["CartesianChart"]),
+        },
+        Scene {
+            name: "cartesian-dense",
+            build: cartesian_dense,
+            shows: Shows::Subjects(&["CartesianChart"]),
+        },
+        Scene {
+            name: "cartesian-states",
+            build: cartesian_states,
+            shows: Shows::Subjects(&["CartesianChart", "PieChart", "RadarChart", "GaugeChart"]),
+        },
+        Scene {
             name: "plot",
             build: plot,
             shows: Shows::Subjects(&["CandlestickChart", "Plot", "SankeyChart"]),
+        },
+        Scene {
+            name: "specialized",
+            build: specialized,
+            shows: Shows::Subjects(&["SpecializedChart"]),
+        },
+        Scene {
+            name: "specialized-distribution",
+            build: specialized_distribution,
+            shows: Shows::Subjects(&["SpecializedChart"]),
+        },
+        Scene {
+            name: "specialized-exploration",
+            build: specialized_exploration,
+            shows: Shows::Subjects(&["SpecializedChart"]),
+        },
+        Scene {
+            name: "continuous-heatmap-transition",
+            build: continuous_heatmap_transition,
+            shows: Shows::Subjects(&["ContinuousHeatmap"]),
+        },
+        Scene {
+            name: "heatmap-reordering",
+            build: heatmap_reordering,
+            shows: Shows::Subjects(&["ContinuousHeatmap"]),
+        },
+        Scene {
+            name: "sankey-motion",
+            build: sankey_motion,
+            shows: Shows::Subjects(&["SankeyChart"]),
+        },
+        Scene {
+            name: "continuous-heatmap",
+            build: continuous_heatmap,
+            shows: Shows::Subjects(&["ContinuousHeatmap"]),
+        },
+        Scene {
+            name: "sankey-layout",
+            build: sankey_layout,
+            shows: Shows::Subjects(&["SankeyChart"]),
+        },
+        Scene {
+            name: "raw-candlestick",
+            build: raw_candlestick,
+            shows: Shows::Subjects(&["CartesianChart"]),
+        },
+        Scene {
+            name: "geography",
+            build: geography,
+            shows: Shows::Subjects(&["GeoMap"]),
+        },
+        Scene {
+            name: "geography-scale",
+            build: geography_scale,
+            shows: Shows::Subjects(&["GeoMap"]),
         },
         Scene {
             name: "attachment",
@@ -1066,6 +1189,11 @@ pub fn catalog() -> Vec<Scene> {
         Scene {
             name: "trace",
             build: trace,
+            shows: Shows::Subjects(&["SpanTimeline", "TraceView"]),
+        },
+        Scene {
+            name: "trace-time",
+            build: trace_time,
             shows: Shows::Subjects(&["SpanTimeline", "TraceView"]),
         },
         Scene {

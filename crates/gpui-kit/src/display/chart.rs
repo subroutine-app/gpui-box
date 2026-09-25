@@ -1,7 +1,9 @@
 //! Cartesian readings over host-owned series.
 //!
-//! A chart does not invent a domain, a tick, a locale, an aggregation, or a
-//! colour. The host supplies normalized coordinates and exact visible text.
+//! The original builders accept normalized coordinates and exact visible text.
+//! [`cartesian::CartesianChart`] additionally accepts raw f64 observations with
+//! explicit shared scales, computed ticks, stacks and controlled exploration.
+//! Locale, aggregation and business identity always remain caller-owned.
 //! This module owns the reusable presentation work downstream applications
 //! should not have to redraw: axes, legends, keyed data motion, area fills,
 //! crosshair interaction, and truthful loading and refresh states.
@@ -38,6 +40,11 @@ use crate::motion::{self, MotionPolicy, MotionRole, Presence, Stagger, Transitio
 use crate::overlay::tooltip::Tooltipped;
 use crate::state::{HasPhase, Phase};
 use crate::strings::{ActiveStrings, StringKey};
+
+pub mod cartesian;
+mod cartesian_performance;
+pub mod data;
+pub mod scale;
 
 /// One host-owned point in a chart series.
 ///
@@ -1906,6 +1913,17 @@ pub struct PieChart {
 }
 
 impl PieChart {
+    /// Normalize finite nonnegative raw shares. Missing/negative readings are
+    /// rejected; an all-zero series remains a valid zero-share observation.
+    pub fn from_raw(
+        ident: impl Into<Ident>,
+        label: impl Into<SharedString>,
+        series: data::RawSeries,
+    ) -> Result<Self, data::DataError> {
+        let series = data::pie_series(&series)?;
+        Ok(Self::new(ident, label, ChartState::Ready(vec![series])))
+    }
+
     pub fn new(ident: impl Into<Ident>, label: impl Into<SharedString>, state: ChartState) -> Self {
         Self {
             ident: ident.into(),
@@ -2046,6 +2064,7 @@ impl RenderOnce for StackedBarChart {
 }
 
 type LegendToggle = Rc<dyn Fn(SharedString, bool, &mut Window, &mut App)>;
+type LegendEmphasis = Rc<dyn Fn(Option<SharedString>, &mut Window, &mut App)>;
 
 /// A standalone legend that reports series hide and show.
 #[derive(IntoElement)]
@@ -2054,6 +2073,7 @@ pub struct ChartLegend {
     series: Vec<ChartSeries>,
     hidden: Vec<SharedString>,
     on_toggle: Option<LegendToggle>,
+    on_emphasis: Option<LegendEmphasis>,
 }
 
 impl std::fmt::Debug for ChartLegend {
@@ -2074,6 +2094,7 @@ impl ChartLegend {
             series: series.into_iter().collect(),
             hidden: Vec::new(),
             on_toggle: None,
+            on_emphasis: None,
         }
     }
 
@@ -2087,6 +2108,15 @@ impl ChartLegend {
         handler: impl Fn(SharedString, bool, &mut Window, &mut App) + 'static,
     ) -> Self {
         self.on_toggle = Some(Rc::new(handler));
+        self
+    }
+    /// Report pointer entry/exit by source series identity. The caller decides
+    /// whether to emphasize a series; this does not toggle visibility.
+    pub fn on_emphasis(
+        mut self,
+        handler: impl Fn(Option<SharedString>, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.on_emphasis = Some(Rc::new(handler));
         self
     }
 }
@@ -2139,6 +2169,12 @@ impl RenderOnce for ChartLegend {
                                 cx.stop_propagation();
                             }
                         });
+                }
+                if let Some(handler) = self.on_emphasis.clone() {
+                    let id = series.id.clone();
+                    row = row.on_hover(move |hovered, window, cx| {
+                        handler(hovered.then(|| id.clone()), window, cx)
+                    });
                 }
                 Some(
                     row.semantic_in(
@@ -2421,6 +2457,27 @@ pub struct RadarChart {
 }
 
 impl RadarChart {
+    /// Raw axis values, ordered by the supplied axes rather than sample order.
+    /// Every series must contain exactly one in-domain reading per axis ID.
+    pub fn from_raw(
+        ident: impl Into<Ident>,
+        label: impl Into<SharedString>,
+        series: impl IntoIterator<Item = data::RawSeries>,
+        axes: &[data::ValueAxis],
+    ) -> Result<Self, data::DataError> {
+        let mut ids = HashSet::new();
+        let series = series
+            .into_iter()
+            .map(|series| {
+                if !ids.insert(series.id.clone()) {
+                    return Err(data::DataError::DuplicateIdentity(series.id));
+                }
+                data::radial_series(&series, axes)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(Self::new(ident, label, ChartState::Ready(series)))
+    }
+
     pub fn new(ident: impl Into<Ident>, label: impl Into<SharedString>, state: ChartState) -> Self {
         Self {
             ident: ident.into(),
@@ -2642,6 +2699,37 @@ pub struct GaugeChart {
 }
 
 impl GaugeChart {
+    /// A raw reading with an explicit domain. Outside-domain and nonfinite
+    /// values are errors rather than clamped needles. None draws no needle.
+    pub fn from_raw(
+        ident: impl Into<Ident>,
+        label: impl Into<SharedString>,
+        reading: data::RawPoint,
+        domain: scale::NumericScale,
+    ) -> Result<Self, data::DataError> {
+        let label = label.into();
+        let points = if let Some(value) = reading.y {
+            let amount = domain
+                .map(value)
+                .filter(|v| (0.0..=1.0).contains(v))
+                .ok_or_else(|| data::DataError::InvalidPoint(reading.id.clone()))?;
+            vec![ChartPoint::new(
+                reading.id,
+                0.,
+                amount as f32,
+                reading.label,
+                reading.formatted,
+            )]
+        } else {
+            Vec::new()
+        };
+        Ok(Self::new(
+            ident,
+            label.clone(),
+            ChartState::Ready(vec![ChartSeries::new("reading", label).points(points)]),
+        ))
+    }
+
     pub fn new(ident: impl Into<Ident>, label: impl Into<SharedString>, state: ChartState) -> Self {
         Self {
             ident: ident.into(),

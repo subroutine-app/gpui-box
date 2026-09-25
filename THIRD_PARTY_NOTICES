@@ -5,6 +5,30 @@ GPUI Box combines Apache-2.0 framework code with MIT kit/MCP code. Imported
 source and assets retain the licenses and attribution below. GPUI Box is an
 independent derivative and is not an official Zed Industries project.
 
+Frozen paint recording and atlas lifetime/replay infrastructure are original
+GPUI Box work. No additional third-party code or assets are imported; the
+demonstrator reuses the bundled fonts under their existing notices and creates
+its image fixture procedurally. Historical import receipts remain unchanged.
+
+Calendar chart ticks and source-traceable transforms are original Kit code.
+They use Chrono's public API (MIT OR Apache-2.0); chrono-tz 0.10.4 (MIT OR
+Apache-2.0) is used only by tests for named-timezone/DST fixtures. Production
+timezone data is caller-owned; no calendar implementation was copied or ported.
+
+Pointer-capture unmount cancellation and cached capture identity retention are
+original local GPUI Box framework work under Apache-2.0. No upstream source was
+copied and the frozen historical import receipt remains unchanged.
+
+Assigned root border-box layout and configurable FLIP timing are original
+GPUI Box work using the existing local framework/Taffy dependencies. No new
+third-party source, licenses or assets were introduced; historical receipts
+and upstream copyright notices remain unchanged.
+
+Local geographic visualization and its synthetic fixture are original GPUI
+Box code. PROJ projection documentation and RFC 7946 informed the mathematical
+and geometry contracts; no source, geographic dataset, or provider asset was
+imported. Existing GPUI/Lyon dependencies and historical receipts are unchanged.
+
 Multi-contact arbitration, captured pan/pinch ownership, residual scrolling
 handoff, lifecycle input cancellation and mobile keyboard/inset/native text
 query contracts are original GPUI Box work. Android and UIKit documentation
@@ -646,3 +670,37 @@ adapter trait checks are original GPUI Box work. They add no third-party source
 or licenses and preserve the frozen historical import receipts.
 Consistent exports of the existing generic priority queue and explicit non-Android
 NDK refusal retain the same source and dependency license authority.
+
+Raw Cartesian scales, stacks, interval marks, composition and controlled
+exploration are original GPUI Box Kit work. The mathematical monotone cubic
+Hermite tangent constraint was consulted, not copied as source. No Recharts,
+ECharts or other visualization implementation was imported; existing framework
+input/rendering dependencies and frozen historical receipts are unchanged.
+Shared Cartesian orientation, caller tick overrides, bounded custom glyphs,
+keyed raw geometry motion and chart state translations are original GPUI Box
+Kit additions using the same existing framework and motion authority.
+Cartesian rectangle indexing, immutable projection caching, pixel-column path
+reduction and performance fixtures are original work with no new third-party
+source or dependencies.
+
+Balanced framework BoundsTree overflow splitting, index-owned traversal and
+focused ordering/structure/performance tests are original GPUI Box work. No
+external spatial-index source or new dependency was imported. Existing GPUI
+attribution and frozen historical import receipts are unchanged.
+
+Measured descriptive semantic-leaf batching, mounted contract tests and native
+debug-bounds inspection are original GPUI Box additions using the existing
+semantic and GPUI accessibility authority. No third-party source, dependency,
+license or frozen historical import revision changes.
+
+Virtual-root placement metadata, UniformList layout-motion integration and
+Trace hierarchy reflow are original GPUI Box work with no new third-party
+source, dependency or changes to frozen import receipts.
+
+Native/Wasm atlas-lease release bounds and cross-thread final-drop tests are
+original GPUI Box work. No third-party source or dependency was added, and
+frozen import receipts are unchanged.
+
+Focusable tooltip lifecycle, Escape dismissal and displayed-bounds anchoring
+are original GPUI Box work. No third-party source or dependency was added, and
+frozen import receipts are unchanged.

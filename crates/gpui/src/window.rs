@@ -944,7 +944,7 @@ impl TooltipId {
 
 pub(crate) struct TooltipBounds {
     id: TooltipId,
-    bounds: Bounds<Pixels>,
+    pub(crate) bounds: Bounds<Pixels>,
 }
 
 #[derive(Clone)]
@@ -984,9 +984,9 @@ pub(crate) struct Frame {
     /// First paint operation that belongs on the GPUI overlay surface.
     pub(crate) overlay_scene_start: usize,
     pub(crate) hitboxes: Vec<Hitbox>,
-    /// Interactive hitboxes keyed by stable element identity, used to carry
-    /// pointer capture across frames that redraw during a gesture.
-    pointer_capture_hitboxes: FxHashMap<GlobalElementId, HitboxId>,
+    /// Stable identities for interactive hitboxes. Keying by hitbox lets cached
+    /// subtree replay carry identities in linear time in the reused hitboxes.
+    pointer_capture_hitboxes: FxHashMap<HitboxId, GlobalElementId>,
     /// Text elements taking part in this window's document selection, keyed by
     /// scope and the business identity each declared. Rebuilding the map every
     /// prepaint is what expires a participant that stopped being mounted.
@@ -1211,6 +1211,7 @@ pub struct Window {
     pub(crate) text_style_stack: Vec<TextStyleRefinement>,
     pub(crate) rendered_entity_stack: Vec<EntityId>,
     pub(crate) element_offset_stack: Vec<Point<Pixels>>,
+    element_placement_stack: Vec<Point<Pixels>>,
     pub(crate) element_opacity: f32,
     pub(crate) edge_fade: Option<EdgeFade>,
     edge_fade_target: EdgeFadeTarget,
@@ -2137,6 +2138,7 @@ impl Window {
             text_style_stack: Vec::new(),
             rendered_entity_stack: Vec::new(),
             element_offset_stack: Vec::new(),
+            element_placement_stack: Vec::new(),
             content_mask_stack: Vec::new(),
             clip_chain: crate::ClipChain::default(),
             visual_transform: crate::VisualTransform::default(),
@@ -3397,14 +3399,16 @@ impl Window {
     ///
     /// This legacy unbound capture releases on any mouse up or cancellation.
     /// Prefer [`Self::capture_pointer_for_button`] for a button-owned gesture.
+    /// A capture whose hitbox disappears on redraw is cancelled. Stable element
+    /// ids preserve capture across rebuilt or cached frames, not across unmount.
     pub fn capture_pointer(&mut self, hitbox_id: HitboxId) {
         self.captured_pointer_button = None;
         self.captured_hitbox = Some(hitbox_id);
         self.captured_pointer_element = self
             .rendered_frame
             .pointer_capture_hitboxes
-            .iter()
-            .find_map(|(element_id, id)| (*id == hitbox_id).then(|| element_id.clone()));
+            .get(&hitbox_id)
+            .cloned();
     }
 
     /// Captures until the specified button is released, or the stream is
@@ -3449,7 +3453,7 @@ impl Window {
     ) {
         self.next_frame
             .pointer_capture_hitboxes
-            .insert(element_id.clone(), hitbox_id);
+            .insert(hitbox_id, element_id.clone());
         if self.captured_pointer_element.as_ref() == Some(element_id) {
             self.captured_hitbox = Some(hitbox_id);
         }
@@ -3526,6 +3530,22 @@ impl Window {
         }
         self.dirty_views.clear();
         self.next_frame.window_active = self.active.get();
+
+        // Notify the previous live listeners before retiring their frame. A
+        // removed capture owner cannot render to clean up its own gesture.
+        // Cancellation is not a mouse-up and must never commit a drag/click.
+        if self.captured_hitbox.is_some_and(|captured| {
+            !self
+                .next_frame
+                .hitboxes
+                .iter()
+                .any(|hitbox| hitbox.id == captured)
+        }) {
+            let propagate_event = cx.propagate_event;
+            cx.propagate_event = true;
+            self.dispatch_mouse_event_with_residual(&crate::MouseCancelEvent, cx);
+            cx.propagate_event = propagate_event;
+        }
 
         // Register requested input handler with the platform window.
         // Use .take() instead of .pop() to preserve Vec length, so that cached
@@ -4179,6 +4199,15 @@ impl Window {
     }
 
     pub(crate) fn reuse_prepaint(&mut self, range: Range<PrepaintStateIndex>) {
+        for hitbox in
+            &self.rendered_frame.hitboxes[range.start.hitboxes_index..range.end.hitboxes_index]
+        {
+            if let Some(element_id) = self.rendered_frame.pointer_capture_hitboxes.get(&hitbox.id) {
+                self.next_frame
+                    .pointer_capture_hitboxes
+                    .insert(hitbox.id, element_id.clone());
+            }
+        }
         self.next_frame.hitboxes.extend(
             self.rendered_frame.hitboxes[range.start.hitboxes_index..range.end.hitboxes_index]
                 .iter()
@@ -4231,6 +4260,144 @@ impl Window {
                     paint_range: deferred_draw.paint_range.clone(),
                 }),
         );
+    }
+
+    /// Marks the start of live GPUI painting, without retaining any element.
+    /// Pair with [`Self::record_paint_since`] in this same paint call.
+    pub fn paint_mark(&self) -> crate::PaintMark {
+        self.invalidator.debug_assert_paint();
+        crate::PaintMark {
+            epoch: self.next_frame.scene.paint_epoch.clone(),
+            start: self.next_frame.scene.len(),
+            window: self.handle.window_id(),
+            scale: self.scale_factor(),
+            platform_views: self.next_frame.platform_views.len(),
+            resource_revision: self.sprite_atlas.resource_revision(),
+            transform: self.visual_transform,
+            opacity: self.element_opacity,
+            layers: self.next_frame.scene.recording_layers(),
+        }
+    }
+
+    /// Freezes paint emitted since `mark`. This never runs element callbacks.
+    /// Capture refuses unsupported content as a whole; callers should retire
+    /// it immediately. Deferred draws anywhere in the frame conservatively
+    /// refuse capture because their eventual paint is outside this range.
+    pub fn record_paint_since(
+        &mut self,
+        mark: crate::PaintMark,
+    ) -> Result<crate::PaintRecording, crate::PaintRecordingError> {
+        use crate::PaintRecordingError as Error;
+        self.invalidator.debug_assert_paint();
+        if mark.window != self.handle.window_id() {
+            return Err(Error::WindowMismatch);
+        }
+        if mark.scale != self.scale_factor() {
+            return Err(Error::ScaleMismatch);
+        }
+        if mark.resource_revision != self.sprite_atlas.resource_revision() {
+            return Err(Error::ResourceReset);
+        }
+        if !Arc::ptr_eq(&mark.epoch, &self.next_frame.scene.paint_epoch) {
+            return Err(Error::StaleMark);
+        }
+        if mark.platform_views != self.next_frame.platform_views.len() {
+            return Err(Error::PlatformView);
+        }
+        if !self.next_frame.deferred_draws.is_empty() {
+            return Err(Error::DeferredDraw);
+        }
+        if !mark.opacity.is_finite() || mark.opacity <= 0. {
+            return Err(Error::InvisibleCapture);
+        }
+        let scene = self.next_frame.scene.freeze_paint(
+            mark.start..self.next_frame.scene.len(),
+            &mark.layers,
+            self.sprite_atlas.clone(),
+        )?;
+        Ok(crate::PaintRecording {
+            scene: Rc::new(scene),
+            window: mark.window,
+            scale: mark.scale,
+            transform: mark.transform,
+            opacity: mark.opacity,
+        })
+    }
+
+    /// Replays frozen visual paint only, replacing capture-time ambient uniform
+    /// transform/opacity with the current scope. The captured visible clipping
+    /// moves with the picture and intersects current clipping; previously culled
+    /// content never reappears. No live element authority returns.
+    pub fn paint_recording(
+        &mut self,
+        recording: &crate::PaintRecording,
+    ) -> Result<(), crate::PaintRecordingError> {
+        self.paint_recording_with_offset(recording, Point::default())
+    }
+
+    /// Replays as [`Self::paint_recording`], translated by `offset` in current
+    /// local replay coordinates. The ambient visual scale applies to this offset
+    /// exactly once. Current ancestor clipping does not move with the offset.
+    pub fn paint_recording_with_offset(
+        &mut self,
+        recording: &crate::PaintRecording,
+        offset: Point<Pixels>,
+    ) -> Result<(), crate::PaintRecordingError> {
+        use crate::PaintRecordingError as Error;
+        self.invalidator.debug_assert_paint();
+        if !offset.x.0.is_finite() || !offset.y.0.is_finite() {
+            return Err(Error::InvalidOffset);
+        }
+        if recording.window != self.handle.window_id() {
+            return Err(Error::WindowMismatch);
+        }
+        if recording.scale != self.scale_factor() {
+            return Err(Error::ScaleMismatch);
+        }
+        if self.edge_fade.is_some() {
+            return Err(Error::EdgeFade);
+        }
+        let mask = ContentMask {
+            bounds: self
+                .visual_transform
+                .map_bounds(self.content_mask().bounds)
+                .scale(self.scale_factor()),
+        };
+        let delta = if self.visual_transform == recording.transform {
+            crate::TransformationMatrix::unit()
+                .translate(offset.scale(self.scale_factor() * self.visual_transform.scale()))
+        } else {
+            let inverse_scale = 1. / recording.transform.scale();
+            let inverse_offset = recording
+                .transform
+                .unmap_point(Point::default())
+                .scale(self.scale_factor());
+            self.visual_transform
+                .matrix(self.scale_factor())
+                .translate(offset.scale(self.scale_factor()))
+                .compose(crate::TransformationMatrix {
+                    rotation_scale: [[inverse_scale, 0.], [0., inverse_scale]],
+                    translation: [inverse_offset.x.0, inverse_offset.y.0],
+                })
+        };
+        let opacity = self.element_opacity / recording.opacity;
+        if !opacity.is_finite()
+            || !delta
+                .rotation_scale
+                .iter()
+                .flatten()
+                .chain(delta.translation.iter())
+                .all(|value| value.is_finite())
+        {
+            return Err(Error::InvalidReplayScope);
+        }
+        let previous = self.next_frame.scene.replace_visual_transform(delta);
+        let result = self
+            .next_frame
+            .scene
+            .replay_frozen(&recording.scene, mask, opacity);
+        self.next_frame.scene.replace_visual_transform(previous);
+        result
     }
 
     pub(crate) fn paint_index(&self) -> PaintIndex {
@@ -4620,6 +4787,35 @@ impl Window {
         result
     }
 
+    /// Places a root-laid-out subtree at `origin`, identifying `scroll_offset`
+    /// as ambient scrolling rather than layout placement. Virtualizers supply
+    /// their actual slot origin and scroll offset, not a second layout estimate.
+    ///
+    /// Rendering, clipping, input and accessibility use the same absolute
+    /// placement as `with_absolute_element_offset`. The additional metadata lets
+    /// layout motion distinguish a reordered slot from scrolling or ancestor
+    /// slides. Nested placement composes in the parent's content coordinates.
+    /// Call only during prepaint.
+    pub fn with_placed_element_offset<R>(
+        &mut self,
+        origin: Point<Pixels>,
+        scroll_offset: Point<Pixels>,
+        f: impl FnOnce(&mut Self) -> R,
+    ) -> R {
+        let placement = self
+            .element_placement_stack
+            .last()
+            .copied()
+            .unwrap_or_default()
+            + origin
+            - scroll_offset
+            - self.element_offset();
+        self.element_placement_stack.push(placement);
+        let result = self.with_absolute_element_offset(origin, f);
+        self.element_placement_stack.pop();
+        result
+    }
+
     pub(crate) fn with_element_opacity<R>(
         &mut self,
         opacity: Option<f32>,
@@ -4769,6 +4965,20 @@ impl Window {
             .last()
             .copied()
             .unwrap_or_default()
+    }
+
+    /// Offset due to scrolling and transient ancestor slides, excluding layout
+    /// placement declared by `with_placed_element_offset`. Subtract this from
+    /// an element's prepaint origin to sample its content-space layout position.
+    /// Without a declared placement scope this equals `element_offset()`.
+    /// This is prepaint metadata, not a separate rendering or hit-test transform.
+    pub fn ambient_element_offset(&self) -> Point<Pixels> {
+        self.element_offset()
+            - self
+                .element_placement_stack
+                .last()
+                .copied()
+                .unwrap_or_default()
     }
 
     /// Obtain the current element opacity. This method should only be called during the
@@ -6465,6 +6675,29 @@ impl Window {
         self.layout_engine = Some(layout_engine);
     }
 
+    /// Compute a root with assigned border-box dimensions for this invocation.
+    /// Authored root size/min/max/aspect-ratio are temporarily overridden;
+    /// descendants reflow normally. Padding/borders and device-pixel rounding
+    /// may enlarge the result: query actual bounds with [`Self::layout_bounds`].
+    /// Subsequent natural computation restores authored sizing.
+    pub fn compute_layout_with_size(
+        &mut self,
+        layout_id: LayoutId,
+        available_space: Size<AvailableSpace>,
+        assigned_size: Size<Pixels>,
+        cx: &mut App,
+    ) {
+        self.invalidator.debug_assert_prepaint();
+        assert!(assigned_size.width.0.is_finite() && assigned_size.width >= Pixels::ZERO);
+        assert!(assigned_size.height.0.is_finite() && assigned_size.height >= Pixels::ZERO);
+        let mut layout_engine = self
+            .layout_engine
+            .take()
+            .expect("required framework invariant must hold");
+        layout_engine.compute_layout_with_size(layout_id, available_space, assigned_size, self, cx);
+        self.layout_engine = Some(layout_engine);
+    }
+
     /// Obtain the bounds computed for the given LayoutId relative to the window. This method will usually be invoked by
     /// GPUI itself automatically in order to pass your element its `Bounds` automatically.
     ///
@@ -7393,10 +7626,9 @@ impl Window {
 
         // Capture phase, events bubble from back to front. Handlers for this phase are used for
         // special purposes, such as detecting events outside of a given Bounds.
-        for listener in &mut mouse_listeners {
-            let listener = listener
-                .as_mut()
-                .expect("required framework invariant must hold");
+        // During unmount cancellation, cached siblings' listeners have already
+        // moved to next_frame. Only the remaining old listeners are retired.
+        for listener in mouse_listeners.iter_mut().flatten() {
             let remaining = wheel.map(|wheel| crate::ScrollWheelEvent {
                 delta: self.remaining_scroll_delta.unwrap_or(wheel.delta),
                 ..wheel.clone()
@@ -7410,10 +7642,7 @@ impl Window {
 
         // Bubble phase, where most normal handlers do their work.
         if cx.propagate_event || cancelled {
-            for listener in mouse_listeners.iter_mut().rev() {
-                let listener = listener
-                    .as_mut()
-                    .expect("required framework invariant must hold");
+            for listener in mouse_listeners.iter_mut().rev().flatten() {
                 let remaining = wheel.map(|wheel| crate::ScrollWheelEvent {
                     delta: self.remaining_scroll_delta.unwrap_or(wheel.delta),
                     ..wheel.clone()

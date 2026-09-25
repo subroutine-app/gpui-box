@@ -925,6 +925,12 @@ pub(super) fn choice(_window: &mut Window, cx: &mut App) -> AnyElement {
                 .disabled(true),
         )
         .child(
+            Checkbox::new("scene.choice.small-checkbox")
+                .label("Small unchecked choice")
+                .control_size(ControlSize::Sm)
+                .on_change(|_, _, _| {}),
+        )
+        .child(
             Radio::new("scene.choice.ask")
                 .label("Ask before every action")
                 .selected(true)
@@ -935,6 +941,18 @@ pub(super) fn choice(_window: &mut Window, cx: &mut App) -> AnyElement {
                 .label("Run without asking")
                 .description("Consequential actions still require approval")
                 .on_select(|_, _| {}),
+        )
+        .child(
+            Radio::new("scene.choice.small-radio")
+                .label("Small selected choice")
+                .selected(true)
+                .control_size(ControlSize::Sm)
+                .on_select(|_, _| {}),
+        )
+        .child(
+            Radio::new("scene.choice.locked-radio")
+                .label("Managed selection")
+                .disabled(true),
         )
         .child(
             Switch::new("scene.choice.preview")
@@ -2485,6 +2503,7 @@ pub(super) fn settings_page(window: &mut Window, cx: &mut App) -> AnyElement {
                 let category = category.clone();
                 Sidebar::new("scene.settings-page.categories")
                     .large()
+                    .fit_height()
                     .section(SidebarSection::new("sections").items([
                         SidebarItem::new("all", "All settings"), SidebarItem::new("general", "General"),
                         SidebarItem::new("appearance", "Appearance")]))

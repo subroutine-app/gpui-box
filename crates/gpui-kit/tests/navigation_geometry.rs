@@ -144,7 +144,14 @@ fn press_and_release(cx: &mut TestAppContext, kind: Navigation) {
                 harness.advance(Duration::from_millis(300));
                 assert_geometry(&mut harness, &resting, "settled release");
             }
-            harness.update(|window, cx| window.focus_next(cx));
+            match kind {
+                // The sidebar has one tab stop; arrows move within its roving order.
+                Navigation::Sidebar => harness.keystrokes("down"),
+                Navigation::Tabs | Navigation::Capsules => {
+                    harness.update(|window, cx| window.focus_next(cx));
+                }
+            }
+            assert!(calls.borrow().is_empty(), "focus alone is not selection");
             assert!(harness.node(IDS[2]).expect("keyboard destination").focused);
             harness.update(|window, _| assert!(window.focus_is_visible()));
             assert_geometry(&mut harness, &resting, "keyboard focus ring");

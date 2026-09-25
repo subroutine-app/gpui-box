@@ -146,9 +146,9 @@ pub mod prelude {
     pub use crate::canvas::{
         CanvasToolbar, CanvasToolbarAction, CanvasToolbarEvent, Diff, EdgeKind, EdgeMarker,
         EdgeState, GraphBand, GraphEdge, GraphEndpoint, GraphFit, GraphInteraction, GraphNode,
-        GraphPort, GraphRouting, GraphState, GraphViewport, Minimap, MinimapEvent, MinimapMark,
-        MinimapView, NodeGraph, NodeGraphEvent, NodeGroup, NodeMetric, NodeState, Placed,
-        PortDirection, PortSide, PortType, layered_layout,
+        GraphPort, GraphRouting, GraphSource, GraphSourceError, GraphState, GraphViewport, Minimap,
+        MinimapEvent, MinimapMark, MinimapView, NodeGraph, NodeGraphEvent, NodeGroup, NodeMetric,
+        NodeState, Placed, PortDirection, PortSide, PortType, layered_layout,
     };
     pub use crate::content::{
         AgentBlockKind, AgentDocument, AgentDocumentBlock, AgentDocumentEvent, AgentDocumentState,
@@ -249,6 +249,10 @@ pub mod prelude {
     };
     pub use crate::display::empty::{Divider, DividerAxis, EmptyKind, EmptyState};
     pub use crate::display::failure_panel::FailurePanel;
+    pub use crate::display::geography::{
+        GeoColorDomain, GeoData, GeoEvent, GeoFeature, GeoMap, GeoPoint, GeoPolygon, GeoPosition,
+        GeoProjected, GeoProjection, GeoRefusal, GeoState, GeoViewport,
+    };
     pub use crate::display::heatmap::{HeatAxis, HeatCell, Heatmap, HeatmapState};
     pub use crate::display::highlight::HighlightedText;
     pub use crate::display::icon::{Icon, IconTone};

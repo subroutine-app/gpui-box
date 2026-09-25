@@ -8,6 +8,20 @@ fact, a locale fact, a transport, or a platform chrome the OS already
 owns. `crates/docs/components.md` describes the components themselves; this file
 exists so a gap is a recorded decision rather than an oversight.
 
+Frozen visual retirement has a paint-only framework primitive: `PaintRecording`
+owns quads/gradients, paths, shadows, underlines, text/image sprites and their
+capture-visible clips/resources. A dynamic offscreen demonstrator lives in
+`tools/headless-visual/src/paint_recording_tests.rs`; it is infrastructure
+evidence, not a Kit component exhibit. Live registrations disappear at removal,
+even while the same visible pixels are replayed. Callers own exit timing,
+recording budgets, reinsertion and reduced-motion disposal.
+
+The remaining generic gap is **composited last-live snapshots** for glass,
+native hosted content/platform surfaces, and deferred overlays. Paint recording
+refuses those capabilities explicitly; it cannot freeze a historical backdrop,
+recover clipped pixels, or replay an `AnyElement` inertly. Families must retire
+unsupported content immediately rather than present shell-only continuity.
+
 Glass optics use a shared height field, Snell refraction, spectral indices and
 Fresnel reflection in all three shader backends. `glass-optics` isolates these
 parameters over a ruled fixture, including fused panes. Regular Liquid uses a
@@ -78,10 +92,11 @@ the part hosts otherwise each get wrong — a build with no engine says so
 instead of drawing a blank page, and Loading, Empty, Unavailable, Error, and
 Ready remain five distinct answers.
 
-`NodeGraph` places nothing. The caller positions every node, because where a
-step belongs is a claim about the run rather than a fact about the component,
-and a layout algorithm here would make that claim for every host at once. A
-node may carry a caller-rendered thumbnail, whose pixels the graph neither
+`NodeGraph` renders caller-owned positions. The caller may compute those with
+the optional `layered_layout` / dimension-aware `layered_layout_sized` helpers
+or a different layout policy; accepting a
+layout result never transfers topology or position ownership to the component.
+A node may carry a caller-rendered thumbnail, whose pixels the graph neither
 fetches nor decodes. `GraphInteraction::Inspect` permits only pan, zoom, and
 selection proposals; `Arrange` additionally permits movement; `Edit` adds
 deletion, connection, and disconnection. The caller remains authoritative for
@@ -240,16 +255,17 @@ own; both are exercised through every control and overlay that uses them.
   a scene-graph dependency, a material system, or a texture pipeline. Other
   formats, materials, animation and skinning are not gaps to be filled here:
   a document that needs them is one an application converts before it arrives.
-- **Inventing a scale, a locale, or a series policy.** A chart still does not
-  own data. Axes, ticks, domains, stacking, aggregation, and "2 minutes ago"
-  are facts the host already has or can compute; Box paints them. Line and bar
-  geometry now enters, updates, and exits by caller business id; area fill,
-  exact-text crosshair tooltips, keyboard traversal, and stale-data retention
-  are component behavior rather than downstream drawing work. The old Kit-era
-  refusal of charts themselves is lifted: line, bar, area, and distribution
-  surfaces are in scope as application primitives. A
-  business-intelligence toolkit — live query, crossfilter, annotation
-  layers, financial overlays — is still a product, not a substrate.
+- **Owning application data or interpreting its business meaning.** Charts
+  read caller-owned observations and report caller-owned actions. Reusable
+  scales, ticks, stacking, statistical layouts, reference marks and controlled
+  range interactions are in scope; they do not require queries or persistence.
+  Hosts still choose the data, domain policy, units, locale/calendar formatting
+  and business transformations. Existing normalized charts retain their
+  caller-prepared coordinates and exact text. Their keyed geometry, crosshair
+  navigation and stale-data retention do not imply a complete raw-data engine.
+  The [visualization delivery plan](../../tasks/visualization-delivery.md) records
+  that expansion separately from delivered coverage. Query execution, stored
+  reports, trading logic and data-source orchestration remain application work.
 - **Owning a platform picker.** Colour, file, and print dialogs that replace
   the operating system stay out. In-window colour wells, dropzones, and
   print-preview chrome that report a choice are in scope; they do not
@@ -913,11 +929,32 @@ the form never owns the condition or removes caller data.
 
 `LineChart` and `BarChart` now cover the cartesian presentation gap with keyed
 motion, area fills, pointer and keyboard crosshairs, exact host-formatted text,
-and stale-data retention. Domains, ticks, aggregation, and queries remain host
-facts rather than drawing work. `Plot` supplies the lower generic measured
-frame and semantic mark traversal. `CandlestickChart` and `SankeyChart` render
-caller-normalized OHLC and flow geometry through that boundary; neither owns a
-market scale, topology algorithm, value transform, or financial vocabulary.
+and stale-data retention. Their existing normalized entry points require
+caller-prepared coordinates and axis wording. `CartesianChart` additionally
+provides raw f64 numeric/category/time scales, mixed layers and separate value
+axes, orientation, caller ticks, bounded custom glyphs, controlled exploration
+and keyed raw motion. Shared immutable input, explicit extrema path sampling
+and exact rectangle hit lookup reduce CPU work without replacing source
+identities. Full semantic publication and enabled motion remain linear in
+input size; the [chart contract](cartesian-charts.md) records measured limits.
+`Plot` supplies the lower generic measured frame and semantic
+mark traversal. `CandlestickChart` and `SankeyChart` render normalized OHLC and
+flow geometry through that boundary. `SankeyData::layout` additionally provides
+an optional validated DAG layout with one weight-to-height scale and explicit
+alignment and optional deterministic crossing-order improvement. `RawOhlc`
+adapts validated open/high/low/close readings to shared Cartesian intervals;
+`SpecializedChart` provides raw hierarchy/distribution/range/waterfall layouts,
+and `ContinuousHeatmap` supplies explicit continuous/diverging domains with
+missing-value and localized status handling. None owns market data or queries.
+
+`TraceView` and `SpanTimeline` add controlled raw-time viewports and virtual row
+windows while retaining an input-sized hierarchy scan. Sized graph layout and
+complete route-cache inputs preserve controlled geometry; large sparse layout
+tests do not establish a responsive 10k-node editor. See [graph/trace evidence](graph-trace-visualization.md).
+`GeoMap` renders immutable caller-supplied projected polygons/holes and points,
+with controlled selection/camera, localized refusal and measured geometry
+targets. Its [projection subset](geography.md) excludes tile/network services,
+geodesic topology, antimeridian cutting and a general GIS engine.
 
 Agent and game applications now have product-neutral run, persona, party,
 objective, ability, and reward families rather than one-off downstream cards.
@@ -1326,3 +1363,18 @@ farthest-position and movement queries still enumerate the document and may
 shape offscreen lazy lines; those are not viewport-bounded operations.
 
 Reference contract: [Apple UITextInput](https://developer.apple.com/documentation/uikit/uitextinput).
+
+## Virtual-root reflow and ambient offsets
+
+UniformList declares its measured row placement and scrolling separately through
+Window's placement scope. Position FLIP observes slot changes while ignoring
+scroll and ancestor slides; paint/input/accessibility still share the original
+element placement. Framework tests cover padded nonzero-origin slots, scrolling,
+nested placement and transient offsets. Trace mounted regressions cover accepted
+and refused hierarchy changes, interrupted reflow, ordinary/virtual row paths,
+new virtual identities, reduced motion and unchanged current readouts.
+
+Variable-height List and custom root adapters retain their prior offset
+semantics until they declare authoritative content-space placement. This is a
+documented motion-coverage gap, not a claim of generic virtualizer reflow. Trace
+removed rows have no paint-retained exit; their live authority retires at once.

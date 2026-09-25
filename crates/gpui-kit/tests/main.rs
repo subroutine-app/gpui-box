@@ -37,6 +37,7 @@ mod it {
     mod mention;
     mod menu;
     mod messages;
+    mod metric;
     mod motion;
     mod nav_stack;
     mod navigation;
@@ -61,6 +62,7 @@ mod it {
     mod textarea;
     mod toast;
     mod tooltip;
+    mod trace;
     mod tree_grid;
     mod virtualization;
 }
