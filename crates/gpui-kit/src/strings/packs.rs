@@ -238,6 +238,7 @@ fn chinese(key: StringKey) -> &'static str {
         NumberAboveMaximum => "允许的最大值为 {0}。",
         SettingsManagedBy => "由 {0} 管理",
         SettingsInapplicable => "此处不可用",
+        SettingsMoreInfo => "关于{0}",
         SettingsEmpty => "没有可用设置",
         SettingsNoResults => "没有与搜索匹配的设置",
         SettingsResultOne => "1 项设置",

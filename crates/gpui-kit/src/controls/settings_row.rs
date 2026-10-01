@@ -30,7 +30,8 @@ use crate::display::badge::Badge;
 use crate::display::empty::{EmptyKind, EmptyState};
 use crate::foundation::direction::{ActiveDirection, DirectionalExt};
 use crate::foundation::slot::{self, Slots, Slotted};
-use crate::foundation::{Ident, StyledExt, text as foundation_text};
+use crate::foundation::{FocusRing as _, Ident, StyledExt, text as foundation_text};
+use crate::overlay::tooltip::Tooltipped as _;
 use crate::strings::{ActiveNumbers, ActiveSearch, ActiveStrings, SearchMatcher, StringKey};
 
 /// Why a row is showing its value instead of its control.
@@ -86,6 +87,7 @@ pub struct SettingsRow {
     label: SharedString,
     label_width: Option<Pixels>,
     description: Option<SharedString>,
+    info: Option<SharedString>,
     badge: Option<SharedString>,
     /// What the setting currently holds, in the caller's words.
     value: Option<SharedString>,
@@ -116,6 +118,7 @@ impl SettingsRow {
             label: label.into(),
             label_width: None,
             description: None,
+            info: None,
             badge: None,
             value: None,
             control: None,
@@ -128,6 +131,19 @@ impl SettingsRow {
 
     pub fn description(mut self, description: impl Into<SharedString>) -> Self {
         self.description = Some(description.into());
+        self
+    }
+
+    /// Supplementary help behind an info icon beside the name.
+    ///
+    /// Use it for context most people do not need every time they read the
+    /// row; what someone must know in order to choose belongs in
+    /// [`Self::description`], which stays visible. The icon is a keyboard
+    /// stop: hover shows the help after the ordinary tooltip delay, focus
+    /// shows it immediately, and Escape dismisses it. Pressing the icon never
+    /// activates the row's switch or select. The text remains searchable.
+    pub fn info(mut self, info: impl Into<SharedString>) -> Self {
+        self.info = Some(info.into());
         self
     }
 
@@ -227,6 +243,7 @@ impl SettingsRow {
         let visible_match = [
             Some(&self.label),
             self.description.as_ref(),
+            self.info.as_ref(),
             self.badge.as_ref(),
             self.value.as_ref(),
         ]
@@ -358,6 +375,34 @@ impl SettingsRow {
                                     .text(self.label.clone()),
                             ),
                     )
+                    .children(self.info.clone().map(|info| {
+                        let info_ident = ident.child("info");
+                        let name = cx
+                            .strings()
+                            .format(StringKey::SettingsMoreInfo, &[self.label.as_ref()]);
+                        div()
+                            .id(info_ident.element_id())
+                            .flex_none()
+                            .rounded_full()
+                            .tab_index(0)
+                            .text_color(theme.colors.text_faint)
+                            .hover(|style| style.text_color(theme.colors.text_muted))
+                            .focus_ring(theme)
+                            .cursor(gpui::CursorStyle::Arrow)
+                            // Help is read, not pressed: the row's own label
+                            // activation must not see this press.
+                            .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
+                                cx.stop_propagation();
+                            })
+                            .child(icon(Icon::Info).size(px(theme.control.xs.icon_size)))
+                            .help_tip(info_ident.clone(), info)
+                            .semantic_in(
+                                cx,
+                                NodeSpec::new(info_ident.semantic_id(), Role::Button)
+                                    .parent(ident.semantic_id())
+                                    .text(name),
+                            )
+                    }))
                     .children(
                         self.badge
                             .clone()

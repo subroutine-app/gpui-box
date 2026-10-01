@@ -4996,6 +4996,7 @@
       ],
       "options": [
         "description(description: impl Into<SharedString>) -> Self",
+        "info(info: impl Into<SharedString>) -> Self",
         "label_width(width: Pixels) -> Self",
         "badge(badge: impl Into<SharedString>) -> Self",
         "value(value: impl Into<SharedString>) -> Self",

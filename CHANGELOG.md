@@ -8,6 +8,15 @@ See `crates/docs/releasing.md` for the protected publication and verification ru
 
 ## [Unreleased]
 
+### Added
+
+- `SettingsRow::info` puts supplementary help behind an info icon beside the
+  setting's name, so a row can keep a short visible description (or none)
+  without dropping context. The icon is a keyboard stop using
+  `Tooltipped::help_tip`: hover shows the help after the ordinary delay, focus
+  shows it immediately, and Escape dismisses it. Pressing the icon never
+  activates the row's switch or select, and the help text stays searchable.
+
 ### Changed
 
 - Regular Liquid now uses its own `effect.glassLiquidBlur` token at 8 px,

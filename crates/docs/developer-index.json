@@ -1436,7 +1436,7 @@
           "features": []
         }
       ],
-      "symbolCount": 5010
+      "symbolCount": 5011
     },
     {
       "name": "gpui-box-kit-assets",
@@ -70866,7 +70866,7 @@
       "source": "crates/gpui-kit/src/controls/settings_row.rs",
       "summary": "One setting: a wrapping name/description and a trailing control. Controls move below the name when the available width cannot accommodate both.",
       "documentation": "One setting: a wrapping name/description and a trailing control. Controls\nmove below the name when the available width cannot accommodate both.",
-      "signature": "# [doc = \" One setting: a wrapping name/description and a trailing control. Controls\"] # [doc = \" move below the name when the available width cannot accommodate both.\"] # [derive (IntoElement)] pub struct SettingsRow { ident : Ident, label : SharedString, label_width : Option<Pixels>, description : Option<SharedString>, badge : Option<SharedString>, # [doc = \" What the setting currently holds, in the caller's words.\"] value : Option<SharedString>, control : Option<RowControl>, control_width : Option<Pixels>, stacked : bool, withheld : Option<Withheld>, search_terms : Vec<SharedString>, }",
+      "signature": "# [doc = \" One setting: a wrapping name/description and a trailing control. Controls\"] # [doc = \" move below the name when the available width cannot accommodate both.\"] # [derive (IntoElement)] pub struct SettingsRow { ident : Ident, label : SharedString, label_width : Option<Pixels>, description : Option<SharedString>, info : Option<SharedString>, badge : Option<SharedString>, # [doc = \" What the setting currently holds, in the caller's words.\"] value : Option<SharedString>, control : Option<RowControl>, control_width : Option<Pixels>, stacked : bool, withheld : Option<Withheld>, search_terms : Vec<SharedString>, }",
       "cfg": []
     },
     {
@@ -70926,6 +70926,21 @@
       "summary": "",
       "documentation": "",
       "signature": "pub fn description (mut self, description : impl Into<SharedString>) -> Self",
+      "cfg": [],
+      "target": "SettingsRow"
+    },
+    {
+      "id": "gpui_kit::controls::settings_row::SettingsRow::info",
+      "name": "info",
+      "kind": "method",
+      "package": "gpui-box-kit",
+      "crate": "gpui_kit",
+      "module": "controls::settings_row",
+      "path": "gpui_kit::controls::settings_row",
+      "source": "crates/gpui-kit/src/controls/settings_row.rs",
+      "summary": "Supplementary help behind an info icon beside the name.",
+      "documentation": "Supplementary help behind an info icon beside the name.\n\nUse it for context most people do not need every time they read the\nrow; what someone must know in order to choose belongs in\n[`Self::description`], which stays visible. The icon is a keyboard\nstop: hover shows the help after the ordinary tooltip delay, focus\nshows it immediately, and Escape dismisses it. Pressing the icon never\nactivates the row's switch or select. The text remains searchable.",
+      "signature": "pub fn info (mut self, info : impl Into<SharedString>) -> Self",
       "cfg": [],
       "target": "SettingsRow"
     },
@@ -141468,6 +141483,7 @@
       ],
       "options": [
         "description(description: impl Into<SharedString>) -> Self",
+        "info(info: impl Into<SharedString>) -> Self",
         "label_width(width: Pixels) -> Self",
         "badge(badge: impl Into<SharedString>) -> Self",
         "value(value: impl Into<SharedString>) -> Self",

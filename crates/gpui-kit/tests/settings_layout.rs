@@ -469,6 +469,116 @@ fn withheld_disabled_and_handlerless_switches_have_no_label_action(cx: &mut Test
     assert!(calls.borrow().is_empty());
 }
 
+#[gpui::test]
+fn info_help_is_reachable_without_activating_the_row(cx: &mut TestAppContext) {
+    let calls: Calls<String> = Rc::default();
+    let sink = calls.clone();
+    let slot: Rc<RefCell<Option<Entity<Select>>>> = Rc::default();
+    let build_slot = slot.clone();
+    let mut harness = Harness::new(cx, gpui_kit::install, move |window, cx| {
+        let sink = sink.clone();
+        let select = build_slot
+            .borrow_mut()
+            .get_or_insert_with(|| {
+                cx.new(|cx| {
+                    Select::new("theme.select", window, cx)
+                        .options([
+                            SelectOption::new("system", "Follow system"),
+                            SelectOption::new("dark", "Dark"),
+                        ])
+                        .selected("system")
+                })
+            })
+            .clone();
+        div()
+            .w(px(420.0))
+            .flex()
+            .flex_col()
+            .child(Button::new("before").label("Before").on_click(|_, _| {}))
+            .child(
+                SettingsRow::new("save", "Save automatically")
+                    .info("Changes are written a moment after you stop typing.")
+                    .switch(
+                        Switch::new("save.switch")
+                            .on_change(move |next, _, _| sink.borrow_mut().push(next.to_string())),
+                    ),
+            )
+            .child(
+                SettingsRow::new("theme", "Application theme")
+                    .info("Dark themes follow the system accent colour.")
+                    .select(select),
+            )
+            .into_any_element()
+    });
+    harness.snapshot();
+    let select = slot.borrow().clone().expect("fixture is rendered");
+    let opened = Rc::new(Cell::new(0));
+    let opened_sink = opened.clone();
+    harness.update(|_, cx| {
+        cx.subscribe(&select, move |_, event: &SelectEvent, _| {
+            if matches!(event, SelectEvent::Opened) {
+                opened_sink.set(opened_sink.get() + 1);
+            }
+        })
+        .detach();
+    });
+
+    let info = harness.node("save.info").expect("info icon is published");
+    assert_eq!(info.text.as_deref(), Some("About Save automatically"));
+    let names = harness.bounds("save.names").expect("fixture is rendered");
+    inside(
+        harness.bounds("save.info").expect("info is laid out"),
+        names,
+    );
+
+    // Pressing help is reading, not choosing.
+    harness.click("save.info");
+    harness.click("theme.info");
+    assert!(calls.borrow().is_empty(), "the switch did not change");
+    assert_eq!(opened.get(), 0, "the select did not open");
+    harness.click("save.label");
+    assert_eq!(*calls.borrow(), vec!["true"], "the name still activates");
+
+    // The keyboard reaches the help before the control it explains.
+    harness.click("before");
+    assert!(harness.node("save.info.tooltip").is_none());
+    harness.update(|window, cx| window.focus_next(cx));
+    assert!(harness.node("save.info").expect("info mounted").focused);
+    let tooltip = harness
+        .node("save.info.tooltip")
+        .expect("focus shows help immediately");
+    assert_eq!(
+        tooltip.text.as_deref(),
+        Some("Changes are written a moment after you stop typing.")
+    );
+    harness.keystrokes("escape");
+    assert!(
+        harness.node("save.info.tooltip").is_none(),
+        "Escape dismisses help"
+    );
+    harness.update(|window, cx| window.focus_next(cx));
+    assert!(harness.node("save.switch").expect("switch mounted").focused);
+}
+
+#[gpui::test]
+fn info_text_is_searchable(cx: &mut TestAppContext) {
+    let mut harness = Harness::new(cx, gpui_kit::install, |_, _| {
+        SettingsList::new("settings")
+            .query("accent")
+            .section(
+                SettingsSection::new("appearance", "Appearance")
+                    .row(
+                        SettingsRow::new("theme", "Theme")
+                            .info("Dark themes follow the system accent colour."),
+                    )
+                    .row(SettingsRow::new("density", "Density")),
+            )
+            .into_any_element()
+    });
+    assert!(harness.node("theme").is_some());
+    assert!(harness.node("density").is_none());
+}
+
 fn select_row(cx: &mut TestAppContext, withheld: bool) -> (Harness, Entity<Select>, Calls<String>) {
     let slot: Rc<RefCell<Option<Entity<Select>>>> = Rc::default();
     let build_slot = slot.clone();
