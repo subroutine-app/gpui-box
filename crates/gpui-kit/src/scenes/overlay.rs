@@ -436,6 +436,75 @@ pub(super) fn command_palette(window: &mut Window, cx: &mut App) -> AnyElement {
         .into_any_element()
 }
 
+struct ScenePalettePicker(Entity<CommandPalette>);
+impl Global for ScenePalettePicker {}
+
+pub(super) fn command_palette_picker(window: &mut Window, cx: &mut App) -> AnyElement {
+    if !cx.has_global::<ScenePalettePicker>() {
+        let palette = cx.new(|cx| {
+            let palette = CommandPalette::new("scene.palette-picker", window, cx).commands([
+                Command::new("shape.circle", "Circle"),
+                Command::new("shape.square", "Square"),
+                Command::new("shape.triangle", "Triangle"),
+            ]);
+            let query = palette.query_input().clone();
+            palette
+                .slot(slot::HEADER_EXTRA, move |_, _| {
+                    let query = query.clone();
+                    IconButton::new(
+                        "scene.palette-picker.back",
+                        Icon::ArrowLeft,
+                        "Back to all fixture shapes",
+                    )
+                    .small()
+                    .on_click(move |window, cx| {
+                        // This fixture's host returns to the unfiltered choices
+                        // and restores focus; the palette knows nothing of back.
+                        query.update(cx, |input, cx| input.set_value("", cx));
+                        query.read(cx).focus_handle(cx).focus(window, cx);
+                    })
+                    .into_any_element()
+                })
+                .slot(slot::FOOTER, |_, cx| {
+                    let theme = cx.theme().clone();
+                    div()
+                        .row()
+                        .w_full()
+                        .justify_between()
+                        .gap_token(&theme, Space::Sm)
+                        .child(caption(&theme, "Fixture shapes"))
+                        .child(
+                            div()
+                                .row()
+                                .gap_token(&theme, Space::Xs)
+                                .child(Kbd::new("up").id("scene.palette-picker.previous"))
+                                .child(Kbd::new("down").id("scene.palette-picker.next"))
+                                .child(caption(&theme, "Navigate"))
+                                .child(Kbd::new("enter").id("scene.palette-picker.choose"))
+                                .child(caption(&theme, "Choose")),
+                        )
+                        .into_any_element()
+                })
+        });
+        palette.update(cx, |palette, cx| {
+            palette.set_query("a", cx);
+            palette.query_input().update(cx, |input, cx| {
+                input.set_placeholder("Choose a fixture shape", cx);
+            });
+        });
+        cx.set_global(ScenePalettePicker(palette));
+    }
+    let palette = cx.global::<ScenePalettePicker>().0.clone();
+    let theme = cx.theme().clone();
+    stack(&theme)
+        .w_full()
+        .h(px(420.0))
+        .items_center()
+        .pt(px(theme.spacing.xxl))
+        .child(palette)
+        .into_any_element()
+}
+
 /// The notification layer the scene shows, kept across frames.
 ///
 /// The stack, each timer, and each entry animation outlive a frame, so the

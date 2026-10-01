@@ -109,9 +109,9 @@ use navigation::{
     tabs, undo_history, wizard,
 };
 use overlay::{
-    action_sheet, bottom_sheet, command_palette, context_menu, dialog, drawer, frost, glass,
-    glass_materials, glass_optics, hover_card, kbd, media_caption, menu, menubar,
-    notification_center, overlay, popover, toast, tooltip,
+    action_sheet, bottom_sheet, command_palette, command_palette_picker, context_menu, dialog,
+    drawer, frost, glass, glass_materials, glass_optics, hover_card, kbd, media_caption, menu,
+    menubar, notification_center, overlay, popover, toast, tooltip,
 };
 use plot::{raw_candlestick, sankey_layout, sankey_motion};
 use specialized::{specialized, specialized_distribution, specialized_exploration};
@@ -440,6 +440,11 @@ pub fn catalog() -> Vec<Scene> {
         Scene {
             name: "command-palette",
             build: command_palette,
+            shows: Shows::Subjects(&["CommandPalette"]),
+        },
+        Scene {
+            name: "command-palette-picker",
+            build: command_palette_picker,
             shows: Shows::Subjects(&["CommandPalette"]),
         },
         Scene {

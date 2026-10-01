@@ -156,3 +156,9 @@ pub const LOADING: &str = "loading";
 /// The slot for extra controls a host hangs off a header, next to the
 /// component's own.
 pub const HEADER_EXTRA: &str = "header_extra";
+
+/// The slot for caller-owned content below a component's main body.
+///
+/// The receiving component documents the frame it supplies (such as a divider
+/// and padding); callers supply the contents, not a second enclosing surface.
+pub const FOOTER: &str = "footer";

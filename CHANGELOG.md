@@ -19,6 +19,11 @@ See `crates/docs/releasing.md` for the protected publication and verification ru
 
 ### Changed
 
+- `CommandPalette` accepts `HEADER_EXTRA` controls beside its query and a
+  `FOOTER` inside the same modal surface. Hosts can present compact drill-down
+  pickers without stacking a second navigation card over the command list.
+  Unslotted palettes retain their existing geometry; hosts still own back
+  actions, focus stops, and status content.
 - Regular Liquid now uses its own `effect.glassLiquidBlur` token at 8 px,
   independently from Frosted's 24 px `effect.glassFrostBlur`. Clear and Lens
   remain sharp by default, and per-surface `Glass::blur` overrides remain

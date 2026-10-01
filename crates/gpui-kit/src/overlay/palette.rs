@@ -163,8 +163,27 @@ fn order_matches_with(
 
 /// A query field over a list of commands.
 ///
-/// The palette owns the query and where the keyboard is; the command list and
-/// whether the palette is on screen at all belong to the host.
+/// The palette owns the query and highlighted command; the command list,
+/// focus policy and whether the palette is on screen at all belong to the host.
+///
+/// # Slots
+///
+/// - [`slot::EMPTY`] replaces the no-results content.
+/// - [`slot::HEADER_EXTRA`] places compact leading controls beside the query in
+///   the same search row. The controls keep their intrinsic width; the query
+///   takes the remaining width, separated by [`Space::Xs`]. Without this slot,
+///   the original query wrapper and its geometry are unchanged.
+/// - [`slot::FOOTER`] places content below the results (including the empty
+///   state), outside their scroll area and inside the palette's sole surface.
+///   The palette owns the footer's [`Space::Xs`] padding and subdued top border:
+///   the theme's hairline width and divider colour at muted opacity. The caller
+///   supplies compact contents, not another surface, border or outer padding.
+///
+/// Slot contents must fit the palette's content width. Callers own their stable
+/// semantic ids, focus handles and handlers, including any back action and
+/// restoring query focus via [`Self::focus_query`]. No navigation state or
+/// additional palette events are introduced by either slot. The optional slot
+/// frames publish `header-extra` and `footer` child ids without copying content.
 pub struct CommandPalette {
     ident: Ident,
     focus_handle: FocusHandle,
@@ -456,7 +475,7 @@ impl Focusable for CommandPalette {
 }
 
 impl Slotted for CommandPalette {
-    const SLOTS: &'static [&'static str] = &[slot::EMPTY];
+    const SLOTS: &'static [&'static str] = &[slot::EMPTY, slot::HEADER_EXTRA, slot::FOOTER];
 
     fn slots_mut(&mut self) -> &mut Slots {
         &mut self.slots
@@ -501,6 +520,36 @@ impl Render for CommandPalette {
             .into_any_element()
         };
 
+        let search = match self.slots.render(slot::HEADER_EXTRA, window, cx) {
+            Some(extra) => div()
+                .row()
+                .p_token(&theme, Space::Xs)
+                .gap_token(&theme, Space::Xs)
+                .child(
+                    div().flex_none().child(extra).semantic_in(
+                        cx,
+                        NodeSpec::new(self.ident.child("header-extra").semantic_id(), Role::Group)
+                            .parent(self.ident.semantic_id()),
+                    ),
+                )
+                .child(div().flex_1().min_w(px(0.0)).child(self.query.clone())),
+            None => div().p_token(&theme, Space::Xs).child(self.query.clone()),
+        };
+        let footer = self.slots.render(slot::FOOTER, window, cx).map(|footer| {
+            div()
+                .flex_none()
+                .min_w(px(0.0))
+                .border_t(px(theme.borders.hairline))
+                .border_color(theme.colors.divider.opacity(theme.opacity.muted))
+                .p_token(&theme, Space::Xs)
+                .child(footer)
+                .semantic_in(
+                    cx,
+                    NodeSpec::new(self.ident.child("footer").semantic_id(), Role::Group)
+                        .parent(self.ident.semantic_id()),
+                )
+        });
+
         let mut spec = NodeSpec::new(self.ident.semantic_id(), Role::Group).value(query);
         if empty {
             spec = spec.description(cx.strings().text(StringKey::PaletteEmptyDetail));
@@ -512,8 +561,9 @@ impl Render for CommandPalette {
             .gap_token(&theme, Space::Xs)
             .track_focus(&self.focus_handle)
             .on_key_down(cx.listener(Self::on_key_down))
-            .child(div().p_token(&theme, Space::Xs).child(self.query.clone()))
+            .child(search)
             .child(body)
+            .children(footer)
             .semantic_in(cx, spec)
     }
 }
@@ -521,9 +571,16 @@ impl Render for CommandPalette {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::controls::button::IconButton;
+    use crate::foundation::Sizable;
     use gpui::TestAppContext;
+    use gpui_kit_assets::Icon;
+    use gpui_kit_semantics::Snapshot;
     use gpui_kit_testkit::harness::Harness;
-    use std::{cell::RefCell, rc::Rc};
+    use std::{
+        cell::{Cell, RefCell},
+        rc::Rc,
+    };
 
     fn commands() -> Vec<Command> {
         vec![
@@ -614,6 +671,321 @@ mod tests {
                     < px(0.0)
             );
         });
+    }
+
+    struct PickerHarness {
+        harness: Harness,
+        palette: Entity<CommandPalette>,
+        back_presses: Rc<Cell<usize>>,
+        events: Rc<RefCell<Vec<CommandPaletteEvent>>>,
+    }
+
+    impl PickerHarness {
+        fn new(cx: &mut TestAppContext, header_extra: bool, footer: bool) -> Self {
+            let mounted = Rc::new(RefCell::new(None));
+            let build = mounted.clone();
+            let back_presses = Rc::new(Cell::new(0));
+            let presses = back_presses.clone();
+            let mut harness = Harness::new(
+                cx,
+                |cx| {
+                    crate::install(cx);
+                    cx.set_reduce_motion(true);
+                },
+                move |window, cx| {
+                    build
+                        .borrow_mut()
+                        .get_or_insert_with(|| {
+                            cx.new(|cx| {
+                                let mut palette = CommandPalette::new("test.picker", window, cx)
+                                    .commands(commands());
+                                if header_extra {
+                                    let query = palette.query_input().clone();
+                                    let presses = presses.clone();
+                                    palette = palette.slot(slot::HEADER_EXTRA, move |_, _| {
+                                        let query = query.clone();
+                                        let presses = presses.clone();
+                                        IconButton::new("test.picker.back", Icon::ArrowLeft, "Back")
+                                            .small()
+                                            .on_click(move |window, cx| {
+                                                presses.set(presses.get() + 1);
+                                                query.read(cx).focus_handle(cx).focus(window, cx);
+                                            })
+                                            .into_any_element()
+                                    });
+                                }
+                                if footer {
+                                    palette = palette.slot(slot::FOOTER, |_, cx| {
+                                        let theme = cx.theme().clone();
+                                        div()
+                                            .type_scale(&theme, TypeScale::Caption)
+                                            .child("Fixture choices")
+                                            .semantic_in(
+                                                cx,
+                                                NodeSpec::new(
+                                                    "test.picker.footer-content",
+                                                    Role::Group,
+                                                )
+                                                .parent("test.picker.footer"),
+                                            )
+                                            .into_any_element()
+                                    });
+                                }
+                                palette
+                            })
+                        })
+                        .clone()
+                        .into_any_element()
+                },
+            );
+            let palette = mounted.borrow().clone().expect("palette mounted");
+            let events = Rc::new(RefCell::new(Vec::new()));
+            let reports = events.clone();
+            harness.update(|_, cx| {
+                cx.subscribe(&palette, move |_, event: &CommandPaletteEvent, _| {
+                    reports.borrow_mut().push(event.clone());
+                })
+                .detach();
+            });
+            Self {
+                harness,
+                palette,
+                back_presses,
+                events,
+            }
+        }
+    }
+
+    fn assert_inside(snapshot: &Snapshot, outer: &str, inner: &str) {
+        let outer = snapshot.find(outer).expect("outer node").bounds;
+        let node = snapshot.find(inner).expect("inner node");
+        let bounds = node.bounds;
+        assert!(
+            node.visible && bounds.area() > 0.0,
+            "{inner} must be visible"
+        );
+        assert!(
+            bounds.x >= outer.x
+                && bounds.y >= outer.y
+                && bounds.x + bounds.width <= outer.x + outer.width
+                && bounds.y + bounds.height <= outer.y + outer.height,
+            "{inner} {bounds:?} must be inside {outer:?}",
+        );
+    }
+
+    #[gpui::test]
+    fn slots_share_the_palette_surface_with_results_and_empty_states(cx: &mut TestAppContext) {
+        let PickerHarness {
+            mut harness,
+            palette,
+            ..
+        } = PickerHarness::new(cx, true, true);
+
+        for query in ["", "zzz"] {
+            harness.update(|_, cx| {
+                palette.update(cx, |palette, cx| palette.set_query(query, cx));
+            });
+            let snapshot = harness.snapshot();
+            let body = if query.is_empty() {
+                "test.picker.results"
+            } else {
+                "test.picker.empty"
+            };
+            for id in [
+                "test.picker.query",
+                "test.picker.header-extra",
+                "test.picker.back",
+                "test.picker.footer",
+                "test.picker.footer-content",
+                body,
+            ] {
+                assert_inside(&snapshot, "test.picker", id);
+            }
+            assert_inside(&snapshot, "test.picker.header-extra", "test.picker.back");
+            assert_inside(
+                &snapshot,
+                "test.picker.footer",
+                "test.picker.footer-content",
+            );
+            let back = snapshot
+                .find("test.picker.back")
+                .expect("header back control remains mounted")
+                .bounds;
+            let query = snapshot
+                .find("test.picker.query")
+                .expect("query remains mounted beside the header control")
+                .bounds;
+            let body = snapshot
+                .find(body)
+                .expect("results or empty state is mounted below the query")
+                .bounds;
+            let footer = snapshot
+                .find("test.picker.footer")
+                .expect("footer remains mounted with results or an empty state");
+            assert!(back.x + back.width < query.x, "control leads the query");
+            assert_eq!(back.center().1, query.center().1, "one search row");
+            assert!(query.y + query.height <= body.y, "results follow the query");
+            assert!(
+                body.y + body.height <= footer.bounds.y,
+                "footer follows results"
+            );
+            assert_eq!(footer.parent.as_deref(), Some("test.picker"));
+        }
+
+        // EMPTY remains independently replaceable; it must not replace the
+        // surrounding search row or footer when a host authors the vacancy.
+        harness.update(|_, cx| {
+            palette.update(cx, |palette, cx| {
+                palette.slots_mut().set(slot::EMPTY, |_, cx| {
+                    div()
+                        .child("No fixture choices")
+                        .semantic_in(cx, NodeSpec::new("test.picker.vacancy", Role::Group))
+                        .into_any_element()
+                });
+                cx.notify();
+            });
+        });
+        let snapshot = harness.snapshot();
+        assert!(!snapshot.contains("test.picker.empty"));
+        for id in [
+            "test.picker.back",
+            "test.picker.vacancy",
+            "test.picker.footer",
+        ] {
+            assert_inside(&snapshot, "test.picker", id);
+        }
+        let vacancy = snapshot
+            .find("test.picker.vacancy")
+            .expect("caller-supplied empty state replaces the default vacancy")
+            .bounds;
+        assert!(
+            vacancy.y + vacancy.height
+                <= snapshot
+                    .find("test.picker.footer")
+                    .expect("footer remains mounted below the caller-supplied empty state")
+                    .bounds
+                    .y
+        );
+    }
+
+    #[gpui::test]
+    fn header_control_and_query_keyboard_keep_caller_owned_behavior(cx: &mut TestAppContext) {
+        let PickerHarness {
+            mut harness,
+            palette,
+            back_presses,
+            events,
+        } = PickerHarness::new(cx, true, true);
+        harness.update(|window, cx| {
+            palette.read(cx).focus_handle(cx).focus(window, cx);
+        });
+        assert!(
+            !harness
+                .node("test.picker.query")
+                .expect("query is mounted before the header control is clicked")
+                .focused
+        );
+        harness.click("test.picker.back");
+        assert_eq!(back_presses.get(), 1);
+        assert!(
+            harness
+                .node("test.picker.query")
+                .expect("query remains mounted after the header control is clicked")
+                .focused
+        );
+        assert!(
+            events.borrow().is_empty(),
+            "slot actions are not palette events"
+        );
+
+        harness.keystrokes("s a v e");
+        let snapshot = harness.snapshot();
+        assert!(snapshot.contains("test.picker.workspace.save"));
+        assert!(snapshot.contains("test.picker.editor.save"));
+        assert!(!snapshot.contains("test.picker.editor.split"));
+        assert!(!snapshot.contains("test.picker.workspace.publish"));
+        assert!(
+            snapshot
+                .find("test.picker.workspace.save")
+                .expect("workspace save command matches the query")
+                .hovered
+        );
+        assert!(
+            events
+                .borrow()
+                .contains(&CommandPaletteEvent::QueryChanged("save".into()))
+        );
+
+        harness.keystrokes("down");
+        assert!(
+            harness
+                .node("test.picker.editor.save")
+                .expect("editor save command remains mounted after Down")
+                .hovered
+        );
+        harness.keystrokes("up");
+        assert!(
+            harness
+                .node("test.picker.workspace.save")
+                .expect("workspace save command remains mounted after Up")
+                .hovered
+        );
+        harness.keystrokes("down enter");
+        let invoked: Vec<_> = events
+            .borrow()
+            .iter()
+            .filter_map(|event| match event {
+                CommandPaletteEvent::Invoked(id) => Some(id.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(invoked, vec![SharedString::from("editor.save")]);
+
+        harness.click("test.picker.back");
+        assert_eq!(back_presses.get(), 2);
+        harness.update(|_, cx| {
+            assert_eq!(palette.read(cx).query(cx).as_ref(), "save");
+        });
+        harness.keystrokes("escape");
+        assert_eq!(
+            events.borrow().last(),
+            Some(&CommandPaletteEvent::Dismissed)
+        );
+    }
+
+    #[gpui::test]
+    fn unslotted_query_geometry_is_unchanged_and_footer_is_independent(cx: &mut TestAppContext) {
+        for (header_extra, footer) in [(false, false), (false, true), (true, false)] {
+            let PickerHarness { mut harness, .. } = PickerHarness::new(cx, header_extra, footer);
+            let snapshot = harness.snapshot();
+            let surface = snapshot
+                .find("test.picker")
+                .expect("palette surface is mounted with each slot configuration")
+                .bounds;
+            let query = snapshot
+                .find("test.picker.query")
+                .expect("query is mounted with each slot configuration")
+                .bounds;
+            let (padding, query_height) = harness.update(|_, cx| {
+                let theme = cx.theme();
+                (
+                    theme.space(Space::Xs),
+                    theme.control.get(Default::default()).height,
+                )
+            });
+            assert_eq!(surface.width, PALETTE_WIDTH);
+            assert_eq!(query.y, surface.y + padding * 2.0);
+            assert_eq!(query.height, query_height);
+            if !header_extra {
+                assert_eq!(query.x, surface.x + padding * 2.0);
+                assert_eq!(query.width, surface.width - padding * 4.0);
+            }
+            assert_eq!(snapshot.contains("test.picker.header-extra"), header_extra);
+            assert_eq!(snapshot.contains("test.picker.footer"), footer);
+            assert_inside(&snapshot, "test.picker", "test.picker.query");
+            assert_inside(&snapshot, "test.picker", "test.picker.results");
+            assert!(snapshot.contains("test.picker.workspace.publish"));
+        }
     }
 
     #[test]
