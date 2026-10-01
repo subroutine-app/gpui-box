@@ -380,13 +380,15 @@ impl SettingsRow {
                         let name = cx
                             .strings()
                             .format(StringKey::SettingsMoreInfo, &[self.label.as_ref()]);
+                        // An svg paints with its own colour, not an inherited
+                        // one, so hover reaches the glyph through a group.
+                        let group = SharedString::from(format!("{}.info", ident.semantic_id()));
                         div()
                             .id(info_ident.element_id())
+                            .group(group.clone())
                             .flex_none()
                             .rounded_full()
                             .tab_index(0)
-                            .text_color(theme.colors.text_faint)
-                            .hover(|style| style.text_color(theme.colors.text_muted))
                             .focus_ring(theme)
                             .cursor(gpui::CursorStyle::Arrow)
                             // Help is read, not pressed: the row's own label
@@ -394,7 +396,14 @@ impl SettingsRow {
                             .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
                                 cx.stop_propagation();
                             })
-                            .child(icon(Icon::Info).size(px(theme.control.xs.icon_size)))
+                            .child(
+                                icon(Icon::Info)
+                                    .size(px(theme.control.xs.icon_size))
+                                    .text_color(theme.colors.text_faint)
+                                    .group_hover(group, |style| {
+                                        style.text_color(theme.colors.text_muted)
+                                    }),
+                            )
                             .help_tip(info_ident.clone(), info)
                             .semantic_in(
                                 cx,
