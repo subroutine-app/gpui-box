@@ -129,7 +129,9 @@ impl Frame {
         if !self.actionable(entry) {
             return;
         }
-        self.focus(index, window, cx);
+        if !self.flyout {
+            self.state.borrow_mut().current = Some(entry.ident.semantic_id());
+        }
         if self.compact && !entry.item.children.is_empty() {
             let mut state = self.state.borrow_mut();
             state.trap.engage(window, cx);
@@ -155,12 +157,14 @@ impl Frame {
             "home" => (0..self.entries.len()).find(enabled),
             "end" => (0..self.entries.len()).rev().find(enabled),
             "enter" | "space" => {
+                self.focus(index, window, cx);
                 self.activate(index, window, cx);
                 return true;
             }
             _ => match cx.layout_direction().arrow_step(key) {
                 Some(1) if !entry.item.children.is_empty() => {
                     if self.compact {
+                        self.focus(index, window, cx);
                         self.activate(index, window, cx);
                         return true;
                     }
@@ -634,14 +638,22 @@ impl Sidebar {
                         .text_color(color),
                     )
                     .when(toggleable, |button| {
-                        button
-                            .cursor_pointer()
-                            .hover_row(theme)
-                            .on_click(move |_, window, cx| {
-                                action.focus(index, window, cx);
+                        button.cursor_pointer().hover_row(theme).on_click(
+                            move |event, window, cx| {
+                                if event.is_keyboard() {
+                                    action.focus(index, window, cx);
+                                } else {
+                                    let id = action.entries[index].ident.semantic_id();
+                                    let focus = action.state.borrow().focus[&id].clone();
+                                    if !action.flyout {
+                                        action.state.borrow_mut().current = Some(id);
+                                    }
+                                    window.focus_from_pointer(&focus, cx);
+                                }
                                 action.toggle(index, window, cx);
                                 cx.stop_propagation();
-                            })
+                            },
+                        )
                     })
                     .tip(toggle_id.clone(), label.clone())
                     .semantic_in(

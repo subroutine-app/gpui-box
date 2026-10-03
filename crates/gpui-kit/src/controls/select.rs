@@ -428,6 +428,11 @@ impl Select {
         if self.disabled || self.open {
             return;
         }
+        window.focus(&self.focus_handle, cx);
+        self.open_menu(window, cx);
+    }
+
+    fn open_menu(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.window_id = window.window_handle().window_id();
         self.claim_picker(cx);
         self.open = true;
@@ -440,7 +445,6 @@ impl Select {
             .filter(|index| !self.options[*index].disabled)
             .or_else(|| self.first_selectable(0, 1));
         self.reveal_active = true;
-        window.focus(&self.focus_handle, cx);
         cx.emit(SelectEvent::Opened);
         cx.notify();
     }
@@ -472,6 +476,18 @@ impl Select {
             self.close_menu(cx);
         } else {
             self.open(window, cx);
+        }
+    }
+
+    pub(crate) fn toggle_from_pointer(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.disabled {
+            return;
+        }
+        window.focus_from_pointer(&self.focus_handle, cx);
+        if self.open {
+            self.close_menu(cx);
+        } else {
+            self.open_menu(window, cx);
         }
     }
 
@@ -854,7 +870,7 @@ impl Render for Select {
         }
         let direction = cx.layout_direction();
         let metrics = theme.control.get(self.size);
-        let focused = self.focus_handle.is_focused(window);
+        let focused = self.focus_handle.is_focused(window) && window.focus_is_visible();
         let label = self
             .selected_option()
             .map(|option| option.label.clone())
@@ -913,7 +929,7 @@ impl Render for Select {
         .when(!self.disabled, |element| {
             element.cursor_pointer().on_mouse_down(
                 MouseButton::Left,
-                cx.listener(|select, _, window, cx| select.toggle(window, cx)),
+                cx.listener(|select, _, window, cx| select.toggle_from_pointer(window, cx)),
             )
         })
         .child(

@@ -117,6 +117,40 @@ fn clicking_opens_the_menu(cx: &mut TestAppContext) {
 }
 
 #[gpui::test]
+fn select_focus_visibility_distinguishes_pointer_and_programmatic_open(cx: &mut TestAppContext) {
+    let (mut harness, entity) = select(cx);
+    harness.click("settings.provider");
+    assert!(harness.node("settings.provider").expect("trigger").focused);
+    assert!(!harness.update(|window, _| window.focus_is_visible()));
+    harness.click("settings.provider.openai");
+    assert!(!harness.update(|window, _| window.focus_is_visible()));
+    assert!(!harness.update(|_, cx| entity.read(cx).is_open()));
+    assert_eq!(
+        harness
+            .node("settings.provider")
+            .expect("trigger")
+            .value
+            .as_deref(),
+        Some("Anthropic")
+    );
+
+    harness.keystrokes("down");
+    assert!(harness.update(|window, _| window.focus_is_visible()));
+    assert!(harness.update(|_, cx| entity.read(cx).is_open()));
+    harness.click("settings.provider");
+    assert!(!harness.update(|window, _| window.focus_is_visible()));
+    assert!(!harness.update(|_, cx| entity.read(cx).is_open()));
+
+    harness.update(|window, cx| entity.update(cx, |select, cx| select.open(window, cx)));
+    assert!(harness.update(|window, _| window.focus_is_visible()));
+    harness.click("settings.provider");
+    assert!(!harness.update(|window, _| window.focus_is_visible()));
+    assert!(!harness.update(|_, cx| entity.read(cx).is_open()));
+    harness.update(|window, cx| entity.update(cx, |select, cx| select.toggle(window, cx)));
+    assert!(harness.update(|window, _| window.focus_is_visible()));
+}
+
+#[gpui::test]
 fn choosing_reports_the_option_without_changing_the_value(cx: &mut TestAppContext) {
     let (mut harness, entity) = select(cx);
     let chosen: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));

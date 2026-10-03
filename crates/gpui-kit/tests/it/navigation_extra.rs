@@ -76,6 +76,41 @@ fn clicking_a_place_reports_it_without_moving_the_selection(cx: &mut TestAppCont
 }
 
 #[gpui::test]
+fn sidebar_focus_visibility_follows_navigation_not_pointer_activation(cx: &mut TestAppContext) {
+    let (mut harness, calls) = sidebar(cx, false);
+    harness.click("workspace.rail.files");
+    assert!(harness.node("workspace.rail.files").expect("files").focused);
+    assert!(!harness.update(|window, _| window.focus_is_visible()));
+
+    harness.keystrokes("up");
+    assert!(
+        harness
+            .node("workspace.rail.runs.active")
+            .expect("previous destination")
+            .focused
+    );
+    assert!(harness.update(|window, _| window.focus_is_visible()));
+    assert_eq!(*calls.borrow(), vec!["files"]);
+
+    harness.click("workspace.rail.runs.active");
+    assert!(!harness.update(|window, _| window.focus_is_visible()));
+    harness.keystrokes("enter");
+    assert!(harness.update(|window, _| window.focus_is_visible()));
+    assert_eq!(*calls.borrow(), vec!["files", "runs.active", "runs.active"]);
+
+    harness.click("workspace.rail.runs.toggle");
+    assert!(harness.node("workspace.rail.runs").expect("branch").focused);
+    assert!(!harness.update(|window, _| window.focus_is_visible()));
+    assert!(harness.node("workspace.rail.runs.active").is_none());
+
+    harness.update(|window, cx| window.focus_next(cx));
+    assert!(harness.update(|window, _| window.focus_is_visible()));
+    harness.click("workspace.rail.runs.toggle");
+    assert!(!harness.update(|window, _| window.focus_is_visible()));
+    assert!(harness.node("workspace.rail.runs.active").is_some());
+}
+
+#[gpui::test]
 fn a_nested_place_publishes_the_depth_it_sits_at(cx: &mut TestAppContext) {
     let (mut harness, _calls) = sidebar(cx, false);
 

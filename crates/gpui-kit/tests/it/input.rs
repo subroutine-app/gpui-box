@@ -48,6 +48,34 @@ fn typing_after_focus_changes_the_value(cx: &mut TestAppContext) {
 }
 
 #[gpui::test]
+fn input_focus_visibility_does_not_replace_editing_focus(cx: &mut TestAppContext) {
+    let (mut harness, slot) = input(cx, |input| input.text("before"));
+    let entity = slot.borrow().clone().expect("input built");
+    harness.click("form.token");
+    assert!(harness.node("form.token").expect("input").focused);
+    assert!(!harness.update(|window, _| window.focus_is_visible()));
+
+    harness.keystrokes("end x");
+    assert_eq!(value(&mut harness, &slot), "beforex");
+    assert!(!harness.update(|window, _| window.focus_is_visible()));
+
+    harness.update(|window, cx| entity.focus_handle(cx).focus(window, cx));
+    assert!(harness.update(|window, _| window.focus_is_visible()));
+    harness.click("form.token");
+    assert!(harness.node("form.token").expect("input").focused);
+    assert!(!harness.update(|window, _| window.focus_is_visible()));
+
+    harness.update(|_, cx| entity.update(cx, |input, cx| input.set_invalid(true, cx)));
+    assert!(harness.node("form.token").expect("invalid input").invalid);
+    harness.update(|_, cx| entity.update(cx, |input, cx| input.set_disabled(true, cx)));
+    let node = harness.node("form.token").expect("disabled input");
+    assert!(node.disabled && !node.focused);
+    harness.click("form.token");
+    harness.keystrokes("y");
+    assert_eq!(value(&mut harness, &slot), "beforex");
+}
+
+#[gpui::test]
 fn an_unfocused_input_ignores_typing(cx: &mut TestAppContext) {
     let (mut harness, slot) = input(cx, |input| input);
     harness.keystrokes("h i");

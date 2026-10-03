@@ -279,48 +279,49 @@ impl SettingsRow {
                 _ => None,
             }
         });
-        let (control, activation): (Option<AnyElement>, Option<ActionHandler>) =
-            if withheld.is_some() {
-                (None, None)
-            } else {
-                match self.control {
-                    Some(RowControl::Custom(control)) => (Some(control), None),
-                    Some(RowControl::Switch(switch)) => {
-                        if let Some(activate) = switch.activation() {
-                            let focus = window
-                                .use_keyed_state(
-                                    ident.child("switch-focus").element_id(),
-                                    cx,
-                                    |_, cx| cx.focus_handle().tab_stop(true),
-                                )
-                                .read(cx)
-                                .clone();
-                            let switch = switch.with_focus_handle(focus.clone());
-                            let activation = Rc::new(move |window: &mut Window, cx: &mut App| {
-                                window.focus_from_pointer(&focus, cx);
-                                activate(window, cx);
-                            }) as ActionHandler;
-                            (Some(switch.into_any_element()), Some(activation))
-                        } else {
-                            (Some(switch.into_any_element()), None)
-                        }
+        let (control, activation): (Option<AnyElement>, Option<ActionHandler>) = if withheld
+            .is_some()
+        {
+            (None, None)
+        } else {
+            match self.control {
+                Some(RowControl::Custom(control)) => (Some(control), None),
+                Some(RowControl::Switch(switch)) => {
+                    if let Some(activate) = switch.activation() {
+                        let focus = window
+                            .use_keyed_state(
+                                ident.child("switch-focus").element_id(),
+                                cx,
+                                |_, cx| cx.focus_handle().tab_stop(true),
+                            )
+                            .read(cx)
+                            .clone();
+                        let switch = switch.with_focus_handle(focus.clone());
+                        let activation = Rc::new(move |window: &mut Window, cx: &mut App| {
+                            window.focus_from_pointer(&focus, cx);
+                            activate(window, cx);
+                        }) as ActionHandler;
+                        (Some(switch.into_any_element()), Some(activation))
+                    } else {
+                        (Some(switch.into_any_element()), None)
                     }
-                    Some(RowControl::Select(select)) => {
-                        select.update(cx, |select, cx| {
-                            select.set_name(self.label.clone(), cx);
-                            select.set_label_hitbox(Rc::downgrade(&label_hitbox));
-                        });
-                        let activation = (!select.read(cx).is_disabled()).then(|| {
-                            let select = select.clone();
-                            Rc::new(move |window: &mut Window, cx: &mut App| {
-                                select.update(cx, |select, cx| select.toggle(window, cx));
-                            }) as ActionHandler
-                        });
-                        (Some(select.into_any_element()), activation)
-                    }
-                    None => (None, None),
                 }
-            };
+                Some(RowControl::Select(select)) => {
+                    select.update(cx, |select, cx| {
+                        select.set_name(self.label.clone(), cx);
+                        select.set_label_hitbox(Rc::downgrade(&label_hitbox));
+                    });
+                    let activation = (!select.read(cx).is_disabled()).then(|| {
+                        let select = select.clone();
+                        Rc::new(move |window: &mut Window, cx: &mut App| {
+                            select.update(cx, |select, cx| select.toggle_from_pointer(window, cx));
+                        }) as ActionHandler
+                    });
+                    (Some(select.into_any_element()), activation)
+                }
+                None => (None, None),
+            }
+        };
         let label_width = self
             .label_width
             .unwrap_or(px(theme.measures.settings_label));
@@ -419,7 +420,7 @@ impl SettingsRow {
                     ),
             )
             .children(self.description.clone().map(|description| {
-                foundation_text(theme, TypeScale::Body, description.clone())
+                foundation_text(theme, TypeScale::Caption, description.clone())
                     .w_full()
                     .min_w_0()
                     .text_tone(theme, gpui_kit_theme::TextTone::Muted)
@@ -486,6 +487,9 @@ impl SettingsRow {
             .w_full()
             .min_w_0()
             .items_start()
+            .when(self.description.is_none() && !self.stacked, |row| {
+                row.items_center()
+            })
             .justify_end()
             .when(direction.is_rtl(), |row| row.justify_start())
             .gap_token(theme, Space::Lg)
@@ -686,7 +690,7 @@ impl RenderOnce for SettingsSection {
                     .gap(px(theme.space(Space::Xxs)))
                     .child(foundation_text(&theme, TypeScale::Body, self.title.clone()))
                     .children(self.description.clone().map(|description| {
-                        foundation_text(&theme, TypeScale::Body, description)
+                        foundation_text(&theme, TypeScale::Caption, description)
                             .text_tone(&theme, gpui_kit_theme::TextTone::Muted)
                     })),
             )
@@ -766,7 +770,7 @@ impl RenderOnce for SettingsSection {
                 div()
                     .column()
                     .w_full()
-                    .surface(&theme, Surface::Raised)
+                    .surface(&theme, Surface::Panel)
                     .radius(&theme, Radius::Card)
                     .border(px(theme.borders.hairline))
                     .border_color(theme.colors.control_hairline)

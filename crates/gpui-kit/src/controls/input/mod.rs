@@ -1075,7 +1075,7 @@ impl TextInput {
         if self.disabled {
             return;
         }
-        window.focus(&self.focus_handle, cx);
+        window.focus_from_pointer(&self.focus_handle, cx);
         self.is_selecting = true;
         let offset = self.index_for_position(event.position, cx.layout_direction().is_rtl());
         if event.modifiers.shift {
@@ -1769,7 +1769,7 @@ impl Render for TextInput {
         }
         let theme = cx.theme().clone();
         let metrics = theme.control.get(self.size);
-        let focused = self.focus_handle.is_focused(window);
+        let focused = self.focus_handle.is_focused(window) && window.focus_is_visible();
         let spec = self.semantics(window, cx);
         let shell = if self.bare {
             div().w_full().flex().flex_row().items_center()

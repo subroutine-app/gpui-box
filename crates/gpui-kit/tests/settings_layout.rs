@@ -235,14 +235,15 @@ fn stacked_composite_uses_available_width_and_readable_type(cx: &mut TestAppCont
         let description = harness
             .bounds("composite.description")
             .expect("fixture is rendered");
-        let (body_height, padding) = harness.update(|_, cx| {
+        let (body_height, caption_height, padding) = harness.update(|_, cx| {
             (
                 cx.theme().typography.body.line_height,
+                cx.theme().typography.caption.line_height,
                 cx.theme().space(Space::Md),
             )
         });
         assert!(label.size.height >= px(body_height));
-        assert!(description.size.height >= px(body_height));
+        assert!(description.size.height >= px(caption_height));
         assert!(names.top() - row.top() >= px(padding));
         assert_eq!(names.size.width, field.size.width);
         assert!(field.top() > names.bottom());
@@ -256,6 +257,53 @@ fn stacked_composite_uses_available_width_and_readable_type(cx: &mut TestAppCont
             inside(harness.bounds(id).expect("fixture is rendered"), row);
         }
     }
+}
+
+#[gpui::test]
+fn settings_names_center_without_description_and_keep_description_secondary(
+    cx: &mut TestAppContext,
+) {
+    let mut harness = Harness::new(cx, gpui_kit::install, |_, _| {
+        div()
+            .w(px(720.0))
+            .child(
+                SettingsSection::new("settings", "General")
+                    .row(
+                        SettingsRow::new("plain", "Workspace")
+                            .switch(Switch::new("plain.switch").on_change(|_, _, _| {})),
+                    )
+                    .row(
+                        SettingsRow::new("described", "Workspace")
+                            .description("Workspace")
+                            .switch(Switch::new("described.switch").on_change(|_, _, _| {})),
+                    ),
+            )
+            .into_any_element()
+    });
+    let plain_names = harness.bounds("plain.names").expect("plain names");
+    let plain_field = harness.bounds("plain.field").expect("plain field");
+    assert!(plain_field.left() > plain_names.right());
+    assert!(plain_field.size.height > plain_names.size.height);
+    assert_eq!(plain_names.center().y, plain_field.center().y);
+
+    let names = harness.bounds("described.names").expect("described names");
+    let field = harness.bounds("described.field").expect("described field");
+    let label = harness.bounds("described.label").expect("label");
+    let description = harness
+        .bounds("described.description")
+        .expect("description");
+    assert!(field.left() > names.right());
+    assert_eq!(names.top(), field.top());
+    assert!(description.top() > label.bottom());
+    let (body_height, caption_height) = harness.update(|_, cx| {
+        (
+            cx.theme().typography.body.line_height,
+            cx.theme().typography.caption.line_height,
+        )
+    });
+    assert_eq!(label.size.height, px(body_height));
+    assert_eq!(description.size.height, px(caption_height));
+    assert!(description.size.height < label.size.height);
 }
 
 #[gpui::test]
@@ -638,6 +686,7 @@ fn select_label_opens_the_exact_entity_and_keyboard_continues_from_selection(
         Some("Application theme")
     );
     harness.click("theme.label");
+    assert!(!harness.update(|window, _| window.focus_is_visible()));
     assert_eq!(*calls.borrow(), vec!["open"]);
     assert!(
         harness
@@ -666,6 +715,7 @@ fn select_label_opens_the_exact_entity_and_keyboard_continues_from_selection(
     );
     calls.borrow_mut().clear();
     harness.click("theme.description");
+    assert!(!harness.update(|window, _| window.focus_is_visible()));
     assert_eq!(*calls.borrow(), vec!["open"]);
     harness.keystrokes("escape");
     calls.borrow_mut().clear();

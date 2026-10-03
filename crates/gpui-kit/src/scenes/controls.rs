@@ -2480,7 +2480,6 @@ pub(super) fn settings_page(window: &mut Window, cx: &mut App) -> AnyElement {
         )
         .row(
             SettingsRow::new("scene.settings-page.density", "Density")
-                .description("Choose how much space separates controls and list items.")
                 .search_terms(["comfortable", "compact"])
                 .select(density),
         );
@@ -2558,7 +2557,6 @@ pub(super) fn settings(window: &mut Window, cx: &mut App) -> AnyElement {
         )
         .row(
             SettingsRow::new("scene.settings.general.runtime", "Native runtime")
-                .description("Runs work on this machine instead of a host")
                 .badge("Requires restart")
                 .search_terms(["engine", "local executor"])
                 .switch(runtime),
@@ -2636,8 +2634,7 @@ pub(super) fn settings(window: &mut Window, cx: &mut App) -> AnyElement {
                         .row(
                             SettingsRow::new("scene.settings.fields.name", "Name")
                                 .control_width(px(240.0))
-                                .control(name)
-                                .description("Visible in the workspace"),
+                                .control(name),
                         )
                         .child(
                             crate::display::card::ListRow::new()
