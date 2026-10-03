@@ -498,7 +498,9 @@ impl Glass {
     /// Report caller-owned focus with `interactive.focus` inside this surface's
     /// fitted rounded edge, at `effect.focusRingWidth`. Replaces the optical
     /// hairline; does not install a focus handler or add an external halo.
-    /// Use this instead of applying `Theme::focus_ring_on` to glass.
+    /// Use this instead of applying `Theme::focus_ring_on` to glass. Noneditable
+    /// hosts pass actual focus AND `Window::focus_is_visible()`; editable hosts
+    /// may report actual focus alone so clicks also decorate the input.
     pub fn focused(mut self, focused: bool) -> Self {
         self.focused = focused;
         self

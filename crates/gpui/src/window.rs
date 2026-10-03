@@ -1272,10 +1272,9 @@ pub struct Window {
     pub(crate) activation_observers: SubscriberSet<(), AnyObserver>,
     pub(crate) focus: Option<FocusId>,
     focus_enabled: bool,
-    /// Whether a pointer press put focus where it currently is, rather than a
-    /// tab stop, an action, or the application moving it. Read by
-    /// focus-visible styling; see [`Window::focus_is_visible`].
-    focus_placed_by_pointer: bool,
+    /// Keyboard interaction reveals focus; pointer interaction hides it.
+    /// Programmatic focus transfers preserve this window-local mode.
+    focus_visible: bool,
     /// Incremented every time focus moves. Used to invalidate a
     /// pending keyboard activation state when focus changes.
     pub(crate) focus_generation: u64,
@@ -2198,7 +2197,7 @@ impl Window {
             activation_observers: SubscriberSet::new(),
             focus: None,
             focus_enabled: true,
-            focus_placed_by_pointer: false,
+            focus_visible: false,
             focus_generation: 0,
             pending_input: None,
             pending_modifier: ModifierState::default(),
@@ -2399,18 +2398,14 @@ impl Window {
             .and_then(|id| FocusHandle::for_id(id, &cx.focus_handles))
     }
 
-    /// Move focus to the element associated with the given [`FocusHandle`].
+    /// Move focus without changing whether keyboard focus indicators are visible.
+    ///
+    /// Pointer-initiated overlays and deferred focus restoration retain the current
+    /// input mode. Keyboard input and tab traversal reveal focus; moving focus by
+    /// itself does not. Editable fields may decorate actual focus independently.
     pub fn focus(&mut self, handle: &FocusHandle, cx: &mut App) {
         if !self.focus_enabled {
             return;
-        }
-
-        // Focus that arrives any way other than a pointer press is worth
-        // drawing, including when it lands back on the element the pointer
-        // last put it on.
-        if self.focus_placed_by_pointer {
-            self.focus_placed_by_pointer = false;
-            self.refresh();
         }
 
         if self.focus == Some(handle.id) {
@@ -2437,26 +2432,32 @@ impl Window {
 
     /// Move focus to the element a pointer press just landed on.
     ///
-    /// The same move as [`Window::focus`], and additionally the record that
-    /// this focus was placed by that press. It is the one distinction
-    /// focus-visible styling turns on: somebody who clicked a control already
-    /// knows where they clicked, while focus a tab stop, an action, or a
-    /// dialog moved is only visible because the ring says so.
+    /// Also hides keyboard-only indicators, including when the same handle
+    /// already holds focus. Editable fields continue to show their own focus
+    /// treatment and caret through actual focus rather than this indicator.
     pub fn focus_from_pointer(&mut self, handle: &FocusHandle, cx: &mut App) {
-        self.focus(handle, cx);
-        if self.focus_enabled && !self.focus_placed_by_pointer {
-            self.focus_placed_by_pointer = true;
-            self.refresh();
+        if !self.focus_enabled {
+            return;
         }
+        self.set_focus_visibility(false);
+        self.focus(handle, cx);
     }
 
-    /// Whether the focused element's focus is worth drawing a ring around.
+    /// Whether keyboard-only focus indicators should be visible.
     ///
-    /// False only while a pointer press is what put focus there. See
-    /// [`Window::focus_from_pointer`] and
-    /// [`InteractiveElement::focus_visible`].
+    /// Windows start with indicators hidden. Key presses and explicit tab
+    /// traversal reveal them; pointer presses/releases and touch interaction
+    /// hide them. Hover and programmatic focus transfers do not change this
+    /// mode. Editable controls should decorate actual focus instead.
     pub fn focus_is_visible(&self) -> bool {
-        !self.focus_placed_by_pointer
+        self.focus_visible
+    }
+
+    fn set_focus_visibility(&mut self, visible: bool) {
+        if self.focus_visible != visible {
+            self.focus_visible = visible;
+            self.refresh();
+        }
     }
 
     /// Remove focus from all elements within this context's window.
@@ -2469,7 +2470,6 @@ impl Window {
             self.focus_generation = self.focus_generation.wrapping_add(1);
         }
         self.focus = None;
-        self.focus_placed_by_pointer = false;
         self.refresh();
     }
 
@@ -2485,6 +2485,7 @@ impl Window {
             return;
         }
 
+        self.set_focus_visibility(true);
         if let Some(handle) = self.rendered_frame.tab_stops.next(self.focus.as_ref()) {
             self.focus(&handle, cx)
         }
@@ -2496,6 +2497,7 @@ impl Window {
             return;
         }
 
+        self.set_focus_visibility(true);
         if let Some(handle) = self.rendered_frame.tab_stops.prev(self.focus.as_ref()) {
             self.focus(&handle, cx)
         }
@@ -7093,9 +7095,18 @@ impl Window {
             || cfg!(feature = "input-latency-histogram"))
         .then(Instant::now);
         let update_count_before = self.invalidator.update_count();
-        // Track input modality for focus-visible styling and hover suppression.
-        // Hover is suppressed during keyboard modality so that keyboard navigation
-        // doesn't show hover highlights on the item under the mouse cursor.
+        match &event {
+            PlatformInput::KeyDown(_) => self.set_focus_visibility(true),
+            PlatformInput::MouseDown(_)
+            | PlatformInput::MouseUp(_)
+            | PlatformInput::Touch(_)
+            | PlatformInput::LongPress(_)
+            | PlatformInput::TouchDrag(_) => self.set_focus_visibility(false),
+            _ => {}
+        }
+
+        // Hover follows pointer movement independently of keyboard focus visibility.
+        // Keyboard navigation suppresses highlights under a stationary pointer.
         let old_modality = self.last_input_modality;
         self.last_input_modality = match &event {
             PlatformInput::KeyDown(_) => InputModality::Keyboard,

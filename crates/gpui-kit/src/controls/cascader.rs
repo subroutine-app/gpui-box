@@ -292,9 +292,13 @@ impl Cascader {
         if self.disabled || self.open {
             return;
         }
+        window.focus(&self.focus_handle, cx);
+        self.open_menu(cx);
+    }
+
+    fn open_menu(&mut self, cx: &mut Context<Self>) {
         self.open = true;
         self.active = Self::first_enabled(&self.options, false);
-        window.focus(&self.focus_handle, cx);
         cx.emit(CascaderEvent::Opened);
         cx.notify();
     }
@@ -716,7 +720,7 @@ impl Render for Cascader {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.theme().clone();
         let metrics = theme.control.get(self.size);
-        let focused = self.focus_handle.is_focused(window);
+        let focused = self.focus_handle.is_focused(window) && window.focus_is_visible();
         let direction = cx.layout_direction();
         let placeholder = self
             .placeholder
@@ -748,17 +752,20 @@ impl Render for Cascader {
             .px(px(metrics.padding_x))
             .radius(&theme, Radius::Control)
             .well(&theme)
-            .when(focused, |element| element.shadow(theme.focus_ring()))
+            .when(focused && !self.disabled, |element| {
+                element.shadow(theme.focus_ring())
+            })
             .when(self.disabled, |el| el.opacity(theme.opacity.disabled))
             .when(!self.disabled, |el| {
                 el.cursor_pointer().on_mouse_down(
                     MouseButton::Left,
                     cx.listener(|this, _, window, cx| {
                         if this.open {
-                            this.close(cx)
+                            this.close(cx);
                         } else {
-                            this.open(window, cx)
+                            this.open_menu(cx);
                         }
+                        window.focus_from_pointer(&this.focus_handle, cx);
                     }),
                 )
             })

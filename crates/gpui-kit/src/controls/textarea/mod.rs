@@ -2128,7 +2128,7 @@ impl TextArea {
         if self.disabled {
             return;
         }
-        window.focus(&self.focus_handle, cx);
+        window.focus_from_pointer(&self.focus_handle, cx);
         self.is_selecting = true;
         let offset = self.index_for_position(event.position);
         if event.modifiers.alt && event.modifiers.shift {

@@ -50,6 +50,7 @@ impl EventEmitter<MultiSelectEvent> for MultiSelect {}
 pub struct MultiSelect {
     ident: Ident,
     query: Entity<TextInput>,
+    trigger_focus: FocusHandle,
     options: Vec<SelectOption>,
     selected: Vec<SharedString>,
     name: SharedString,
@@ -93,6 +94,7 @@ impl MultiSelect {
         Self {
             ident,
             query,
+            trigger_focus: cx.focus_handle(),
             options: Vec::new(),
             selected: Vec::new(),
             name: SharedString::default(),
@@ -240,10 +242,14 @@ impl MultiSelect {
         if self.disabled || self.open {
             return;
         }
+        self.query.read(cx).focus_handle(cx).focus(window, cx);
+        self.open_menu(cx);
+    }
+
+    fn open_menu(&mut self, cx: &mut Context<Self>) {
         self.open = true;
         self.active = self.first_match(cx);
         self.reveal_active = true;
-        self.query.read(cx).focus_handle(cx).focus(window, cx);
         cx.emit(MultiSelectEvent::Opened);
         cx.notify();
     }
@@ -258,14 +264,6 @@ impl MultiSelect {
             .update(cx, |query, cx| query.set_text_quietly("", cx));
         cx.emit(MultiSelectEvent::Closed);
         cx.notify();
-    }
-
-    fn toggle(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.open {
-            self.close(cx);
-        } else {
-            self.open(window, cx);
-        }
     }
 
     fn on_query(&mut self, query: SharedString, cx: &mut Context<Self>) {
@@ -546,8 +544,17 @@ impl Render for MultiSelect {
         if let Some(sheet) = &self.sheet {
             sheet.sync(bottom && self.open, window, cx);
         }
+        if self.disabled && self.trigger_focus.is_focused(window) {
+            window.blur();
+        }
+        let query_in_sheet = self
+            .sheet
+            .as_ref()
+            .is_some_and(|sheet| sheet.drawer.read(cx).is_rendered());
         let metrics = theme.control.get(self.size);
-        let focused = self.query.read(cx).focus_handle(cx).is_focused(window);
+        let query_focus = self.query.read(cx).focus_handle(cx);
+        let focused = (!query_in_sheet && query_focus.is_focused(window))
+            || (self.trigger_focus.is_focused(window) && window.focus_is_visible());
         let placeholder = self
             .placeholder
             .clone()
@@ -557,6 +564,7 @@ impl Render for MultiSelect {
             query.set_name(self.name.clone(), cx);
             query.set_disabled(self.disabled, cx);
             query.set_control_size(self.size, cx);
+            query.set_bare(!query_in_sheet, cx);
         });
 
         let visible_indices = self.matches(cx);
@@ -615,24 +623,27 @@ impl Render for MultiSelect {
         .when(!self.disabled, |element| {
             element.on_mouse_down(
                 MouseButton::Left,
-                cx.listener(|select, _, window, cx| select.toggle(window, cx)),
+                cx.listener(|select, _, _, cx| {
+                    if select.open {
+                        select.close(cx);
+                    } else {
+                        select.open_menu(cx);
+                    }
+                }),
             )
         })
         .children(chips)
         .child(
-            div().flex_1().min_w(px(theme.space(Space::Xl))).child(
-                if self
-                    .sheet
-                    .as_ref()
-                    .is_some_and(|sheet| sheet.drawer.read(cx).is_rendered())
-                {
+            div()
+                .flex_1()
+                .min_w(px(theme.space(Space::Xl)))
+                .child(if query_in_sheet {
                     div()
                         .child(self.query.read(cx).value().clone())
                         .into_any_element()
                 } else {
                     self.query.clone().into_any_element()
-                },
-            ),
+                }),
         )
         .when(
             self.clearable && !self.selected.is_empty() && !self.disabled,
@@ -703,7 +714,7 @@ impl Render for MultiSelect {
             .expanded(self.open)
             .value(cx.numbers().count(self.selected.len()));
         if !self.disabled {
-            spec = spec.focus(&self.query.read(cx).focus_handle(cx));
+            spec = spec.focus(&self.trigger_focus);
         }
 
         div()

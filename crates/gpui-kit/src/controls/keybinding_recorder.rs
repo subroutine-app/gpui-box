@@ -487,7 +487,12 @@ impl Render for KeybindingRecorder {
 
         if actionable {
             field = field
-                .on_click(cx.listener(|recorder, _, window, cx| recorder.start(window, cx)))
+                .on_click(cx.listener(|recorder, event, window, cx| {
+                    recorder.start(window, cx);
+                    if !matches!(event, gpui::ClickEvent::Keyboard(_)) {
+                        window.focus_from_pointer(&recorder.focus_handle, cx);
+                    }
+                }))
                 .when(recording, |field| {
                     field.on_mouse_down_out(cx.listener(|recorder, _, _, cx| recorder.cancel(cx)))
                 });

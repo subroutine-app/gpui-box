@@ -169,7 +169,7 @@ fn control<E: StatefulInteractiveElement + Styled>(
                 Ok(proposal) => {
                     down.borrow_mut().captured_bounds = Some(down_bounds.get());
                     down.borrow_mut().captured_scale = Some(down_mapping.0);
-                    down_focus.focus(window, cx);
+                    window.focus_from_pointer(&down_focus, cx);
                     down_handler(proposal, window, cx);
                     window.refresh();
                 }
@@ -267,7 +267,9 @@ pub(super) fn render(
     );
     let focus = focus
         .borrow_mut()
-        .get_or_insert_with(|| std::array::from_fn(|_| cx.focus_handle()))
+        .get_or_insert_with(|| {
+            std::array::from_fn(|_| cx.focus_handle().tab_stop(true).tab_index(0))
+        })
         .clone();
     let preview = state.borrow().edit.preview();
     let shown = preview.or(value);
@@ -344,7 +346,7 @@ pub(super) fn render(
     }
     if let Some(handler) = &handler {
         track = control(
-            track,
+            track.focus_ring(&theme),
             RangeIntent::Create,
             RangeTarget::Window,
             focus[0].clone(),

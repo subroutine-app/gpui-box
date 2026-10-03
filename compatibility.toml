@@ -17,6 +17,11 @@ linux = "Framework mounted input/IME/accessibility tests, WGPU lease eviction/re
 native_acceptance = "Metal and Direct3D atlas leases and submission guards are implemented; macOS and Windows execution remains coordinator-owned and pending."
 lifetime = "Callers bound recording counts and retirement duration, dropping on completion/reinsertion/reduced motion. Final recording and frame release unpins only referenced allocations; reset invalidates all outstanding leases before reuse. Native leases remain Send + Sync for submission callbacks; Wasm leases stay thread-confined with browser GPU resources."
 
+[framework_focus_visibility]
+contract = "Windows start with keyboard-only focus decoration hidden. KeyDown and explicit next/previous tab traversal reveal it; mouse press/release and touch interactions hide it. Hover, modifiers, scrolling, blur and programmatic focus transfers preserve the mode. Actual focus, caret, selection, accessibility and tab order are independent. Editable fields decorate actual focus, including clicks; noneditable controls use focus_visible."
+commands = ["cargo test -p gpui-box --features test-support --lib elements::div::tests", "cargo test -p gpui-box-kit --all-features", "cargo run -p xtask -- dependencies check", "cargo run -p xtask -- headless check"]
+validation = "Portable framework paint/input tests and Kit control regressions executed on macOS. Metal catalog comparison reviewed separately; Linux and Windows native execution remain pending."
+
 [focusable_tooltip]
 contract = "Explicit opt-in focusable help shares one tooltip across hover and real GPUI focus. Focus opens immediately from displayed owner bounds; Escape dismisses for the current focus tenure; blur and unmount clear it. Existing hover-only tooltip behavior is unchanged."
 commands = ["cargo test -p gpui-box focusable_tooltip --lib", "cargo run -p xtask -- gate full"]

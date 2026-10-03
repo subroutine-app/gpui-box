@@ -20,6 +20,8 @@ pub struct FieldState {
 }
 
 impl FieldState {
+    /// Enables focus decoration. Editable fields pass actual focus; noneditable
+    /// triggers also require `Window::focus_is_visible()`.
     pub fn focused(mut self, focused: bool) -> Self {
         self.focused = focused;
         self

@@ -1361,11 +1361,10 @@ pub trait InteractiveElement: Sized {
         self
     }
 
-    /// Set the given styles to be applied when this element's focus is worth
-    /// pointing out. This is CSS's `:focus-visible` pseudo-class: it applies
-    /// when the element is focused and a pointer press is not what put focus
-    /// there, so a tab stop, an action, or a dialog moving focus here shows,
-    /// while clicking the element itself does not.
+    /// Apply styles while this element is focused and the window is in keyboard
+    /// interaction mode. Pointer interaction hides this decoration; programmatic
+    /// focus transfers preserve the mode. Editable controls that also indicate
+    /// focus on click should use [`InteractiveElement::focus`] instead.
     /// Requires that the element is focusable. Elements can be made focusable using [`InteractiveElement::track_focus`].
     fn focus_visible(mut self, f: impl FnOnce(StyleRefinement) -> StyleRefinement) -> Self
     where
@@ -4894,9 +4893,9 @@ impl ScrollHandle {
 mod tests {
     use super::*;
     use crate::{
-        AnyWindowHandle, AppContext as _, Context, InputEvent, Keystroke, Modifiers,
-        MouseDownEvent, MouseMoveEvent, MouseUpEvent, TestAppContext, canvas,
-        util::FluentBuilder as _,
+        AnyWindowHandle, AppContext as _, Context, InputEvent, Keystroke, LongPressEvent,
+        Modifiers, MouseDownEvent, MouseMoveEvent, MouseUpEvent, ScrollDelta, TestAppContext,
+        TouchDragEvent, TouchEvent, TouchPhase, canvas, rgb, util::FluentBuilder as _,
     };
     use std::{
         cell::{Cell, RefCell},
@@ -4924,8 +4923,6 @@ mod tests {
         }
     }
 
-    /// Two focusable squares side by side, so a press can land on one while
-    /// something else moves focus to the other.
     struct FocusVisibilityTestView {
         first: FocusHandle,
         second: FocusHandle,
@@ -4933,21 +4930,46 @@ mod tests {
 
     impl Render for FocusVisibilityTestView {
         fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+            let immediate = self.second.clone();
+            let deferred = self.first.clone();
             div()
                 .size_full()
-                .child(
-                    div()
-                        .id("first")
-                        .size(px(50.))
-                        .track_focus(&self.first)
-                        .tab_index(0),
+                .flex()
+                .flex_col()
+                .children(
+                    [("first", &self.first), ("second", &self.second)].map(|(id, focus)| {
+                        div()
+                            .id(id)
+                            .size(px(50.))
+                            .flex_shrink_0()
+                            .track_focus(focus)
+                            .tab_index(focus.tab_index)
+                            .tab_stop(focus.tab_stop)
+                            .bg(rgb(0x000000))
+                            .border_2()
+                            .border_color(rgb(0x000000))
+                            .focus(|style| style.bg(rgb(0xffffff)))
+                            .focus_visible(|style| style.border_color(rgb(0x00ff00)))
+                    }),
                 )
                 .child(
                     div()
-                        .id("second")
+                        .id("focus-in-handler")
                         .size(px(50.))
-                        .track_focus(&self.second)
-                        .tab_index(1),
+                        .flex_shrink_0()
+                        .on_mouse_down(MouseButton::Left, move |_, window, cx| {
+                            window.focus(&immediate, cx);
+                        }),
+                )
+                .child(
+                    div()
+                        .id("focus-next-frame")
+                        .size(px(50.))
+                        .flex_shrink_0()
+                        .on_mouse_down(MouseButton::Left, move |_, window, _| {
+                            let deferred = deferred.clone();
+                            window.on_next_frame(move |window, cx| window.focus(&deferred, cx));
+                        }),
                 )
         }
     }
@@ -5007,13 +5029,14 @@ mod tests {
         assert_eq!(generated.borrow().as_ref(), Some(&first));
     }
 
-    fn setup_focus_visibility_test() -> (TestAppContext, AnyWindowHandle, FocusHandle, FocusHandle)
-    {
+    fn setup_focus_visibility_test(
+        tab_stops: usize,
+    ) -> (TestAppContext, AnyWindowHandle, FocusHandle, FocusHandle) {
         let mut cx = TestAppContext::single();
         let (first, second) = cx.update(|cx| {
             (
-                cx.focus_handle().tab_stop(true).tab_index(0),
-                cx.focus_handle().tab_stop(true).tab_index(1),
+                cx.focus_handle().tab_stop(tab_stops > 0).tab_index(0),
+                cx.focus_handle().tab_stop(tab_stops > 1).tab_index(1),
             )
         });
         let window = cx.add_window({
@@ -5045,68 +5068,290 @@ mod tests {
         cx.run_until_parked();
     }
 
-    #[test]
-    fn a_press_that_places_focus_does_not_make_it_visible() {
-        let (mut cx, window, first, _second) = setup_focus_visibility_test();
-        press(&mut cx, window, point(px(25.), px(25.)));
-        cx.update_window(window, |_, window, _| {
-            assert!(first.is_focused(window), "the press focused the element");
-            assert!(
-                !window.focus_is_visible(),
-                "somebody who clicked it knows where they clicked"
-            );
+    #[track_caller]
+    fn assert_focus_paint(
+        cx: &mut TestAppContext,
+        window: AnyWindowHandle,
+        focused: Option<&FocusHandle>,
+        visible: bool,
+    ) {
+        cx.update_window(window, |view, window, cx| {
+            assert_eq!(window.focused(cx).as_ref(), focused, "focus identity");
+            assert_eq!(window.focus_is_visible(), visible, "indicator mode");
+            window.draw(cx).clear(cx);
+            let view = view
+                .downcast::<FocusVisibilityTestView>()
+                .expect("focus view");
+            let view = view.read(cx);
+            let quads = &window.rendered_frame.scene.quads;
+            for (handle, y) in [(&view.first, 0.), (&view.second, 50.)] {
+                let bounds = Bounds::new(point(px(0.), px(y)), size(px(50.), px(50.)))
+                    .scale(window.scale_factor());
+                let (fills, borders): (Vec<&crate::scene::Quad>, Vec<_>) = quads
+                    .iter()
+                    .filter(|quad| quad.bounds == bounds)
+                    .partition(|quad| !quad.background.is_transparent());
+                let is_focused = focused == Some(handle);
+                assert_eq!(fills.len(), 1, "control background painted");
+                assert_eq!(
+                    fills[0].background,
+                    rgb(if is_focused { 0xffffff } else { 0x000000 }).into(),
+                    ".focus() follows actual focus regardless of input mode"
+                );
+                assert!(!borders.is_empty(), "control border painted");
+                for border in borders {
+                    assert_eq!(
+                        border.border_color,
+                        rgb(if is_focused && visible {
+                            0x00ff00
+                        } else {
+                            0x000000
+                        })
+                        .into(),
+                        ".focus_visible() paints only the keyboard-focused control"
+                    );
+                }
+            }
         })
-        .expect("required framework invariant must hold");
+        .expect("focus paint");
     }
 
     #[test]
-    fn focus_the_application_moves_is_visible_even_after_a_press() {
-        let (mut cx, window, _first, second) = setup_focus_visibility_test();
+    fn a_press_that_places_focus_does_not_make_it_visible() {
+        let (mut cx, window, first, _second) = setup_focus_visibility_test(2);
+        assert_focus_paint(&mut cx, window, None, false);
+        press(&mut cx, window, point(px(125.), px(25.)));
+        assert_focus_paint(&mut cx, window, None, false);
+        press(&mut cx, window, point(px(25.), px(25.)));
+        assert_focus_paint(&mut cx, window, Some(&first), false);
+        for key in ["a", "left"] {
+            key_down(&mut cx, window, key);
+            assert_focus_paint(&mut cx, window, Some(&first), true);
+            key_up(&mut cx, window, key);
+            press(&mut cx, window, point(px(25.), px(25.)));
+            assert_focus_paint(&mut cx, window, Some(&first), false);
+        }
+    }
+
+    #[test]
+    fn focus_the_application_moves_preserves_visibility_even_after_a_press() {
+        let (mut cx, window, first, second) = setup_focus_visibility_test(2);
+        cx.update_window(window, |_, window, cx| window.focus(&second, cx))
+            .expect("startup focus");
+        assert_focus_paint(&mut cx, window, Some(&second), false);
+
         press(&mut cx, window, point(px(25.), px(25.)));
         cx.update_window(window, |_, window, cx| window.focus(&second, cx))
-            .expect("required framework invariant must hold");
-        cx.run_until_parked();
-        cx.update_window(window, |_, window, _| {
-            assert!(second.is_focused(window));
-            assert!(
-                window.focus_is_visible(),
-                "a dialog that moved focus here is the only thing saying it moved"
-            );
-        })
-        .expect("required framework invariant must hold");
+            .expect("application transfer after pointer input");
+        assert_focus_paint(&mut cx, window, Some(&second), false);
+        key_down(&mut cx, window, "left");
+        cx.update_window(window, |_, window, cx| window.focus(&first, cx))
+            .expect("application transfer after keyboard input");
+        assert_focus_paint(&mut cx, window, Some(&first), true);
+
+        press(&mut cx, window, point(px(25.), px(125.)));
+        assert_focus_paint(&mut cx, window, Some(&second), false);
+        for visible in [false, true] {
+            press(&mut cx, window, point(px(25.), px(175.)));
+            cx.update_window(window, |_, window, cx| {
+                window.dispatch_event(
+                    MouseUpEvent {
+                        position: point(px(25.), px(175.)),
+                        click_count: 1,
+                        ..Default::default()
+                    }
+                    .to_platform_input(),
+                    cx,
+                );
+            })
+            .expect("release before deferred focus transfer");
+            assert_focus_paint(&mut cx, window, Some(&second), false);
+            if visible {
+                key_down(&mut cx, window, "a");
+            }
+            cx.update_window(window, |_, window, cx| {
+                assert!(window.simulate_next_frame(cx) > 0, "deferred transfer ran");
+            })
+            .expect("next frame");
+            assert_focus_paint(&mut cx, window, Some(&first), visible);
+            cx.update_window(window, |_, window, cx| window.focus(&second, cx))
+                .expect("restore source");
+            assert_focus_paint(&mut cx, window, Some(&second), visible);
+        }
     }
 
     #[test]
     fn stepping_to_the_next_tab_stop_makes_focus_visible_again() {
-        let (mut cx, window, _first, second) = setup_focus_visibility_test();
-        press(&mut cx, window, point(px(25.), px(25.)));
-        cx.update_window(window, |_, window, cx| window.focus_next(cx))
-            .expect("required framework invariant must hold");
-        cx.run_until_parked();
-        cx.update_window(window, |_, window, _| {
-            assert!(second.is_focused(window), "the tab stop after the first");
-            assert!(window.focus_is_visible());
-        })
-        .expect("required framework invariant must hold");
+        for tab_stops in [2, 1, 0] {
+            let (mut cx, window, first, second) = setup_focus_visibility_test(tab_stops);
+            for next in [true, false] {
+                cx.update_window(window, |_, window, cx| {
+                    window.focus_from_pointer(&first, cx);
+                })
+                .expect("hide before traversal");
+                assert_focus_paint(&mut cx, window, Some(&first), false);
+                cx.update_window(window, |_, window, cx| {
+                    if next {
+                        window.focus_next(cx);
+                    } else {
+                        window.focus_prev(cx);
+                    }
+                })
+                .expect("explicit traversal");
+                let target = if tab_stops == 2 { &second } else { &first };
+                assert_focus_paint(&mut cx, window, Some(target), true);
+            }
+            for visible in [false, true] {
+                cx.update_window(window, |_, window, cx| {
+                    window.focus_from_pointer(&first, cx);
+                    if visible {
+                        window.focus_next(cx);
+                    }
+                    window.blur();
+                })
+                .expect("blur without changing mode");
+                assert_focus_paint(&mut cx, window, None, visible);
+                cx.update_window(window, |_, window, cx| window.focus(&first, cx))
+                    .expect("neutral focus after blur");
+                assert_focus_paint(&mut cx, window, Some(&first), visible);
+            }
+        }
     }
 
     #[test]
     fn pressing_the_element_focus_is_already_on_hides_the_ring_again() {
-        let (mut cx, window, first, _second) = setup_focus_visibility_test();
-        cx.update_window(window, |_, window, cx| window.focus(&first, cx))
-            .expect("required framework invariant must hold");
-        cx.run_until_parked();
-        cx.update_window(window, |_, window, _| assert!(window.focus_is_visible()))
-            .expect("required framework invariant must hold");
+        let (mut cx, window, first, _second) = setup_focus_visibility_test(2);
+        cx.update_window(window, |_, window, cx| window.focus_next(cx))
+            .expect("keyboard traversal");
+        assert_focus_paint(&mut cx, window, Some(&first), true);
         press(&mut cx, window, point(px(25.), px(25.)));
-        cx.update_window(window, |_, window, _| {
-            assert!(first.is_focused(window), "focus did not move");
-            assert!(
-                !window.focus_is_visible(),
-                "the press is still what put the pointer's owner on it"
+        assert_focus_paint(&mut cx, window, Some(&first), false);
+
+        let blank = point(px(125.), px(25.));
+        for visible in [false, true] {
+            if visible {
+                key_down(&mut cx, window, "a");
+            }
+            for event in [
+                MouseMoveEvent {
+                    position: point(px(25.), px(25.)),
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                MouseMoveEvent {
+                    position: blank,
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                ScrollWheelEvent {
+                    position: blank,
+                    delta: ScrollDelta::Pixels(point(px(0.), px(10.))),
+                    modifiers: Modifiers::none(),
+                    touch_phase: TouchPhase::Moved,
+                }
+                .to_platform_input(),
+                ModifiersChangedEvent {
+                    modifiers: Modifiers {
+                        shift: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                ModifiersChangedEvent::default().to_platform_input(),
+                KeyUpEvent {
+                    keystroke: Keystroke::parse("a").expect("key"),
+                }
+                .to_platform_input(),
+            ] {
+                cx.update_window(window, |_, window, cx| {
+                    window.dispatch_event(event, cx);
+                })
+                .expect("non-activating input");
+                assert_focus_paint(&mut cx, window, Some(&first), visible);
+            }
+        }
+
+        press(&mut cx, window, blank);
+        assert_focus_paint(&mut cx, window, Some(&first), false);
+        key_down(&mut cx, window, "a");
+        assert_focus_paint(&mut cx, window, Some(&first), true);
+        cx.update_window(window, |_, window, cx| {
+            window.dispatch_event(
+                MouseUpEvent {
+                    position: blank,
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                cx,
             );
         })
-        .expect("required framework invariant must hold");
+        .expect("release without auto-focus");
+        assert_focus_paint(&mut cx, window, Some(&first), false);
+    }
+
+    #[test]
+    fn touch_hides_focus_indicators_only_in_its_window() {
+        let (mut cx, window, first, _second) = setup_focus_visibility_test(2);
+        let other: AnyWindowHandle = cx
+            .add_window(|_, cx| FocusVisibilityTestView {
+                first: cx.focus_handle().tab_stop(true).tab_index(0),
+                second: cx.focus_handle().tab_stop(true).tab_index(1),
+            })
+            .into();
+        let other_focus = cx
+            .update_window(other, |view, window, cx| {
+                let view = view
+                    .downcast::<FocusVisibilityTestView>()
+                    .expect("other view");
+                let focus = view.read(cx).first.clone();
+                window.focus(&focus, cx);
+                focus
+            })
+            .expect("other window");
+        key_down(&mut cx, window, "a");
+        assert_focus_paint(&mut cx, other, Some(&other_focus), false);
+        key_down(&mut cx, other, "a");
+        assert_focus_paint(&mut cx, other, Some(&other_focus), true);
+        cx.update_window(window, |_, window, cx| window.focus(&first, cx))
+            .expect("focus original window");
+
+        let blank = point(px(125.), px(25.));
+        for event in [
+            TouchEvent {
+                phase: TouchPhase::Started,
+                position: blank,
+                ..Default::default()
+            }
+            .to_platform_input(),
+            TouchEvent {
+                phase: TouchPhase::Cancelled,
+                position: blank,
+                ..Default::default()
+            }
+            .to_platform_input(),
+            LongPressEvent {
+                start_position: blank,
+                position: blank,
+                ..Default::default()
+            }
+            .to_platform_input(),
+            TouchDragEvent {
+                phase: TouchPhase::Started,
+                start_position: blank,
+                position: blank,
+            }
+            .to_platform_input(),
+        ] {
+            key_down(&mut cx, window, "left");
+            assert_focus_paint(&mut cx, window, Some(&first), true);
+            cx.update_window(window, |_, window, cx| {
+                window.dispatch_event(event, cx);
+            })
+            .expect("touch input");
+            assert_focus_paint(&mut cx, window, Some(&first), false);
+            assert_focus_paint(&mut cx, other, Some(&other_focus), true);
+        }
     }
 
     #[test]

@@ -5,6 +5,10 @@ GPUI Box combines Apache-2.0 framework code with MIT kit/MCP code. Imported
 source and assets retain the licenses and attribution below. GPUI Box is an
 independent derivative and is not an official Zed Industries project.
 
+Window-local keyboard focus visibility, neutral focus handoffs, and Kit editable
+focus-decoration corrections are original GPUI Box work. They add no third-party
+source, assets, or dependencies and preserve the frozen import receipts.
+
 Frozen paint recording and atlas lifetime/replay infrastructure are original
 GPUI Box work. No additional third-party code or assets are imported; the
 demonstrator reuses the bundled fonts under their existing notices and creates

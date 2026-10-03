@@ -20,10 +20,13 @@ fn clearing_search_preserves_pointer_or_keyboard_focus_visibility(cx: &mut TestA
     });
     let search = slot.borrow().clone().expect("search mounted");
 
+    assert!(!harness.update(|window, _| window.focus_is_visible()));
     harness.click("search.query");
-    harness.keystrokes("a");
     assert!(harness.node("search.query").expect("input").focused);
     assert!(!harness.update(|window, _| window.focus_is_visible()));
+    harness.keystrokes("a");
+    assert!(harness.node("search.query").expect("input").focused);
+    assert!(harness.update(|window, _| window.focus_is_visible()));
     harness.click("search.clear");
     assert!(harness.node("search.query").expect("cleared input").focused);
     assert!(harness.update(|_, cx| search.read(cx).value(cx)).is_empty());
@@ -31,6 +34,7 @@ fn clearing_search_preserves_pointer_or_keyboard_focus_visibility(cx: &mut TestA
     assert!(!harness.update(|window, _| window.focus_is_visible()));
 
     harness.keystrokes("b");
+    assert!(harness.update(|window, _| window.focus_is_visible()));
     assert_eq!(
         harness.update(|_, cx| search.read(cx).value(cx)).as_ref(),
         "b",

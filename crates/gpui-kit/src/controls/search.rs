@@ -208,11 +208,7 @@ impl Render for SearchInput {
                 input
                     .update(cx, |input, cx| {
                         input.set_value("", cx);
-                        if window.focus_is_visible() {
-                            window.focus(&input.focus_handle(cx), cx);
-                        } else {
-                            window.focus_from_pointer(&input.focus_handle(cx), cx);
-                        }
+                        window.focus(&input.focus_handle(cx), cx);
                     })
                     .ok();
             })
@@ -221,7 +217,7 @@ impl Render for SearchInput {
             &theme,
             self.size,
             FieldState::default()
-                .focused(focus.is_focused(window) && window.focus_is_visible())
+                .focused(focus.is_focused(window))
                 .disabled(self.disabled),
         )
         .id(self.ident.element_id())

@@ -602,17 +602,35 @@ a testing/debug surface.
 
 ## Focus visibility
 
-`focus_visible` styling is placed by focus provenance, not by input history.
-`Window::focus_from_pointer` is the move a pointer press makes and is the only
-one that suppresses the styling; `Window::focus`, tab stops, focus traps, and
-accessibility focus actions all leave it visible, so a dialog that moves focus
-to its own action still says so. `Window::focus_is_visible` reads the current
-answer. `Window::last_input_was_keyboard` is unchanged and still governs hover
-suppression, which is about the pointer's position rather than focus.
+Ordinary controls use `focus_visible`: the element must hold focus and its
+window must be in keyboard interaction mode. Windows start with this decoration
+hidden. KeyDown and explicit `focus_next`/`focus_prev` reveal it, including when
+navigation leaves focus on the same element. Mouse press/release and touch input
+hide it before handlers run. Hover, modifier changes and scrolling do not switch
+this mode.
 
-Behaviour is platform-independent: it is decided in `Window` from dispatched
-events, so macOS, Windows, Linux, and the browser host agree without any
-platform reporting a focus modality of its own.
+`Window::focus` is now neutral: opening an overlay, restoring focus, or moving
+focus in a deferred callback preserves the mode rather than revealing the ring.
+`focus_from_pointer` explicitly hides it. Blur preserves the mode for subsequent
+focus restoration. `focus_is_visible` reports the mode; it does not report
+whether any element actually holds focus. This changes the previous contract
+where every programmatic focus call revealed a ring. Callers that mean keyboard
+traversal should use traversal APIs or handle a dispatched keyboard event, not
+use an extra `focus` call to force decoration.
+
+Editable controls are the exception: TextInput, search/password/OTP/number/tag
+fields, editable queries, multiline editors and focused inline/grid editors
+show their field decoration on click as well as keyboard focus. A picker’s
+noneditable trigger remains keyboard-only; a query moved into a sheet owns its
+editable decoration there, not on the background trigger. Unfocused mounted
+editors have no ring. Carets, selections, invalid-state feedback, accessibility
+focus and tab order continue to use their own state rather than this decoration.
+
+The mode is window-local and independent of `last_input_was_keyboard`, which
+still controls hover suppression. The shared dispatch path implements the same
+policy for macOS, Windows, Linux and browser hosts without platform-specific
+modality reporting. Portable paint/input regressions have run on macOS; they
+do not substitute for Linux/Windows native validation.
 
 Backdrop glass is one material contract across Metal, Direct3D, and WGPU.
 `GlassMaterial::blur_radius` controls scattering only: zero performs no

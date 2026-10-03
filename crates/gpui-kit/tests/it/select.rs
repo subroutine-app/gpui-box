@@ -117,8 +117,11 @@ fn clicking_opens_the_menu(cx: &mut TestAppContext) {
 }
 
 #[gpui::test]
-fn select_focus_visibility_distinguishes_pointer_and_programmatic_open(cx: &mut TestAppContext) {
+fn select_programmatic_open_preserves_pointer_or_keyboard_focus_visibility(
+    cx: &mut TestAppContext,
+) {
     let (mut harness, entity) = select(cx);
+    assert!(!harness.update(|window, _| window.focus_is_visible()));
     harness.click("settings.provider");
     assert!(harness.node("settings.provider").expect("trigger").focused);
     assert!(!harness.update(|window, _| window.focus_is_visible()));
@@ -142,11 +145,27 @@ fn select_focus_visibility_distinguishes_pointer_and_programmatic_open(cx: &mut 
     assert!(!harness.update(|_, cx| entity.read(cx).is_open()));
 
     harness.update(|window, cx| entity.update(cx, |select, cx| select.open(window, cx)));
-    assert!(harness.update(|window, _| window.focus_is_visible()));
+    assert!(harness.node("settings.provider").expect("trigger").focused);
+    assert!(harness.update(|_, cx| entity.read(cx).is_open()));
+    assert!(!harness.update(|window, _| window.focus_is_visible()));
     harness.click("settings.provider");
     assert!(!harness.update(|window, _| window.focus_is_visible()));
     assert!(!harness.update(|_, cx| entity.read(cx).is_open()));
     harness.update(|window, cx| entity.update(cx, |select, cx| select.toggle(window, cx)));
+    assert!(harness.update(|_, cx| entity.read(cx).is_open()));
+    assert!(!harness.update(|window, _| window.focus_is_visible()));
+
+    harness.keystrokes("escape");
+    assert!(!harness.update(|_, cx| entity.read(cx).is_open()));
+    assert!(harness.update(|window, _| window.focus_is_visible()));
+    harness.update(|window, cx| entity.update(cx, |select, cx| select.open(window, cx)));
+    assert!(harness.update(|_, cx| entity.read(cx).is_open()));
+    assert!(harness.update(|window, _| window.focus_is_visible()));
+    harness.update(|window, cx| entity.update(cx, |select, cx| select.toggle(window, cx)));
+    assert!(!harness.update(|_, cx| entity.read(cx).is_open()));
+    harness.update(|window, cx| entity.update(cx, |select, cx| select.toggle(window, cx)));
+    assert!(harness.node("settings.provider").expect("trigger").focused);
+    assert!(harness.update(|_, cx| entity.read(cx).is_open()));
     assert!(harness.update(|window, _| window.focus_is_visible()));
 }
 

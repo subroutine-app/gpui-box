@@ -1138,7 +1138,7 @@ impl RichTextEditor {
         if self.disabled {
             return;
         }
-        window.focus(&self.focus_handle, cx);
+        window.focus_from_pointer(&self.focus_handle, cx);
         self.is_selecting = true;
         let position = self.position_for_point(event.position, cx);
         let projection = self.projection(cx);
@@ -1568,7 +1568,6 @@ impl Render for RichTextEditor {
             window.blur();
         }
         let theme = cx.theme().clone();
-        let focused = self.focus_handle.is_focused(window);
         let spec = self.semantics(cx);
         let (projection, anchor, head) = self.flat_selection(cx);
         let content = projection.text().clone();
@@ -1759,8 +1758,8 @@ impl Render for RichTextEditor {
                             ))
                             .glow(&theme, theme.colors.danger)
                     })
-                    .when(focused && !self.invalid, |element| {
-                        element.shadow(theme.focus_ring())
+                    .when(!self.disabled && !self.invalid, |element| {
+                        element.focus(|style| style.shadow(theme.focus_ring()))
                     })
             })
             .font_fallbacks(gpui_kit_assets::text_fallbacks())

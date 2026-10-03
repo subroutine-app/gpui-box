@@ -38,7 +38,7 @@ use gpui::{
     prelude::FluentBuilder as _, px,
 };
 use gpui_kit_semantics::{NodeSpec, Role, Semantic};
-use gpui_kit_theme::{ActiveTheme, ControlSize};
+use gpui_kit_theme::{ActiveTheme, ControlSize, Theme};
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::controls::field::{FieldState, field_shell};
@@ -1202,6 +1202,21 @@ impl TextInput {
         let _ = window;
         spec
     }
+
+    fn shell(&self, theme: &Theme, window: &Window) -> gpui::Div {
+        if self.bare {
+            div().w_full().flex().flex_row().items_center()
+        } else {
+            field_shell(
+                theme,
+                self.size,
+                FieldState::default()
+                    .focused(self.focus_handle.is_focused(window))
+                    .invalid(self.invalid)
+                    .disabled(self.disabled),
+            )
+        }
+    }
 }
 
 impl std::fmt::Debug for TextInput {
@@ -1769,21 +1784,10 @@ impl Render for TextInput {
         }
         let theme = cx.theme().clone();
         let metrics = theme.control.get(self.size);
-        let focused = self.focus_handle.is_focused(window) && window.focus_is_visible();
         let spec = self.semantics(window, cx);
-        let shell = if self.bare {
-            div().w_full().flex().flex_row().items_center()
-        } else {
-            field_shell(
-                &theme,
-                self.size,
-                FieldState::default()
-                    .focused(focused)
-                    .invalid(self.invalid)
-                    .disabled(self.disabled),
-            )
-        };
-        let shell = shell.font_fallbacks(gpui_kit_assets::text_fallbacks());
+        let shell = self
+            .shell(&theme, window)
+            .font_fallbacks(gpui_kit_assets::text_fallbacks());
 
         let content = self.edit.text().clone();
         let (anchor, focus) = if self.edit.is_reversed() {
@@ -1964,6 +1968,78 @@ mod retained_options_tests {
     use gpui::{AppContext as _, TestAppContext};
     use gpui_kit_testkit::harness::Harness;
     use std::{cell::RefCell, rc::Rc};
+
+    #[gpui::test]
+    fn pointer_focus_paints_input_chrome_without_promoting_modality(cx: &mut TestAppContext) {
+        use gpui_kit_theme::{Elevation, FieldFocus};
+
+        let slot = Rc::new(RefCell::new(None));
+        let build = slot.clone();
+        let mut harness = Harness::new(cx, crate::install, move |window, cx| {
+            build
+                .borrow_mut()
+                .get_or_insert_with(|| cx.new(|cx| TextInput::new("chrome.input", window, cx)))
+                .clone()
+                .into_any_element()
+        });
+        let input = slot.borrow().clone().expect("input mounted");
+        harness.click("chrome.input");
+        harness.update(|window, cx| {
+            assert!(!window.focus_is_visible());
+            assert!(input.focus_handle(cx).is_focused(window));
+            for treatment in [FieldFocus::Ring, FieldFocus::Fill] {
+                let mut tokens = gpui_kit_tokens::studio_light().clone();
+                tokens.effect.field_focus = treatment;
+                let theme = Theme::from_tokens(&tokens, Default::default());
+                let mut shell = input.read(cx).shell(&theme, window);
+                let mut shadows = theme.control_shadows(Elevation::Flat);
+                if treatment == FieldFocus::Ring {
+                    shadows.extend(theme.focus_ring_on(theme.colors.control));
+                }
+                assert_eq!(
+                    shell.style().box_shadow.as_deref(),
+                    Some(shadows.as_slice())
+                );
+                assert_eq!(
+                    shell.style().background,
+                    Some(match treatment {
+                        FieldFocus::Ring => theme.colors.control.into(),
+                        FieldFocus::Fill => theme.colors.control_hover.into(),
+                    })
+                );
+                assert_eq!(
+                    shell.style().border_color,
+                    Some(theme.colors.control_hairline)
+                );
+            }
+
+            let theme = Theme::studio_dark();
+            window.blur();
+            let mut shell = input.read(cx).shell(&theme, window);
+            assert_eq!(
+                shell.style().box_shadow.as_deref(),
+                Some(theme.control_shadows(Elevation::Flat).as_slice())
+            );
+            window.focus_from_pointer(&input.focus_handle(cx), cx);
+            input.update(cx, |input, cx| input.set_invalid(true, cx));
+            let mut shell = input.read(cx).shell(&theme, window);
+            let mut shadows = theme.control_shadows(Elevation::Flat);
+            shadows.extend(theme.glow(theme.colors.danger));
+            assert_eq!(
+                shell.style().box_shadow.as_deref(),
+                Some(shadows.as_slice())
+            );
+            input.update(cx, |input, cx| {
+                input.set_invalid(false, cx);
+                input.set_disabled(true, cx);
+            });
+            let mut shell = input.read(cx).shell(&theme, window);
+            assert_eq!(
+                shell.style().box_shadow.as_deref(),
+                Some(theme.control_shadows(Elevation::Flat).as_slice())
+            );
+        });
+    }
 
     // Independent affine result for scales 2 about (13,29), then inner .75
     // about (41,17). Do not derive expectations from the consumer's snapshot.

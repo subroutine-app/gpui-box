@@ -4,6 +4,12 @@ GPUI Box is an independent derivative project, not an official Zed project.
 Provenance applies to imported and translated source as well as linked assets.
 The machine-readable release record is `provenance.toml`.
 
+Window-local keyboard focus visibility and neutral programmatic focus transfers
+are original GPUI Box framework work. Pointer/touch input hides noneditable
+focus indicators; keyboard input and tab traversal reveal them. Editable Kit
+fields retain click-focus decoration. No source, assets, dependencies, platform
+backends, or frozen historical receipts were imported or changed by this work.
+
 Frozen paint recordings, per-allocation atlas leases, capture revision/reset
 fences, and callback-free replay are original GPUI Box framework work. They
 extend this tree's Scene, clipping, and native atlas implementations without

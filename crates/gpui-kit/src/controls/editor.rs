@@ -681,7 +681,7 @@ impl Disableable for Editor {
 }
 
 impl Render for Editor {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let spans = self
             .highlights
             .as_ref()
@@ -720,7 +720,6 @@ impl Render for Editor {
         let theme = cx.theme().clone();
         let metrics = theme.control.get(ControlSize::Md);
         let focus = self.area.read(cx).focus_handle(cx);
-        let focused = focus.is_focused(window);
         let document = self.area.read(cx).document();
         let active_line = document.line_at(self.area.read(cx).cursor_offset());
         let line_count = document.line_count();
@@ -780,8 +779,10 @@ impl Render for Editor {
             .py_token(&theme, Space::Xs)
             .radius(&theme, Radius::Control)
             .well(&theme)
-            .when(focused, |element| element.shadow(theme.focus_ring()))
             .track_focus(&focus)
+            .when(!self.disabled, |element| {
+                element.focus(|style| style.shadow(theme.focus_ring()))
+            })
             .when(!self.disabled, |element| {
                 element.on_action(cx.listener(|editor, _: &ToggleFold, _, cx| {
                     let area = editor.area.read(cx);

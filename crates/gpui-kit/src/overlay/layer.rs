@@ -453,6 +453,7 @@ pub struct GlassSurface {
 impl GlassSurface {
     /// Report focus inside the material edge, replacing its hairline.
     /// This forwards [`super::Glass::focused`]; do not add a focus halo.
+    /// Noneditable hosts also gate this value on `Window::focus_is_visible()`.
     pub fn focused(mut self, focused: bool) -> Self {
         self.focused = focused;
         self

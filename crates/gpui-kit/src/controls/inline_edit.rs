@@ -424,6 +424,7 @@ impl RenderOnce for InlineEdit {
 
         let field = match editor {
             Editor::Line(field) => div()
+                .track_focus(&field.read(cx).focus_handle(cx))
                 .w_full()
                 .min_h(px(metrics.height))
                 .px(px(theme.space(Space::Xs)))
@@ -442,7 +443,7 @@ impl RenderOnce for InlineEdit {
                             ),
                         ))
                         .glow(&theme, theme.colors.danger),
-                    false => element.shadow(theme.focus_ring()),
+                    false => element.focus(|style| style.shadow(theme.focus_ring())),
                 })
                 .text_size(px(metrics.font_size))
                 .child(field),

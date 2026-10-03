@@ -859,7 +859,13 @@ impl Render for Combobox {
                 .update(cx, |query, cx| query.set_disabled(disabled, cx));
         }
 
-        let focused = self.query.read(cx).focus_handle(cx).is_focused(window);
+        let query_in_sheet = self
+            .sheet
+            .as_ref()
+            .is_some_and(|sheet| sheet.drawer.read(cx).is_rendered());
+        self.query
+            .update(cx, |query, cx| query.set_bare(!query_in_sheet, cx));
+        let focused = !query_in_sheet && self.query.read(cx).focus_handle(cx).is_focused(window);
         let geometry = (self.open && !bottom).then(|| {
             popover::menu_geometry(
                 window,
@@ -902,26 +908,19 @@ impl Render for Combobox {
                 MouseButton::Left,
                 cx.listener(|combobox, _, window, cx| {
                     if !combobox.open {
-                        combobox.toggle(window, cx);
+                        combobox.open(cx);
                     }
+                    window.focus_from_pointer(&combobox.query.read(cx).focus_handle(cx), cx);
                 }),
             )
         })
-        .child(
-            div().flex_1().child(
-                if self
-                    .sheet
-                    .as_ref()
-                    .is_some_and(|sheet| sheet.drawer.read(cx).is_rendered())
-                {
-                    div()
-                        .child(self.query.read(cx).value().clone())
-                        .into_any_element()
-                } else {
-                    self.query.clone().into_any_element()
-                },
-            ),
-        )
+        .child(div().flex_1().child(if query_in_sheet {
+            div()
+                .child(self.query.read(cx).value().clone())
+                .into_any_element()
+        } else {
+            self.query.clone().into_any_element()
+        }))
         .child(
             icon(Icon::AltArrowDown)
                 .size(px(theme.control.get(self.size).icon_size * 0.9))

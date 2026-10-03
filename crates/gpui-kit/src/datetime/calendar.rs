@@ -530,16 +530,11 @@ impl Calendar {
         week_start: bool,
         week_end: bool,
         direction: LayoutDirection,
-        grid_id: &SharedString,
+        window: &Window,
         cx: &mut Context<Self>,
-    ) -> AnyElement {
+    ) -> Option<gpui::Stateful<gpui::Div>> {
+        let day = cell.day()?;
         let theme = cx.theme().clone();
-        let Some(day) = cell.day() else {
-            return div()
-                .size(px(theme.control.get(self.size).height))
-                .flex_none()
-                .into_any_element();
-        };
 
         let ident = self.day_ident(day);
         let selectability = self.adapter.is_selectable(day);
@@ -547,14 +542,17 @@ impl Calendar {
         let selectable = selectability.is_selectable() && !self.disabled;
         let selected = self.selection.contains(&day);
         let is_today = self.adapter.today() == Some(day);
-        let cursored = self.cursor == Some(day);
+        let cursored = self.cursor == Some(day)
+            && !self.disabled
+            && self.focus_handle.is_focused(window)
+            && window.focus_is_visible();
         let mark = self.overlay.as_ref().and_then(|overlay| overlay(day));
         let banded = self.band(day);
         let endpoint = self.is_endpoint(day);
         let label = self.adapter.day_label(day);
 
         let mut spec = NodeSpec::new(ident.semantic_id(), Role::Option)
-            .parent(grid_id.clone())
+            .parent(self.ident.child("grid").semantic_id())
             .text(label.clone())
             .checked(selected || endpoint)
             .disabled(!selectable)
@@ -690,7 +688,7 @@ impl Calendar {
             }))
             .semantic_in(cx, spec);
 
-        cell.into_any_element()
+        Some(cell)
     }
 
     /// Whether the day falls inside the drawn range, including the length a
@@ -719,11 +717,11 @@ impl Calendar {
             .is_some_and(|range| range.start == day || range.end == Some(day))
     }
 
-    fn body(&self, grid: &MonthGrid, cx: &mut Context<Self>) -> AnyElement {
+    fn body(&self, grid: &MonthGrid, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let theme = cx.theme().clone();
         let direction = cx.layout_direction();
         let grid_ident = self.ident.child("grid");
-        let grid_id = grid_ident.semantic_id();
+
         self.day_idents.borrow_mut().retain(|day, _| {
             grid.weeks
                 .iter()
@@ -741,7 +739,14 @@ impl Calendar {
                         week.iter()
                             .enumerate()
                             .map(|(index, cell)| {
-                                self.cell(*cell, index == 0, index == last, direction, &grid_id, cx)
+                                self.cell(*cell, index == 0, index == last, direction, window, cx)
+                                    .map(IntoElement::into_any_element)
+                                    .unwrap_or_else(|| {
+                                        div()
+                                            .size(px(theme.control.get(self.size).height))
+                                            .flex_none()
+                                            .into_any_element()
+                                    })
                             })
                             .collect::<Vec<_>>(),
                     )
@@ -801,7 +806,7 @@ impl Render for Calendar {
 
         let body = match (month, self.grid()) {
             (Some(month), Some(grid)) => {
-                let body = div().column().child(self.body(&grid, cx));
+                let body = div().column().child(self.body(&grid, window, cx));
                 if self.navigations == 0 {
                     body.into_any_element()
                 } else {
@@ -1047,6 +1052,10 @@ fn neighbour(grid: &MonthGrid, week: usize, column: usize, forward: bool) -> Opt
         flat.get(..index)?.iter().rev().flatten().copied().next()
     }
 }
+
+#[cfg(test)]
+#[path = "datetime_focus.rs"]
+mod datetime_focus;
 
 #[cfg(test)]
 mod tests {
