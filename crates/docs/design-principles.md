@@ -28,11 +28,12 @@ Every line in the library has one of four meanings:
   `interactive.hairlineStrong`, and they carry the 3:1 non-text contrast the
   guidelines ask of a control boundary;
 - a **report** — focus, invalidity, a drop target, a refusal. These are state
-  marks in the colour of the thing being reported. Fields use paint-only
-  halos; a border-based report reserves its width while resting. Becoming
-  invalid must not reflow the row. Glass uses a paint-only inward report edge
-  in `interactive.focus`, replacing its optical hairline rather than adding
-  a halo outside the material. `Glass::focused` and `GlassSurface::focused`
+  marks in the colour of the thing being reported. Field focus rings are solid,
+  external, and paint-only; invalidity retains its halo. A border-based report
+  reserves its width while resting. Becoming invalid must not reflow the row.
+  Glass uses a paint-only inward report edge in `interactive.focus`, replacing
+  its optical hairline rather than adding an external ring.
+  `Glass::focused` and `GlassSurface::focused`
   own that report; do not combine them with `Theme::focus_ring_on`;
 - **control definition** — an in-content editable or actionable surface has a
   quiet `interactive.controlHairline`, an opaque `surface.control` fill one
@@ -40,8 +41,9 @@ Every line in the library has one of four meanings:
   `interactive.controlHighlight`. This material says “this can be operated”;
   it is not a high-contrast outline. The definition edge stays below 3:1.
   Focus and invalidity preserve resting geometry. Editable field focus follows
-  `effect.fieldFocus`: a halo (`ring`) or the hover fill without a focus shadow
-  (`fill`). Invalidity retains its danger halo; other control focus is unchanged.
+  `effect.fieldFocus`: a solid external ring (`ring`) or the hover fill without
+  a focus ring (`fill`). Invalidity retains its danger halo; other control focus
+  is unchanged.
 
 Content controls do not use Liquid Glass. Glass belongs to floating controls
 and media captions. Raised selection knobs use `elevation.raised` shadows;

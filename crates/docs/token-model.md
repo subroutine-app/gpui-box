@@ -157,8 +157,8 @@ inset `controlHighlight`. These are not plane-ladder surfaces and do not use
 backdrop glass. Labels retain their text contrast floors on every control
 state. Knobs reuse `elevation.raised` rather than introducing a duplicate
 `effect.controlKnobShadow` scale. Required `effect.fieldFocus` is a typed
-`"ring" | "fill"` choice for editable fields only: ring adds the normal focus
-halo, while fill uses `surface.controlHover` with no focus shadow. The caret
+`"ring" | "fill"` choice for editable fields only: ring adds the solid external
+focus ring, while fill uses `surface.controlHover` with no focus ring. The caret
 is unchanged. Disabled fields suppress focus treatment; invalid fields retain
 their danger wash and glow even when disabled or focused. Resting control
 shadows and `interactive.controlHairline` remain independent. All bundled
@@ -412,13 +412,15 @@ a colour anything can paint.
 Selection and focus live here too, and they are drawn differently on purpose:
 selection says which answer is current, focus says where the next keystroke
 goes, and a reader who cannot tell them apart cannot tell what pressing a key
-would do. `effect.focusRingWidth` and `effect.focusRingAlpha` draw an outset
-halo in `color.interactive.focus` around whatever holds the keyboard. The halo
-uses blur instead of a hard counter outline; a control with a different resting
-fill resolves the same single halo to a readable pole on that fill. Selection
-uses the stronger tonal fill at `color.interactive.selected`, never an outline
-or an edge rail. Component-owned state washes distinguish changed lines,
-matched ranges, and drop targets without adding another selection vocabulary.
+would do. `effect.focusRingWidth` and `effect.focusRingAlpha` draw a solid
+external ring in `color.interactive.focus`. Bundled themes use a width of three
+logical pixels and alpha 1. The ring is paint-only, with zero blur and spread
+equal to its width. Its colour resolves against the surface behind the control,
+not the control's own fill, falling back to a readable pole when needed.
+Glass retains its inward focus edge. Selection uses the stronger tonal fill at `color.interactive.selected`,
+never an outline or an edge rail. Component-owned state washes distinguish
+changed lines, matched ranges, and drop targets without adding another
+selection vocabulary.
 
 Gradients are not a token group. This library composes one from a base colour
 and an alpha ladder, the way `Theme::glow` composes a bloom from

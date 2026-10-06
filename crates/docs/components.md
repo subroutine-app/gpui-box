@@ -21,8 +21,9 @@ component grows a literal a reader could read.
 ## Controls
 
 In-content controls share the token-backed control material: an opaque fill,
-quiet definition hairline and one-pixel top inset highlight. Focus/invalid
-states add halos; selection is tonal fill. Knobs reuse `Elevation::Raised`.
+quiet definition hairline and one-pixel top inset highlight. Focus adds a solid
+external ring; invalidity retains its halo. Selection is tonal fill. Knobs reuse
+`Elevation::Raised`.
 This family is distinct from floating Liquid Glass surfaces. Small through
 medium action controls use `Radius::Control`; large controls use capsules.
 
@@ -71,12 +72,12 @@ In-content fields and Select triggers share `StyledExt::control_surface`:
 `surface.control`, `interactive.controlHairline`, and a top inset
 `interactive.controlHighlight`. Invalid halos and ring-mode field focus append
 without replacing the highlight. `effect.fieldFocus: "fill"` instead focuses
-editable fields with `surface.controlHover` and no focus halo; disabled focus
+editable fields with `surface.controlHover` and no focus ring; disabled focus
 is suppressed and invalidity takes precedence. Select and button focus are
 unchanged. This material is opaque, not Liquid Glass.
 Owned TextArea frames (including MentionInput's editor) share the same field
 material and state policy without adopting single-line layout. `Frame::Host`
-continues to contribute no fill, border, padding, or halo of its own.
+continues to contribute no fill, border, padding, focus ring, or invalid halo of its own.
 `Theme::control_shadows(Elevation::Raised)` reuses the elevation authority for
 knobs instead of adding another shadow token. Segmented strips have equal
 widths and neutral selected text unless a segment explicitly supplies tint;
@@ -91,9 +92,10 @@ where the authored control step cannot separate from its parent. On Button,
 pill and not a second Glass surface. Its glyph and loading mark use the same
 foreground as its label, including under a light theme.
 
-`FocusRing` appends its halo to the existing material shadows. A pressed
-button combines its fill and travel with `Pressable::pressable_with`; Reduce
-motion removes travel without removing the pressed colour report.
+`FocusRing` appends a solid, paint-only external ring with zero blur to the
+existing material shadows. A pressed button combines its fill and travel with
+`Pressable::pressable_with`; Reduce motion removes travel without removing the
+pressed colour report.
 
 `Badge::new(value).count()` is a formatted-data mark, not a status: Caption
 type, tabular OpenType figures, a fine control hairline, and no status wash.
@@ -915,7 +917,7 @@ halo, and changes no layout, clipping or hit target.
 The report is identical for Regular, Clear (including dimmed), Frosted,
 reduce-transparency and admission-budget fallback. Opaque content controls
 continue to use `Theme::focus_ring_on`; glass callers use `.focused(focused)`
-instead of wrapping the material in that halo. Do not apply both treatments.
+instead of wrapping the material in an external ring. Do not apply both treatments.
 The `glass` exhibit shows focused pills in both themes, reduced transparency,
 and the rejected budget surface R. The headless pixel test checks the inward
 edge after child painting, its token width, rounded corners and absence of
@@ -1335,14 +1337,14 @@ glyph turns around is a property of the drawing, carried by
 `Icon::mirroring` in the asset catalog, so a chevron flips and a checkmark
 does not.
 
-**Focus.** Every interactive element is reachable with tab and wears the same
-ring, from `effect.focusRingWidth` and `effect.focusRingAlpha` in the focus
-colour, applied through `FocusRing::focus_ring`. The ring is a shadow rather
-than a border, so focus never reflows what is around it, and it is a different
-treatment from selection on purpose: focus says where the next keystroke goes,
-selection says which answer is current. Selection is a neutral wash and nothing
-else, so the two never wear one appearance: focus is a halo around the shape,
-selection is the shape's own fill.
+**Focus.** Every interactive element is reachable with tab. The shared solid
+external ring uses `effect.focusRingWidth` and `effect.focusRingAlpha` in the
+focus colour, applied through `FocusRing::focus_ring`. It is a paint-only,
+zero-blur shadow rather than a border, so focus never reflows what is around
+it. Glass retains its inward focus edge. Focus is a different treatment from
+selection on purpose: focus says where the next keystroke goes, selection says
+which answer is current. Selection is a neutral wash and nothing else, so the
+two never wear one appearance: focus is a ring, selection is the shape's own fill.
 
 ## What a node's `value` means
 

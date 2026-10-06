@@ -714,7 +714,7 @@
   "effect": {
     "fieldFocus": "ring",
     "edgeFadeBand": 20,
-    "focusRingWidth": 2,
+    "focusRingWidth": 3,
     "focusRingAlpha": 1,
     "glowAlpha": 0.26,
     "glowBlur": 12,

@@ -143,7 +143,7 @@ pub trait StyledExt: Styled + Sized {
 
     /// A bordered in-content control, not a glass surface. The definition
     /// edge is deliberately quieter than a focus indicator; the top inset
-    /// highlight remains when callers append interaction halos.
+    /// highlight remains when callers append focus rings or invalid glows.
     fn control_surface(self, theme: &Theme, elevation: Elevation) -> Self {
         self.bg(theme.colors.control)
             .border(px(theme.borders.hairline))
@@ -219,7 +219,7 @@ pub trait StyledExt: Styled + Sized {
     ///
     /// A field is a well rather than an outlined box, so the resting state of
     /// every editable control in the library is a colour and nothing else.
-    /// Focus and invalidity are paint-only halos, so neither state needs a
+    /// Focus rings and invalid glows are paint-only, so neither state needs a
     /// transparent border to reserve geometry.
     fn well(self, theme: &Theme) -> Self {
         self.surface(theme, Surface::Sunken)
@@ -298,12 +298,12 @@ impl<T: gpui::InteractiveElement + Sized> Hoverable for T {}
 ///
 /// Every keyboard-reachable element wears the same ring from the same tokens,
 /// so "the keyboard is here" looks identical whether it is on a button, a
-/// table header, or a tree row. It is a shadow rather than a border so turning
-/// focus on never reflows what is around it.
+/// table header, or a tree row. It is a solid, zero-blur ring painted outside
+/// the element rather than a layout border, so focus never causes reflow.
 ///
 /// The ring answers "the keyboard is here", so it is drawn for keyboard focus
 /// and not for a pointer that landed on the same element. A person who just
-/// clicked a strip knows where they clicked. The halo appends to the resting
+/// clicked a strip knows where they clicked. The ring appends to the resting
 /// material's shadows, preserving its inner highlight and elevation. An
 /// editable control is the case this does not cover, and it does not go
 /// through here: a field says where the caret is with its control material and
@@ -313,7 +313,7 @@ pub trait FocusRing: InteractiveElement + Styled {
         self.focus_ring_on(theme, theme.colors.canvas)
     }
 
-    /// The same additive halo resolved against the ground behind the control.
+    /// The same solid ring resolved against the ground behind the control.
     fn focus_ring_on(mut self, theme: &Theme, background: gpui::Hsla) -> Self {
         let mut shadows = self.style().box_shadow.clone().unwrap_or_default();
         shadows.extend(theme.focus_ring_on(background));

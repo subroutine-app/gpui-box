@@ -486,8 +486,8 @@ Row stagger maximum items: `8`.
 |---|---:|
 | `effect.fieldFocus` | ring |
 | `effect.edgeFadeBand` | 20 |
-| `effect.focusRingWidth` | 2 |
-| `effect.focusRingAlpha` | 0.7 |
+| `effect.focusRingWidth` | 3 |
+| `effect.focusRingAlpha` | 1 |
 | `effect.glowAlpha` | 0.26 |
 | `effect.glowBlur` | 12 |
 | `effect.glowSpread` | -5 |
@@ -600,7 +600,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.backdrop + color.agent.evidenceWash` | 7.43 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.backdrop` | 3.71 | 3.0 |
 | `color.interactive.track` | `color.surface.backdrop` | 3.71 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.backdrop` | 3.61 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.backdrop` | 6.51 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.backdrop` | 6.58 | 3.0 |
 | `color.loader.mark` | `color.surface.backdrop` | 6.51 | 3.0 |
 | `color.text.primary` | `color.surface.canvas` | 15.30 | 4.5 |
@@ -623,7 +623,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.canvas + color.agent.evidenceWash` | 6.58 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.canvas` | 3.83 | 3.0 |
 | `color.interactive.track` | `color.surface.canvas` | 3.83 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.canvas` | 3.50 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.canvas` | 5.94 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.canvas` | 6.42 | 3.0 |
 | `color.loader.mark` | `color.surface.canvas` | 5.94 | 3.0 |
 | `color.text.primary` | `color.surface.sunken` | 16.31 | 4.5 |
@@ -646,7 +646,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.sunken + color.agent.evidenceWash` | 7.15 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.sunken` | 3.77 | 3.0 |
 | `color.interactive.track` | `color.surface.sunken` | 3.77 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.sunken` | 3.59 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.sunken` | 6.33 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.sunken` | 6.55 | 3.0 |
 | `color.loader.mark` | `color.surface.sunken` | 6.33 | 3.0 |
 | `color.text.primary` | `color.surface.panel` | 14.19 | 4.5 |
@@ -669,7 +669,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.panel + color.agent.evidenceWash` | 6.01 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.panel` | 3.80 | 3.0 |
 | `color.interactive.track` | `color.surface.panel` | 3.80 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.panel` | 3.36 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.panel` | 5.50 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.panel` | 6.18 | 3.0 |
 | `color.loader.mark` | `color.surface.panel` | 5.50 | 3.0 |
 | `color.text.primary` | `color.surface.raised` | 12.14 | 4.5 |
@@ -692,7 +692,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.raised + color.agent.evidenceWash` | 5.08 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.raised` | 3.63 | 3.0 |
 | `color.interactive.track` | `color.surface.raised` | 3.63 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.raised` | 3.04 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.raised` | 4.71 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.raised` | 5.61 | 3.0 |
 | `color.loader.mark` | `color.surface.raised` | 4.71 | 3.0 |
 | `color.text.primary` | `color.surface.overlay` | 12.79 | 4.5 |
@@ -715,7 +715,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.overlay + color.agent.evidenceWash` | 5.36 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.overlay` | 3.70 | 3.0 |
 | `color.interactive.track` | `color.surface.overlay` | 3.70 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.overlay` | 3.15 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.overlay` | 4.96 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.overlay` | 5.80 | 3.0 |
 | `color.loader.mark` | `color.surface.overlay` | 4.96 | 3.0 |
 | `color.terminal.ansi.0` | `color.terminal.background` | 1.28 | 1.2 |
@@ -1307,8 +1307,8 @@ Row stagger maximum items: `8`.
 |---|---:|
 | `effect.fieldFocus` | ring |
 | `effect.edgeFadeBand` | 20 |
-| `effect.focusRingWidth` | 2 |
-| `effect.focusRingAlpha` | 0.8 |
+| `effect.focusRingWidth` | 3 |
+| `effect.focusRingAlpha` | 1 |
 | `effect.glowAlpha` | 0.18 |
 | `effect.glowBlur` | 12 |
 | `effect.glowSpread` | -5 |
@@ -1421,7 +1421,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.backdrop + color.agent.evidenceWash` | 5.08 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.backdrop` | 4.02 | 3.0 |
 | `color.interactive.track` | `color.surface.backdrop` | 4.02 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.backdrop` | 3.29 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.backdrop` | 4.61 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.backdrop` | 3.15 | 3.0 |
 | `color.loader.mark` | `color.surface.backdrop` | 4.61 | 3.0 |
 | `color.text.primary` | `color.surface.canvas` | 15.05 | 4.5 |
@@ -1444,7 +1444,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.canvas + color.agent.evidenceWash` | 5.83 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.canvas` | 4.18 | 3.0 |
 | `color.interactive.track` | `color.surface.canvas` | 4.18 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.canvas` | 3.63 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.canvas` | 5.30 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.canvas` | 3.27 | 3.0 |
 | `color.loader.mark` | `color.surface.canvas` | 5.30 | 3.0 |
 | `color.text.primary` | `color.surface.sunken` | 13.60 | 4.5 |
@@ -1467,7 +1467,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.sunken + color.agent.evidenceWash` | 5.27 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.sunken` | 4.07 | 3.0 |
 | `color.interactive.track` | `color.surface.sunken` | 4.07 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.sunken` | 3.38 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.sunken` | 4.79 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.sunken` | 3.18 | 3.0 |
 | `color.loader.mark` | `color.surface.sunken` | 4.79 | 3.0 |
 | `color.text.primary` | `color.surface.panel` | 16.44 | 4.5 |
@@ -1490,7 +1490,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.panel + color.agent.evidenceWash` | 6.36 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.panel` | 4.29 | 3.0 |
 | `color.interactive.track` | `color.surface.panel` | 4.29 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.panel` | 3.86 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.panel` | 5.79 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.panel` | 3.34 | 3.0 |
 | `color.loader.mark` | `color.surface.panel` | 5.79 | 3.0 |
 | `color.text.primary` | `color.surface.raised` | 17.89 | 4.5 |
@@ -1513,7 +1513,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.raised + color.agent.evidenceWash` | 6.92 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.raised` | 4.38 | 3.0 |
 | `color.interactive.track` | `color.surface.raised` | 4.38 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.raised` | 4.09 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.raised` | 6.30 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.raised` | 3.40 | 3.0 |
 | `color.loader.mark` | `color.surface.raised` | 6.30 | 3.0 |
 | `color.text.primary` | `color.surface.overlay` | 17.89 | 4.5 |
@@ -1536,7 +1536,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.overlay + color.agent.evidenceWash` | 6.92 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.overlay` | 4.38 | 3.0 |
 | `color.interactive.track` | `color.surface.overlay` | 4.38 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.overlay` | 4.09 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.overlay` | 6.30 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.overlay` | 3.40 | 3.0 |
 | `color.loader.mark` | `color.surface.overlay` | 6.30 | 3.0 |
 | `color.terminal.ansi.0` | `color.terminal.background` | 15.79 | 1.2 |
@@ -2128,8 +2128,8 @@ Row stagger maximum items: `8`.
 |---|---:|
 | `effect.fieldFocus` | ring |
 | `effect.edgeFadeBand` | 20 |
-| `effect.focusRingWidth` | 2 |
-| `effect.focusRingAlpha` | 0.7 |
+| `effect.focusRingWidth` | 3 |
+| `effect.focusRingAlpha` | 1 |
 | `effect.glowAlpha` | 0.26 |
 | `effect.glowBlur` | 12 |
 | `effect.glowSpread` | -5 |
@@ -2242,7 +2242,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.backdrop + color.agent.evidenceWash` | 7.73 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.backdrop` | 3.82 | 3.0 |
 | `color.interactive.track` | `color.surface.backdrop` | 3.82 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.backdrop` | 4.90 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.backdrop` | 8.91 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.backdrop` | 5.56 | 3.0 |
 | `color.loader.mark` | `color.surface.backdrop` | 8.91 | 3.0 |
 | `color.text.primary` | `color.surface.canvas` | 11.34 | 4.5 |
@@ -2265,7 +2265,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.canvas + color.agent.evidenceWash` | 6.61 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.canvas` | 3.75 | 3.0 |
 | `color.interactive.track` | `color.surface.canvas` | 3.75 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.canvas` | 4.53 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.canvas` | 7.79 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.canvas` | 5.20 | 3.0 |
 | `color.loader.mark` | `color.surface.canvas` | 7.79 | 3.0 |
 | `color.text.primary` | `color.surface.sunken` | 12.14 | 4.5 |
@@ -2288,7 +2288,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.sunken + color.agent.evidenceWash` | 7.14 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.sunken` | 3.81 | 3.0 |
 | `color.interactive.track` | `color.surface.sunken` | 3.81 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.sunken` | 4.73 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.sunken` | 8.34 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.sunken` | 5.40 | 3.0 |
 | `color.loader.mark` | `color.surface.sunken` | 8.34 | 3.0 |
 | `color.text.primary` | `color.surface.panel` | 10.28 | 4.5 |
@@ -2311,7 +2311,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.panel + color.agent.evidenceWash` | 5.95 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.panel` | 3.64 | 3.0 |
 | `color.interactive.track` | `color.surface.panel` | 3.64 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.panel` | 4.24 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.panel` | 7.06 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.panel` | 4.90 | 3.0 |
 | `color.loader.mark` | `color.surface.panel` | 7.06 | 3.0 |
 | `color.text.primary` | `color.surface.raised` | 8.69 | 4.5 |
@@ -2334,7 +2334,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.raised + color.agent.evidenceWash` | 5.01 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.raised` | 3.39 | 3.0 |
 | `color.interactive.track` | `color.surface.raised` | 3.39 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.raised` | 3.76 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.raised` | 5.97 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.raised` | 4.38 | 3.0 |
 | `color.loader.mark` | `color.surface.raised` | 5.97 | 3.0 |
 | `color.text.primary` | `color.surface.overlay` | 9.36 | 4.5 |
@@ -2357,7 +2357,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.overlay + color.agent.evidenceWash` | 5.40 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.overlay` | 3.50 | 3.0 |
 | `color.interactive.track` | `color.surface.overlay` | 3.50 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.overlay` | 3.96 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.overlay` | 6.43 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.overlay` | 4.61 | 3.0 |
 | `color.loader.mark` | `color.surface.overlay` | 6.43 | 3.0 |
 | `color.terminal.ansi.0` | `color.terminal.background` | 2.06 | 1.2 |
@@ -2949,7 +2949,7 @@ Row stagger maximum items: `8`.
 |---|---:|
 | `effect.fieldFocus` | ring |
 | `effect.edgeFadeBand` | 20 |
-| `effect.focusRingWidth` | 2 |
+| `effect.focusRingWidth` | 3 |
 | `effect.focusRingAlpha` | 1 |
 | `effect.glowAlpha` | 0.18 |
 | `effect.glowBlur` | 12 |
@@ -3770,8 +3770,8 @@ Row stagger maximum items: `8`.
 |---|---:|
 | `effect.fieldFocus` | ring |
 | `effect.edgeFadeBand` | 20 |
-| `effect.focusRingWidth` | 2 |
-| `effect.focusRingAlpha` | 0.7 |
+| `effect.focusRingWidth` | 3 |
+| `effect.focusRingAlpha` | 1 |
 | `effect.glowAlpha` | 0.26 |
 | `effect.glowBlur` | 12 |
 | `effect.glowSpread` | -5 |
@@ -3884,7 +3884,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.backdrop + color.agent.evidenceWash` | 10.84 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.backdrop` | 3.75 | 3.0 |
 | `color.interactive.track` | `color.surface.backdrop` | 3.75 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.backdrop` | 4.72 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.backdrop` | 8.17 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.backdrop` | 6.25 | 3.0 |
 | `color.loader.mark` | `color.surface.backdrop` | 8.17 | 3.0 |
 | `color.text.primary` | `color.surface.canvas` | 12.16 | 4.5 |
@@ -3907,7 +3907,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.canvas + color.agent.evidenceWash` | 9.22 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.canvas` | 3.56 | 3.0 |
 | `color.interactive.track` | `color.surface.canvas` | 3.56 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.canvas` | 4.24 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.canvas` | 7.01 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.canvas` | 5.66 | 3.0 |
 | `color.loader.mark` | `color.surface.canvas` | 7.01 | 3.0 |
 | `color.text.primary` | `color.surface.sunken` | 13.16 | 4.5 |
@@ -3930,7 +3930,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.sunken + color.agent.evidenceWash` | 10.00 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.sunken` | 3.67 | 3.0 |
 | `color.interactive.track` | `color.surface.sunken` | 3.67 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.sunken` | 4.48 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.sunken` | 7.58 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.sunken` | 5.97 | 3.0 |
 | `color.loader.mark` | `color.surface.sunken` | 7.58 | 3.0 |
 | `color.text.primary` | `color.surface.panel` | 10.84 | 4.5 |
@@ -3953,7 +3953,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.panel + color.agent.evidenceWash` | 8.20 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.panel` | 3.38 | 3.0 |
 | `color.interactive.track` | `color.surface.panel` | 3.38 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.panel` | 3.90 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.panel` | 6.24 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.panel` | 5.23 | 3.0 |
 | `color.loader.mark` | `color.surface.panel` | 6.24 | 3.0 |
 | `color.text.primary` | `color.surface.raised` | 8.73 | 4.5 |
@@ -3976,7 +3976,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.raised + color.agent.evidenceWash` | 6.63 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.raised` | 3.05 | 3.0 |
 | `color.interactive.track` | `color.surface.raised` | 3.05 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.raised` | 3.31 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.raised` | 5.03 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.raised` | 4.48 | 3.0 |
 | `color.loader.mark` | `color.surface.raised` | 5.03 | 3.0 |
 | `color.text.primary` | `color.surface.overlay` | 9.59 | 4.5 |
@@ -3999,7 +3999,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.overlay + color.agent.evidenceWash` | 7.27 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.overlay` | 3.20 | 3.0 |
 | `color.interactive.track` | `color.surface.overlay` | 3.20 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.overlay` | 3.56 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.overlay` | 5.53 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.overlay` | 4.80 | 3.0 |
 | `color.loader.mark` | `color.surface.overlay` | 5.53 | 3.0 |
 | `color.terminal.ansi.0` | `color.terminal.background` | 1.31 | 1.2 |
@@ -4591,8 +4591,8 @@ Row stagger maximum items: `8`.
 |---|---:|
 | `effect.fieldFocus` | ring |
 | `effect.edgeFadeBand` | 20 |
-| `effect.focusRingWidth` | 2 |
-| `effect.focusRingAlpha` | 0.7 |
+| `effect.focusRingWidth` | 3 |
+| `effect.focusRingAlpha` | 1 |
 | `effect.glowAlpha` | 0.26 |
 | `effect.glowBlur` | 12 |
 | `effect.glowSpread` | -5 |
@@ -4705,7 +4705,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.backdrop + color.agent.evidenceWash` | 8.35 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.backdrop` | 3.82 | 3.0 |
 | `color.interactive.track` | `color.surface.backdrop` | 3.82 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.backdrop` | 4.25 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.backdrop` | 7.59 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.backdrop` | 5.11 | 3.0 |
 | `color.loader.mark` | `color.surface.backdrop` | 7.59 | 3.0 |
 | `color.text.primary` | `color.surface.canvas` | 10.59 | 4.5 |
@@ -4728,7 +4728,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.canvas + color.agent.evidenceWash` | 7.30 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.canvas` | 3.79 | 3.0 |
 | `color.interactive.track` | `color.surface.canvas` | 3.79 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.canvas` | 4.01 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.canvas` | 6.79 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.canvas` | 4.87 | 3.0 |
 | `color.loader.mark` | `color.surface.canvas` | 6.79 | 3.0 |
 | `color.text.primary` | `color.surface.sunken` | 11.14 | 4.5 |
@@ -4751,7 +4751,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.sunken + color.agent.evidenceWash` | 7.74 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.sunken` | 3.82 | 3.0 |
 | `color.interactive.track` | `color.surface.sunken` | 3.82 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.sunken` | 4.12 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.sunken` | 7.14 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.sunken` | 4.99 | 3.0 |
 | `color.loader.mark` | `color.surface.sunken` | 7.14 | 3.0 |
 | `color.text.primary` | `color.surface.panel` | 9.02 | 4.5 |
@@ -4774,7 +4774,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.panel + color.agent.evidenceWash` | 6.14 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.panel` | 3.61 | 3.0 |
 | `color.interactive.track` | `color.surface.panel` | 3.61 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.panel` | 3.61 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.panel` | 5.78 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.panel` | 4.43 | 3.0 |
 | `color.loader.mark` | `color.surface.panel` | 5.78 | 3.0 |
 | `color.text.primary` | `color.surface.raised` | 7.97 | 4.5 |
@@ -4797,7 +4797,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.raised + color.agent.evidenceWash` | 5.41 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.raised` | 3.43 | 3.0 |
 | `color.interactive.track` | `color.surface.raised` | 3.43 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.raised` | 3.30 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.raised` | 5.11 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.raised` | 4.08 | 3.0 |
 | `color.loader.mark` | `color.surface.raised` | 5.11 | 3.0 |
 | `color.text.primary` | `color.surface.overlay` | 8.32 | 4.5 |
@@ -4820,7 +4820,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.overlay + color.agent.evidenceWash` | 5.65 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.overlay` | 3.49 | 3.0 |
 | `color.interactive.track` | `color.surface.overlay` | 3.49 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.overlay` | 3.41 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.overlay` | 5.33 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.overlay` | 4.20 | 3.0 |
 | `color.loader.mark` | `color.surface.overlay` | 5.33 | 3.0 |
 | `color.terminal.ansi.0` | `color.terminal.background` | 1.34 | 1.2 |
@@ -5412,8 +5412,8 @@ Row stagger maximum items: `8`.
 |---|---:|
 | `effect.fieldFocus` | ring |
 | `effect.edgeFadeBand` | 20 |
-| `effect.focusRingWidth` | 2 |
-| `effect.focusRingAlpha` | 0.7 |
+| `effect.focusRingWidth` | 3 |
+| `effect.focusRingAlpha` | 1 |
 | `effect.glowAlpha` | 0.26 |
 | `effect.glowBlur` | 12 |
 | `effect.glowSpread` | -5 |
@@ -5526,7 +5526,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.backdrop + color.agent.evidenceWash` | 8.87 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.backdrop` | 3.79 | 3.0 |
 | `color.interactive.track` | `color.surface.backdrop` | 3.79 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.backdrop` | 3.77 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.backdrop` | 6.29 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.backdrop` | 5.52 | 3.0 |
 | `color.loader.mark` | `color.surface.backdrop` | 6.29 | 3.0 |
 | `color.text.primary` | `color.surface.canvas` | 10.75 | 4.5 |
@@ -5549,7 +5549,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.canvas + color.agent.evidenceWash` | 7.64 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.canvas` | 3.63 | 3.0 |
 | `color.interactive.track` | `color.surface.canvas` | 3.63 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.canvas` | 3.45 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.canvas` | 5.48 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.canvas` | 5.08 | 3.0 |
 | `color.loader.mark` | `color.surface.canvas` | 5.48 | 3.0 |
 | `color.text.primary` | `color.surface.sunken` | 11.67 | 4.5 |
@@ -5572,7 +5572,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.sunken + color.agent.evidenceWash` | 8.35 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.sunken` | 3.73 | 3.0 |
 | `color.interactive.track` | `color.surface.sunken` | 3.73 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.sunken` | 3.64 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.sunken` | 5.95 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.sunken` | 5.35 | 3.0 |
 | `color.loader.mark` | `color.surface.sunken` | 5.95 | 3.0 |
 | `color.text.primary` | `color.surface.panel` | 9.86 | 4.5 |
@@ -5595,7 +5595,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.panel + color.agent.evidenceWash` | 6.99 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.panel` | 3.51 | 3.0 |
 | `color.interactive.track` | `color.surface.panel` | 3.51 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.panel` | 3.25 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.panel` | 5.02 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.panel` | 4.80 | 3.0 |
 | `color.loader.mark` | `color.surface.panel` | 5.02 | 3.0 |
 | `color.text.primary` | `color.surface.raised` | 8.98 | 4.5 |
@@ -5618,7 +5618,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.raised + color.agent.evidenceWash` | 6.36 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.raised` | 3.37 | 3.0 |
 | `color.interactive.track` | `color.surface.raised` | 3.37 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.raised` | 3.03 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.raised` | 4.57 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.raised` | 4.51 | 3.0 |
 | `color.loader.mark` | `color.surface.raised` | 4.57 | 3.0 |
 | `color.text.primary` | `color.surface.overlay` | 9.14 | 4.5 |
@@ -5641,7 +5641,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.overlay + color.agent.evidenceWash` | 6.48 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.overlay` | 3.39 | 3.0 |
 | `color.interactive.track` | `color.surface.overlay` | 3.39 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.overlay` | 3.07 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.overlay` | 4.66 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.overlay` | 4.56 | 3.0 |
 | `color.loader.mark` | `color.surface.overlay` | 4.66 | 3.0 |
 | `color.terminal.ansi.0` | `color.terminal.background` | 1.29 | 1.2 |
@@ -6233,8 +6233,8 @@ Row stagger maximum items: `8`.
 |---|---:|
 | `effect.fieldFocus` | ring |
 | `effect.edgeFadeBand` | 20 |
-| `effect.focusRingWidth` | 2 |
-| `effect.focusRingAlpha` | 0.7 |
+| `effect.focusRingWidth` | 3 |
+| `effect.focusRingAlpha` | 1 |
 | `effect.glowAlpha` | 0.26 |
 | `effect.glowBlur` | 12 |
 | `effect.glowSpread` | -5 |
@@ -6347,7 +6347,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.backdrop + color.agent.evidenceWash` | 9.01 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.backdrop` | 3.82 | 3.0 |
 | `color.interactive.track` | `color.surface.backdrop` | 3.82 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.backdrop` | 4.30 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.backdrop` | 7.52 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.backdrop` | 7.08 | 3.0 |
 | `color.loader.mark` | `color.surface.backdrop` | 7.52 | 3.0 |
 | `color.text.primary` | `color.surface.canvas` | 14.81 | 4.5 |
@@ -6370,7 +6370,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.canvas + color.agent.evidenceWash` | 7.70 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.canvas` | 3.72 | 3.0 |
 | `color.interactive.track` | `color.surface.canvas` | 3.72 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.canvas` | 3.94 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.canvas` | 6.55 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.canvas` | 6.53 | 3.0 |
 | `color.loader.mark` | `color.surface.canvas` | 6.55 | 3.0 |
 | `color.text.primary` | `color.surface.sunken` | 15.72 | 4.5 |
@@ -6393,7 +6393,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.sunken + color.agent.evidenceWash` | 8.22 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.sunken` | 3.78 | 3.0 |
 | `color.interactive.track` | `color.surface.sunken` | 3.78 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.sunken` | 4.10 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.sunken` | 6.95 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.sunken` | 6.78 | 3.0 |
 | `color.loader.mark` | `color.surface.sunken` | 6.95 | 3.0 |
 | `color.text.primary` | `color.surface.panel` | 13.36 | 4.5 |
@@ -6416,7 +6416,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.panel + color.agent.evidenceWash` | 6.91 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.panel` | 3.58 | 3.0 |
 | `color.interactive.track` | `color.surface.panel` | 3.58 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.panel` | 3.67 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.panel` | 5.90 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.panel` | 6.10 | 3.0 |
 | `color.loader.mark` | `color.surface.panel` | 5.90 | 3.0 |
 | `color.text.primary` | `color.surface.raised` | 11.05 | 4.5 |
@@ -6439,7 +6439,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.raised + color.agent.evidenceWash` | 5.70 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.raised` | 3.29 | 3.0 |
 | `color.interactive.track` | `color.surface.raised` | 3.29 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.raised` | 3.20 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.raised` | 4.88 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.raised` | 5.34 | 3.0 |
 | `color.loader.mark` | `color.surface.raised` | 4.88 | 3.0 |
 | `color.text.primary` | `color.surface.overlay` | 11.93 | 4.5 |
@@ -6462,7 +6462,7 @@ Row stagger maximum items: `8`.
 | `color.text.muted` | `color.surface.overlay + color.agent.evidenceWash` | 6.16 | 4.5 |
 | `color.interactive.hairlineStrong` | `color.surface.overlay` | 3.41 | 3.0 |
 | `color.interactive.track` | `color.surface.overlay` | 3.41 | 3.0 |
-| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.overlay` | 3.39 | 3.0 |
+| `color.interactive.focus @ effect.focusRingAlpha` | `color.surface.overlay` | 5.27 | 3.0 |
 | `color.text.primary @ opacity.disabled` | `color.surface.overlay` | 5.64 | 3.0 |
 | `color.loader.mark` | `color.surface.overlay` | 5.27 | 3.0 |
 | `color.terminal.ansi.0` | `color.terminal.background` | 1.41 | 1.2 |
@@ -7054,7 +7054,7 @@ Row stagger maximum items: `8`.
 |---|---:|
 | `effect.fieldFocus` | ring |
 | `effect.edgeFadeBand` | 20 |
-| `effect.focusRingWidth` | 2 |
+| `effect.focusRingWidth` | 3 |
 | `effect.focusRingAlpha` | 1 |
 | `effect.glowAlpha` | 0.26 |
 | `effect.glowBlur` | 12 |
@@ -7875,7 +7875,7 @@ Row stagger maximum items: `8`.
 |---|---:|
 | `effect.fieldFocus` | ring |
 | `effect.edgeFadeBand` | 20 |
-| `effect.focusRingWidth` | 2 |
+| `effect.focusRingWidth` | 3 |
 | `effect.focusRingAlpha` | 1 |
 | `effect.glowAlpha` | 0.18 |
 | `effect.glowBlur` | 12 |

@@ -20,12 +20,13 @@ The host owns focus transfer to and from native child views. The component
 system does not claim that handoff until a platform bridge can identify and
 verify the native child in the same accessibility hierarchy.
 
-Focus is both painted and reported in the semantic tree. It is painted the same
-way everywhere: one ring in `color.interactive.focus`, sized by
-`effect.focusRingWidth` and `effect.focusRingAlpha`, applied through
-`FocusRing::focus_ring`. It is drawn as a shadow, so showing it never moves
-anything, and it is deliberately unlike the selected ring — focus says where
-the next keystroke lands, selection says which answer is current.
+Focus is both painted and reported in the semantic tree. The shared treatment
+is one solid external ring in `color.interactive.focus`, with width and alpha
+from `effect.focusRingWidth` and `effect.focusRingAlpha`, applied through
+`FocusRing::focus_ring`. It is a paint-only, zero-blur shadow, so showing it
+never moves anything. Glass retains its inward focus edge. Focus is deliberately
+unlike selection — focus says where the next keystroke lands, selection says
+which answer is current.
 
 ## Roles and names
 

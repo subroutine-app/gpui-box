@@ -1694,8 +1694,8 @@ impl Theme {
     }
 
     /// In-content control lighting: the requested elevation plus a top inset
-    /// highlight. Knobs use `Raised`; fields use `Flat`. Focus and invalid
-    /// halos append to this list so they never erase the resting material.
+    /// highlight. Knobs use `Raised`; fields use `Flat`. Focus rings and invalid
+    /// glows append to this list so they never erase the resting material.
     pub fn control_shadows(&self, level: Elevation) -> Vec<BoxShadow> {
         let mut shadows = self.shadow(level).to_vec();
         shadows.push(
@@ -1734,63 +1734,29 @@ impl Theme {
         cx.global::<ThemeRegistry>().active()
     }
 
-    /// The soft halo drawn around whichever control currently has the keyboard.
+    /// A solid, paint-only focus ring against the page ground.
     ///
-    /// The page ground is the default substrate. A control that paints a
-    /// different fill calls [`Self::focus_ring_on`] so the single focus colour
-    /// can switch to a readable pole instead of gaining a permanent counter
-    /// outline.
+    /// Use [`Self::focus_ring_on`] when the control stands on another surface.
     pub fn focus_ring(&self) -> Vec<BoxShadow> {
         self.focus_ring_on(self.colors.canvas)
     }
 
-    /// The focus halo resolved against the surface it will be drawn on.
+    /// A solid external ring, with token width and opacity and no blur.
     ///
-    /// `background` is what lies *behind* the control — the well a field sits
-    /// in, the card a node stands on, the page. It is not the control's own
-    /// fill. The halo is a ring, cast outside the element's shape, so the fill
-    /// is the one surface it never touches; choosing a colour legible against
-    /// the fill picks for a surface the ring is never drawn on.
-    ///
-    /// A field is the case that reads as the exception and is not one. A field
-    /// paints a well, so `theme.surface(Surface::Sunken)` is the obvious thing
-    /// to hand this — and it is exactly the mistake above, because the well is
-    /// the fill and the ring is drawn outside it, on the form. Every field in
-    /// this library therefore takes [`Self::focus_ring`] and the page ground.
-    /// Reach for this one only when the ring will genuinely be cast onto
-    /// something other than the page.
-    ///
-    /// That distinction used to be academic, because the halo was a drop
-    /// shadow painted under the element as well as around it. It stopped being
-    /// academic the moment the element was cut out of it: a primary button
-    /// whose fill is the accent asks this for a pole readable on accent, gets
-    /// near-black on a dark theme, and paints it onto a dark dialog.
+    /// `background` is the surface behind the control, not its own fill: the
+    /// ring is painted outside the shape without filling it or affecting layout.
+    /// The focus colour falls back to a readable pole when contrast requires it.
     pub fn focus_ring_on(&self, background: Hsla) -> Vec<BoxShadow> {
         let focus = if self.contrast(self.colors.focus, background) >= 3.0 {
             self.colors.focus
         } else {
             self.readable_on(background)
         };
-        let width = self.effects.focus_ring_width;
         vec![BoxShadow {
             color: focus.opacity(self.effects.focus_ring_alpha),
             offset: point(px(0.0), px(0.0)),
-            // Softened by well under its own width, so the band has an edge.
-            //
-            // This used to blur by twice the width, which was invisible while
-            // the halo was a drop shadow: an opaque control covered the
-            // interior and only the outer falloff showed. Cutting the element
-            // out of it exposed the whole band, and eight device pixels of
-            // bloom around a row reads as a smudge rather than as a ring —
-            // worst on a light theme, where it spreads across the surface
-            // instead of dying into it.
-            blur_radius: px(width * 0.75),
-            spread_radius: px(width * 0.5),
-            // The halo answers "the keyboard is here" about the element's
-            // edge, so the element's own shape is cut out of it. A drop
-            // shadow is painted under the element as well as around it, which
-            // an opaque control hides and a transparent row does not: the same
-            // halo that rings a button floods a list row at its full alpha.
+            blur_radius: px(0.0),
+            spread_radius: px(self.effects.focus_ring_width),
             style: ShadowStyle::Ring,
         }]
     }
@@ -2817,7 +2783,7 @@ mod tests {
     }
 
     #[test]
-    fn focus_is_one_soft_halo_readable_on_its_own_colour() {
+    fn focus_is_one_solid_ring_readable_on_its_background() {
         for theme in gpui_kit_tokens::all()
             .into_iter()
             .map(|tokens| Theme::from_tokens(tokens, Density::Comfortable))
@@ -2825,21 +2791,17 @@ mod tests {
             let focus = theme.focus_ring();
             assert_eq!(focus.len(), 1, "{}", theme.id);
             for band in &focus {
-                // A halo is a ring: cast outward, with the element it rings
-                // cut out of it, so it never floods a control that has no
-                // fill of its own.
                 assert_eq!(band.style, ShadowStyle::Ring, "{}", theme.id);
-                // A ring that reserved space would move the layout the moment
-                // the keyboard arrived on a control.
                 assert_eq!(band.offset, point(px(0.0), px(0.0)), "{}", theme.id);
-                assert!(band.spread_radius > px(0.0), "{}", theme.id);
-                assert!(band.blur_radius > px(0.0), "{}", theme.id);
+                assert_eq!(
+                    band.spread_radius,
+                    px(theme.effects.focus_ring_width),
+                    "{}",
+                    theme.id
+                );
+                assert_eq!(band.blur_radius, px(0.0), "{}", theme.id);
+                assert_eq!(band.color.a, 1.0, "{}", theme.id);
             }
-            // The halo is cast outside the control, so it lands on whatever
-            // surface the control stands on. It has to be legible there in
-            // every theme — a ring nobody can see is not a focus indication,
-            // and the way that happened was a caller passing its own fill as
-            // the ground, which is the one surface the ring never touches.
             for surface in [
                 Surface::Canvas,
                 Surface::Panel,

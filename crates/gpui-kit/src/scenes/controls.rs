@@ -1800,7 +1800,7 @@ pub(super) fn input(window: &mut Window, cx: &mut App) -> AnyElement {
                 ControlSize::Md,
                 crate::controls::field::FieldState::default().focused(true),
             )
-            .child("Halo retains the inner highlight")
+            .child("Solid ring retains the inner highlight")
             .semantic_in(cx, NodeSpec::new("scene.input.focused-chrome", Role::Group)),
         )
         .into_any_element()
