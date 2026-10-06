@@ -5516,6 +5516,8 @@ impl Window {
     /// Paint the drop (non-inset) shadows from `shadows` into the scene at the current
     /// z-index. Inset shadows are skipped; paint those with [`Self::paint_inset_shadows`]
     /// after the element's background so they layer on top of the fill.
+    /// Ring shadows add their spread to the fitted corner radii, keeping zero-offset
+    /// rings concentric with the element. Ordinary drop-shadow radii are unchanged.
     ///
     /// This method should only be called as part of the paint phase of element drawing.
     pub fn paint_drop_shadows(
@@ -5535,6 +5537,11 @@ impl Window {
                 continue;
             }
             let shadow_bounds = (bounds + shadow.offset).dilate(shadow.spread_radius);
+            let shadow_corner_radii = if shadow.style.is_ring() {
+                corner_radii.map(|radius| (*radius + shadow.spread_radius).max(Pixels::ZERO))
+            } else {
+                corner_radii
+            };
             let painted_bounds = shadow_bounds.dilate(shadow.blur_radius * 3.0);
             let opacity = self.visual_opacity_for_visible_bounds(&painted_bounds);
             self.next_frame.scene.insert_primitive(Shadow {
@@ -5543,7 +5550,7 @@ impl Window {
                 blur_radius: shadow.blur_radius.scale(scale_factor),
                 bounds: self.cover_bounds(shadow_bounds),
                 content_mask,
-                corner_radii: corner_radii.scale(scale_factor),
+                corner_radii: shadow_corner_radii.scale(scale_factor),
                 color: shadow.color.opacity(opacity),
                 element_bounds,
                 element_corner_radii,
@@ -9602,6 +9609,57 @@ mod tests {
                 .last()
                 .expect("the non-text primitive should be painted");
             assert_eq!(quad.background.solid.a, 1.0);
+        });
+    }
+
+    #[gpui::test]
+    fn ring_shadow_corners_are_concentric_without_changing_drop_shadows(cx: &mut TestAppContext) {
+        use crate::Corners;
+
+        let window = cx.add_empty_window();
+        let bounds = Bounds::new(point(px(10.), px(10.)), size(px(80.), px(40.)));
+        let radii = Corners {
+            top_left: px(0.),
+            top_right: px(2.),
+            bottom_right: px(8.),
+            bottom_left: px(20.),
+        };
+        window.draw(
+            point(px(0.), px(0.)),
+            size(px(100.), px(60.)),
+            move |_, _| {
+                canvas(
+                    |_, _, _| (),
+                    move |_, _, window, _| {
+                        let shadow = BoxShadow::new(px(0.), px(0.), white()).spread_radius(px(3.));
+                        window.paint_drop_shadows(bounds, radii, &[shadow.clone().ring(), shadow]);
+                    },
+                )
+                .size_full()
+                .into_any_element()
+            },
+        );
+        window.update(|window, _| {
+            let scale = window.scale_factor();
+            let shadows = &window.rendered_frame.scene.shadows;
+            assert_eq!(shadows.len(), 2);
+            let ring = &shadows[0];
+            assert_eq!(ring.bounds, bounds.dilate(px(3.)).scale(scale));
+            assert_eq!(ring.element_bounds, bounds.scale(scale));
+            assert_eq!(ring.element_corner_radii, radii.scale(scale));
+            assert_eq!(
+                ring.corner_radii,
+                Corners {
+                    top_left: px(3.),
+                    top_right: px(5.),
+                    bottom_right: px(11.),
+                    bottom_left: px(23.),
+                }
+                .scale(scale)
+            );
+            assert_eq!(ring.outer_only, 1);
+            assert_eq!(shadows[1].corner_radii, radii.scale(scale));
+            assert_eq!(shadows[1].outer_only, 0);
         });
     }
 

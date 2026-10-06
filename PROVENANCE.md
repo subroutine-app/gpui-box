@@ -10,6 +10,10 @@ focus indicators; keyboard input and tab traversal reveal them. Editable Kit
 fields retain click-focus decoration. No source, assets, dependencies, platform
 backends, or frozen historical receipts were imported or changed by this work.
 
+Concentric ring-shadow corner geometry is original GPUI Box framework work.
+It adjusts the shared shadow primitive without changing renderer backends,
+dependencies, or frozen import receipts; no source or assets were imported.
+
 Frozen paint recordings, per-allocation atlas leases, capture revision/reset
 fences, and callback-free replay are original GPUI Box framework work. They
 extend this tree's Scene, clipping, and native atlas implementations without

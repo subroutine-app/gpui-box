@@ -42226,8 +42226,8 @@
       "module": "window",
       "path": "gpui::window",
       "source": "crates/gpui/src/window.rs",
-      "summary": "Paint the drop (non-inset) shadows from `shadows` into the scene at the current z-index. Inset shadows are skipped; paint those with [`Self::paint_inset_shadows`] after the element's background so they layer on top of the fill.",
-      "documentation": "Paint the drop (non-inset) shadows from `shadows` into the scene at the current\nz-index. Inset shadows are skipped; paint those with [`Self::paint_inset_shadows`]\nafter the element's background so they layer on top of the fill.\n\nThis method should only be called as part of the paint phase of element drawing.",
+      "summary": "Paint the drop (non-inset) shadows from `shadows` into the scene at the current z-index. Inset shadows are skipped; paint those with [`Self::paint_inset_shadows`] after the element's background so they layer on top of the fill. Ring shadows add their spread to the fitted corner radii, keeping zero-offset rings concentric with the element. Ordinary drop-shadow radii are unchanged.",
+      "documentation": "Paint the drop (non-inset) shadows from `shadows` into the scene at the current\nz-index. Inset shadows are skipped; paint those with [`Self::paint_inset_shadows`]\nafter the element's background so they layer on top of the fill.\nRing shadows add their spread to the fitted corner radii, keeping zero-offset\nrings concentric with the element. Ordinary drop-shadow radii are unchanged.\n\nThis method should only be called as part of the paint phase of element drawing.",
       "signature": "pub fn paint_drop_shadows (& mut self, bounds : Bounds<Pixels>, corner_radii : Corners<Pixels>, shadows : & [BoxShadow],)",
       "cfg": [],
       "target": "Window"

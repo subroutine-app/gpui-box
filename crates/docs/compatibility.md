@@ -21,6 +21,14 @@ history. It does not contact either historical source repository.
 
 ## Platform evidence and limits
 
+Ring shadows expand fitted corner radii by their spread, so a zero-offset focus
+ring's inner and outer corners share a center. Drop and inset shadows retain
+their existing geometry. The correction is in shared scene construction for
+all renderers; layout, clipping, hit testing, and accessibility are unchanged.
+The focused regression is
+`ring_shadow_corners_are_concentric_without_changing_drop_shadows`.
+Tests and native visual catalogs were not rerun for this follow-up.
+
 `Window::paint_mark` / `record_paint_since` freeze a balanced, contiguous range
 while the subtree is live. Marks may be inside ancestor paint layers: capture
 owns balanced copies of their ordering scopes. The range must not close an
