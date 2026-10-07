@@ -871,7 +871,7 @@ is in `crates/docs/interaction.md`.
 | Component | Kind | Notes |
 |---|---|---|
 | `Overlay` | builder | Placement, which trigger edge it hangs from, token-driven paint priority, scrim, dismissal |
-| `Frost` | builder | Strongly scattered glass: the pixels behind are blurred by `effect.glassFrostBlur` and the semantic surface colour is laid over them at `effect.glassAlpha`. The whole subtree paints in one scene layer, keeping the blur below its content. Where the renderer has no backdrop blur, and where a theme sets `effect.glassAlpha` to 1, the tinted fill is drawn on its own and the surface is merely unblurred |
+| `Frost` | builder | Strongly scattered glass: the pixels behind are blurred by `effect.glassFrostBlur` and the semantic surface colour is laid over them at `effect.glassAlpha`. The backdrop paints in its own layer before normally ordered content, keeping descendant shadows and focus rings above their parent fills. Where the renderer has no backdrop blur, and where a theme sets `effect.glassAlpha` to 1, the tinted fill is drawn on its own and the surface is merely unblurred |
 | `Glass` | builder | A complete token-backed glass surface over caller content. Regular Liquid uses the lighter `effect.glassLiquidBlur` plus refraction, wash and rim light; Clear and Lens are sharp by default. `surface` selects Frosted/fallback colour rather than the optical preset; `tint` colours the optical material. Optional pointer/press response remains visual and emits no action |
 | `GlassFrame` | builder | The composable `.id(...).bg_glass()` / `.bg_frost()` path for a `Div`. It derives `{div-id}.glass` instead of asking for a second identity, keeps ordinary `Styled` and `ParentElement` methods on the content frame, and reserves `glass_surface`, `glass_preset`, `glass_radius`, `glass_radius_px`, and `glass_blur` for the backdrop. `glass(...)` exposes every advanced `Glass` option without giving up frame styling |
 | `GlassGroup` | builder | Caller-owned panes fused into one optical height field, with shared thickness, refractive index, background optical-plane distance and press response. `merge` controls the polynomial smooth-union strength rather than promising an exact gap threshold; `gap` remains Kit's row-layout spacing. Over-budget groups preserve every pane with an opaque fallback |
@@ -904,6 +904,14 @@ controls scattering independently: Regular Liquid defaults to
 `effect.glassLiquidBlur`, Frosted to `effect.glassFrostBlur`, and Clear/Lens to
 zero. Reduced transparency ignores optical overrides. See
 `crates/docs/compatibility.md` for model limits and backend coverage.
+
+### Focus inside glass-backed settings
+
+A glass backdrop is ordered before its content, but the content is not flattened
+into that same paint layer. Settings panels must paint before their controls'
+focus-ring shadows; otherwise shadow batching hides the rings behind the panels.
+Buttons, dropdowns, and switches inside `SettingsSection` retain their normal
+shared focus treatment, including when the whole dialog uses `.bg_glass()`.
 
 ### Glass reports focus inside its material
 

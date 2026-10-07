@@ -534,12 +534,26 @@ fn action_sheet_keyboard_skips_disabled_and_pending_retains_rows(cx: &mut TestAp
             .into_any_element()
     });
     let sheet = slot.borrow().clone().expect("action sheet mounted");
+    let release_enter = |harness: &mut Harness| {
+        harness.update(|window, cx| {
+            window.dispatch_event(
+                gpui::KeyUpEvent {
+                    keystroke: gpui::Keystroke::parse("enter").expect("valid Enter keystroke"),
+                }
+                .to_platform_input(),
+                cx,
+            );
+        });
+    };
     harness.keystrokes("enter");
+    assert!(events.borrow().is_empty(), "no activation on key down");
+    release_enter(&mut harness);
     assert_eq!(
         events.borrow().as_slice(),
         &[gpui::SharedString::from("save")]
     );
     harness.keystrokes("tab enter");
+    release_enter(&mut harness);
     assert_eq!(
         events.borrow().last().expect("keyboard action emitted"),
         "remove"
@@ -568,5 +582,6 @@ fn action_sheet_keyboard_skips_disabled_and_pending_retains_rows(cx: &mut TestAp
             .disabled
     );
     harness.keystrokes("tab enter");
+    release_enter(&mut harness);
     assert!(!harness.update(|_, cx| sheet.read(cx).sheet().read(cx).is_open(cx)));
 }

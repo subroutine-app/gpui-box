@@ -7,8 +7,8 @@
 //! same on every renderer, because a blur is the one backdrop capability they
 //! all have.
 //!
-//! Everything else — the single scene layer that keeps the blur underneath the
-//! content, the opaque-theme path that paints no blur at all, and where the
+//! Everything else — the backdrop layer followed by normally ordered content,
+//! the opaque-theme path that paints no blur at all, and where the
 //! backdrop does not exist — is described on [`super::glass`], because this is
 //! that module's material with its optics turned off.
 

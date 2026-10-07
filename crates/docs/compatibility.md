@@ -21,6 +21,38 @@ history. It does not contact either historical source repository.
 
 ## Platform evidence and limits
 
+### macOS toolbar window corners
+
+`TitlebarOptions::toolbar_style` opts into an empty native `NSToolbar` on macOS
+26+, using `WindowToolbarStyle::Unified` or `UnifiedCompact`. The default is
+`None`; older macOS and other platforms ignore the option. AppKit owns the outer
+silhouette, clipping, shadow and fullscreen geometry. Neither style promises a
+20- or 26-point radius, and `NSGlassEffectView.cornerRadius` is not used as a
+window-radius API. Window background materials remain independent.
+
+With `appears_transparent: true`, GPUI still draws and receives input over the
+full content bounds. Native tabs occupy native titlebar space and are not laid
+out by GPUI: custom headers should leave `WindowOptions::tabbing_identifier`
+unset unless they explicitly accommodate that strip. The empty toolbar hides
+before fullscreen entry and returns only on successful exit or failed entry,
+preventing an input-obstructing empty fullscreen toolbar child window.
+
+The native example compares default, compact and unified chrome, including custom
+traffic-light positions. Its bounded smoke checks native configuration, viewport,
+header hit targets, resize, fullscreen and simulated failed-entry/failed-exit recovery:
+
+```sh
+cargo run --locked -p gpui-box-macos --features font-kit --example window_toolbar -- --smoke
+```
+
+This smoke passed on macOS 26.6.2 (25G83), SDK 27.0; captures of all three real
+GPUI/Metal windows were visually inspected with the traffic lights at `(16, 16)`.
+Omit `--smoke` for interactive review. Native frame images are diagnostic captures,
+not offscreen scene baselines. Real cancelled transitions, older-macOS fallback,
+native tab layout and mixed-style/fullscreen tab groups require separate review.
+
+### Framework evidence
+
 Ring shadows expand fitted corner radii by their spread, so a zero-offset focus
 ring's inner and outer corners share a center. Drop and inset shadows retain
 their existing geometry. The correction is in shared scene construction for
@@ -28,6 +60,13 @@ all renderers; layout, clipping, hit testing, and accessibility are unchanged.
 The focused regression is
 `ring_shadow_corners_are_concentric_without_changing_drop_shadows`.
 Tests and native visual catalogs were not rerun for this follow-up.
+
+Glass backdrop layers no longer flatten descendant content into a single draw
+order. Settings panel fills therefore precede their controls' focus-ring shadows,
+including custom buttons, Select and Switch. The pixel regression
+`settings_focus_rings_paint_above_glass_panel_fills` covers keyboard traversal in
+Liquid and Frosted settings across both Studio themes. It has been added but not
+run; native visual catalogs remain unrefreshed for this change.
 
 `Window::paint_mark` / `record_paint_since` freeze a balanced, contiguous range
 while the subtree is live. Marks may be inside ancestor paint layers: capture

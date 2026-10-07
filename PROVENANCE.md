@@ -4,6 +4,13 @@ GPUI Box is an independent derivative project, not an official Zed project.
 Provenance applies to imported and translated source as well as linked assets.
 The machine-readable release record is `provenance.toml`.
 
+Opt-in macOS toolbar window chrome and its fullscreen lifecycle are original
+GPUI Box framework work using public `NSToolbar` and `NSWindow` APIs.
+[Apple's WWDC25 AppKit session](https://developer.apple.com/videos/play/wwdc2025/310/)
+describes toolbar-dependent window corners; `NSGlassEffectView.cornerRadius`
+controls only the glass view, not the outer window. No source or assets were
+imported, no numeric system radius is copied, and historical receipts are unchanged.
+
 Window-local keyboard focus visibility and neutral programmatic focus transfers
 are original GPUI Box framework work. Pointer/touch input hides noneditable
 focus indicators; keyboard input and tab traversal reveal them. Editable Kit

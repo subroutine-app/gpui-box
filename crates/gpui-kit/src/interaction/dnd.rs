@@ -426,7 +426,7 @@ impl DeferredDrop {
         }
         static NEXT: AtomicU64 = AtomicU64::new(1);
         let id = DropRequestId(
-            NEXT.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+            NEXT.try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
                 .expect("drop request identities exhausted"),
         );
         let request = DropRequest {

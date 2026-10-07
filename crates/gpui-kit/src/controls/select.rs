@@ -128,7 +128,7 @@ impl std::fmt::Debug for Select {
 
 impl Select {
     pub fn new(ident: impl Into<Ident>, window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let focus_handle = cx.focus_handle();
+        let focus_handle = cx.focus_handle().tab_stop(true);
         let focus_out = cx.on_focus_out(&focus_handle, window, |select, _, _, cx| {
             if select.presentation == popover::PickerPresentation::Anchored {
                 select.close_menu(cx);
@@ -327,6 +327,9 @@ impl Select {
     /// Replaces the options from the host side, keeping a selection that is
     /// still offered and dropping one that is not.
     pub fn set_options(&mut self, options: Vec<SelectOption>, cx: &mut Context<Self>) {
+        if self.options == options {
+            return;
+        }
         let still_offered = self
             .selected
             .as_ref()
@@ -341,6 +344,9 @@ impl Select {
     }
 
     pub fn set_selected(&mut self, id: Option<SharedString>, cx: &mut Context<Self>) {
+        if self.selected == id {
+            return;
+        }
         self.selected = id;
         if self.open {
             self.active = self
@@ -1048,6 +1054,63 @@ mod retained_options_tests {
     use gpui::{AppContext as _, TestAppContext};
     use gpui_kit_testkit::harness::Harness;
     use std::cell::RefCell;
+
+    #[gpui::test]
+    fn host_redraws_preserve_navigation_and_display_the_committed_choice(cx: &mut TestAppContext) {
+        let slot = Rc::new(RefCell::new(None));
+        let selected = Rc::new(RefCell::new(Some(SharedString::from("alpha"))));
+        let build = slot.clone();
+        let value = selected.clone();
+        let mut harness = Harness::new(cx, crate::install, move |window, cx| {
+            let options = vec![
+                SelectOption::new("alpha", "Alpha"),
+                SelectOption::new("disabled", "Disabled").disabled(true),
+                SelectOption::new("beta", "Beta"),
+            ];
+            let select = build
+                .borrow_mut()
+                .get_or_insert_with(|| cx.new(|cx| Select::new("controlled.select", window, cx)))
+                .clone();
+            select.update(cx, |select, cx| {
+                select.set_options(options, cx);
+                select.set_selected(value.borrow().clone(), cx);
+            });
+            select.into_any_element()
+        });
+        let entity = slot.borrow().clone().expect("select built");
+        let accepted = selected.clone();
+        harness.update(|window, cx| {
+            cx.subscribe(&entity, move |_, event: &SelectEvent, cx| {
+                if let SelectEvent::Selected(id) = event {
+                    *accepted.borrow_mut() = Some(id.clone());
+                    cx.refresh_windows();
+                }
+            })
+            .detach();
+            window.focus_next(cx);
+        });
+        harness.keystrokes("enter");
+        for (key, active) in [("down", "beta"), ("up", "alpha"), ("down", "beta")] {
+            harness.keystrokes(key);
+            harness.frame();
+            assert!(
+                harness
+                    .node(&format!("controlled.select.{active}"))
+                    .expect("option is mounted")
+                    .hovered,
+                "a host redraw must not reset keyboard navigation"
+            );
+            assert_eq!(selected.borrow().as_deref(), Some("alpha"));
+        }
+        harness.keystrokes("enter");
+        let trigger = harness
+            .node("controlled.select")
+            .expect("trigger is mounted");
+        assert_eq!(selected.borrow().as_deref(), Some("beta"));
+        assert_eq!(trigger.value.as_deref(), Some("Beta"));
+        assert_eq!(trigger.expanded, Some(false));
+        assert!(trigger.focused);
+    }
 
     #[gpui::test]
     fn options_keep_open_focus_selection_and_locale_default(cx: &mut TestAppContext) {

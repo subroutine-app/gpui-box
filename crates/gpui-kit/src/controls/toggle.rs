@@ -648,15 +648,8 @@ fn choice_row(
         });
 
     if let (true, Some(handler)) = (actionable, handler) {
-        let click = Rc::clone(&handler);
         row.interactivity()
-            .on_click(move |_, window, cx| click(window, cx));
-        row.interactivity().on_key_down(move |event, window, cx| {
-            if matches!(event.keystroke.key.as_str(), "enter" | "space") {
-                handler(window, cx);
-                cx.stop_propagation();
-            }
-        });
+            .on_click(move |_, window, cx| handler(window, cx));
     }
 
     row
@@ -671,6 +664,68 @@ mod tests {
     use gpui_kit_testkit::harness::Harness;
 
     use super::*;
+
+    #[gpui::test]
+    fn switch_activates_once_per_key_press_across_redraws(cx: &mut gpui::TestAppContext) {
+        use gpui::{InputEvent as _, KeyDownEvent, KeyUpEvent, Keystroke};
+
+        let on = Rc::new(Cell::new(false));
+        let changes = Rc::new(Cell::new(0));
+        let mut harness = Harness::new(cx, crate::install, {
+            let on = on.clone();
+            let changes = changes.clone();
+            move |_, _| {
+                let next_on = on.clone();
+                let changes = changes.clone();
+                Switch::new("switch")
+                    .label("Switch")
+                    .on(on.get())
+                    .on_change(move |next, window, _| {
+                        next_on.set(next);
+                        changes.set(changes.get() + 1);
+                        window.refresh();
+                    })
+                    .into_any_element()
+            }
+        });
+        harness.update(|window, cx| window.focus_next(cx));
+        assert!(harness.node("switch").expect("switch is mounted").focused);
+
+        for (index, key) in ["enter", "space"].into_iter().enumerate() {
+            let previous = on.get();
+            for is_held in [false, true] {
+                harness.update(|window, cx| {
+                    window.dispatch_event(
+                        KeyDownEvent {
+                            keystroke: Keystroke::parse(key).expect("valid activation keystroke"),
+                            is_held,
+                            prefer_character_input: false,
+                        }
+                        .to_platform_input(),
+                        cx,
+                    );
+                });
+                harness.frame();
+                assert_eq!(changes.get(), index, "key down must not toggle");
+                assert_eq!(on.get(), previous);
+            }
+            harness.update(|window, cx| {
+                window.dispatch_event(
+                    KeyUpEvent {
+                        keystroke: Keystroke::parse(key).expect("valid activation keystroke"),
+                    }
+                    .to_platform_input(),
+                    cx,
+                );
+            });
+            assert_eq!(changes.get(), index + 1, "one change per key release");
+            assert_eq!(on.get(), !previous);
+            assert_eq!(
+                harness.node("switch").expect("switch is mounted").checked,
+                Some(!previous)
+            );
+        }
+    }
 
     #[gpui::test]
     fn choices_report_pointer_and_keyboard_intent_without_owning_state(
@@ -709,6 +764,16 @@ mod tests {
 
         harness.click("radio");
         harness.keystrokes("space");
+        harness.update(|window, cx| {
+            use gpui::InputEvent as _;
+            window.dispatch_event(
+                gpui::KeyUpEvent {
+                    keystroke: gpui::Keystroke::parse("space").expect("valid Space keystroke"),
+                }
+                .to_platform_input(),
+                cx,
+            );
+        });
         harness.click("disabled-radio");
         harness.click("checkbox");
 

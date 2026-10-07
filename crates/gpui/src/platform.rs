@@ -2861,11 +2861,7 @@ impl Default for WindowOptions {
     fn default() -> Self {
         Self {
             window_bounds: None,
-            titlebar: Some(TitlebarOptions {
-                title: Default::default(),
-                appears_transparent: Default::default(),
-                traffic_light_position: Default::default(),
-            }),
+            titlebar: Some(TitlebarOptions::default()),
             focus: true,
             show: true,
             kind: WindowKind::Normal,
@@ -2896,6 +2892,26 @@ pub struct TitlebarOptions {
 
     /// The position of the macOS traffic light buttons
     pub traffic_light_position: Option<Point<Pixels>>,
+
+    /// Opt into native toolbar window chrome on macOS 26+.
+    ///
+    /// AppKit owns the outer corners and shadow; this does not specify a numeric
+    /// radius or change the window background material. An empty native toolbar
+    /// hosts the chrome, while `appears_transparent` lets GPUI draw the header.
+    /// The toolbar is hidden in fullscreen. Native tabs still occupy native
+    /// titlebar space; custom headers should normally disable `tabbing_identifier`.
+    /// `None`, older macOS versions, and other platforms keep existing behavior.
+    pub toolbar_style: Option<WindowToolbarStyle>,
+}
+
+/// Native macOS toolbar chrome. Corner geometry follows the operating system,
+/// not a fixed radius in logical or device pixels.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WindowToolbarStyle {
+    /// A full-height unified toolbar, with the larger system window corners.
+    Unified,
+    /// A compact unified toolbar, with the smaller toolbar-window corners.
+    UnifiedCompact,
 }
 
 /// The kind of window to create

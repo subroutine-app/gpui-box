@@ -245,22 +245,11 @@ impl RenderOnce for Accordion {
 
             if let (true, Some(handler)) = (actionable, self.on_toggle.clone()) {
                 let reports = reports(&expanded_ids, &section.id, open, self.exclusive);
-                let key_reports = reports.clone();
-                let click = Rc::clone(&handler);
-                header = header
-                    .on_click(move |_, window, cx| {
-                        for (id, next) in &reports {
-                            click(id.clone(), *next, window, cx);
-                        }
-                    })
-                    .on_key_down(move |event, window, cx| {
-                        if matches!(event.keystroke.key.as_str(), "enter" | "space") {
-                            for (id, next) in &key_reports {
-                                handler(id.clone(), *next, window, cx);
-                            }
-                            cx.stop_propagation();
-                        }
-                    });
+                header = header.on_click(move |_, window, cx| {
+                    for (id, next) in &reports {
+                        handler(id.clone(), *next, window, cx);
+                    }
+                });
             }
 
             let header = header.semantic_in(

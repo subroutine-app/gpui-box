@@ -33,7 +33,8 @@ use gpui::{
     PlatformNativeMenuSession, PlatformViewHandle, PlatformViewHosting, PlatformViewUpdate,
     PlatformWindow, Point, PromptButton, PromptLevel, RequestFrameOptions, SharedString, Size,
     SystemWindowTab, WindowAppearance, WindowBackgroundAppearance, WindowBounds, WindowControlArea,
-    WindowKind, WindowParams, flip_bounds_origin_y, platform_view_content_origin, point, px, size,
+    WindowKind, WindowParams, WindowToolbarStyle, flip_bounds_origin_y,
+    platform_view_content_origin, point, px, size,
 };
 #[cfg(any(test, feature = "test-support"))]
 use image::RgbaImage;
@@ -53,12 +54,12 @@ use objc::{
     runtime::{BOOL, Class, NO, Object, Protocol, Sel, YES},
     sel, sel_impl,
 };
-use objc2::{rc::Retained, runtime::AnyObject as Objc2Object};
+use objc2::{MainThreadMarker, MainThreadOnly, rc::Retained, runtime::AnyObject as Objc2Object};
 use objc2_app_kit::{
-    NSBeep, NSButton as Objc2NSButton, NSView as Objc2NSView, NSWindow as Objc2NSWindow,
-    NSWindowButton as Objc2NSWindowButton,
+    NSBeep, NSButton as Objc2NSButton, NSTitlebarSeparatorStyle, NSToolbar, NSView as Objc2NSView,
+    NSWindow as Objc2NSWindow, NSWindowButton as Objc2NSWindowButton, NSWindowToolbarStyle,
 };
-use objc2_foundation::{NSPoint as Objc2NSPoint, NSRect as Objc2NSRect};
+use objc2_foundation::{NSPoint as Objc2NSPoint, NSRect as Objc2NSRect, ns_string};
 use parking_lot::Mutex;
 use raw_window_handle as rwh;
 use smallvec::SmallVec;
@@ -517,6 +518,14 @@ unsafe fn build_window_class(name: &'static str, superclass: &Class) -> *const C
             window_did_exit_fullscreen as extern "C" fn(&Object, Sel, id),
         );
         decl.add_method(
+            sel!(windowDidFailToEnterFullScreen:),
+            window_did_exit_fullscreen as extern "C" fn(&Object, Sel, id),
+        );
+        decl.add_method(
+            sel!(windowDidFailToExitFullScreen:),
+            window_did_fail_to_exit_fullscreen as extern "C" fn(&Object, Sel, id),
+        );
+        decl.add_method(
             sel!(windowDidMove:),
             window_did_move as extern "C" fn(&Object, Sel, id),
         );
@@ -675,6 +684,7 @@ struct MacWindowState {
     traffic_light_position: Option<Point<Pixels>>,
     traffic_light_frames: Option<TrafficLightFrames>,
     transparent_titlebar: bool,
+    titlebar_toolbar: Option<Retained<NSToolbar>>,
     previous_modifiers_changed_event: Option<PlatformInput>,
     keystroke_for_do_command: Option<Keystroke>,
     do_command_handled: Option<bool>,
@@ -1059,6 +1069,14 @@ impl MacWindow {
                 setReleasedWhenClosed: NO
             ];
 
+            let titlebar_toolbar = titlebar
+                .as_ref()
+                .and_then(|titlebar| titlebar.toolbar_style)
+                .filter(|_| is_macos_version_at_least(NSOperatingSystemVersion::new(26, 0, 0)))
+                .map(|style| {
+                    install_titlebar_toolbar(&*native_window.cast::<Objc2NSWindow>(), style)
+                });
+
             let content_view = native_window.contentView();
             let native_view: id = msg_send![VIEW_CLASS, alloc];
             let native_view = NSView::initWithFrame_(native_view, NSView::bounds(content_view));
@@ -1107,6 +1125,7 @@ impl MacWindow {
                 transparent_titlebar: titlebar
                     .as_ref()
                     .is_none_or(|titlebar| titlebar.appears_transparent),
+                titlebar_toolbar,
                 previous_modifiers_changed_event: None,
                 keystroke_for_do_command: None,
                 do_command_handled: None,
@@ -3216,15 +3235,21 @@ extern "C" fn window_did_resize(this: &Object, _: Sel, _: id) {
 
 extern "C" fn window_will_enter_fullscreen(this: &Object, _: Sel, _: id) {
     let window_state = unsafe { get_window_state(this) };
-    let mut lock = window_state.as_ref().lock();
-    lock.fullscreen_restore_bounds = lock.bounds();
-    lock.restore_traffic_light();
+    let (native_window, toolbar) = {
+        let mut state = window_state.lock();
+        state.fullscreen_restore_bounds = state.bounds();
+        state.restore_traffic_light();
+        (state.native_window, state.titlebar_toolbar.clone())
+    };
 
-    let min_version = NSOperatingSystemVersion::new(15, 3, 0);
-
-    if is_macos_version_at_least(min_version) {
+    // Otherwise AppKit creates an empty, input-obstructing fullscreen toolbar window.
+    // Toolbar layout can synchronously call back into GPUI, so hold no state lock.
+    if let Some(toolbar) = toolbar {
+        toolbar.setVisible(false);
+    }
+    if is_macos_version_at_least(NSOperatingSystemVersion::new(15, 3, 0)) {
         unsafe {
-            lock.native_window.setTitlebarAppearsTransparent_(NO);
+            native_window.setTitlebarAppearsTransparent_(NO);
         }
     }
 }
@@ -3243,10 +3268,35 @@ extern "C" fn window_will_exit_fullscreen(this: &Object, _: Sel, _: id) {
 }
 
 extern "C" fn window_did_exit_fullscreen(this: &Object, _: Sel, _: id) {
-    // SAFETY: This method is registered only on GPUI window classes, which initialize
-    // WINDOW_STATE_IVAR with an Arc<Mutex<MacWindowState>> during window creation.
     let window_state = unsafe { get_window_state(this) };
-    window_state.as_ref().lock().move_traffic_light();
+    let (native_window, toolbar, transparent) = {
+        let state = window_state.lock();
+        (
+            state.native_window,
+            state.titlebar_toolbar.clone(),
+            state.transparent_titlebar,
+        )
+    };
+    // Also called for a failed entry, which has no will-exit notification.
+    if is_macos_version_at_least(NSOperatingSystemVersion::new(15, 3, 0)) {
+        unsafe {
+            native_window.setTitlebarAppearsTransparent_(transparent as BOOL);
+        }
+    }
+    if let Some(toolbar) = toolbar {
+        toolbar.setVisible(true);
+    }
+    window_state.lock().move_traffic_light();
+}
+
+extern "C" fn window_did_fail_to_exit_fullscreen(this: &Object, _: Sel, _: id) {
+    let window_state = unsafe { get_window_state(this) };
+    let native_window = window_state.lock().native_window;
+    if is_macos_version_at_least(NSOperatingSystemVersion::new(15, 3, 0)) {
+        unsafe {
+            native_window.setTitlebarAppearsTransparent_(NO);
+        }
+    }
 }
 
 pub(crate) fn is_macos_version_at_least(version: NSOperatingSystemVersion) -> bool {
@@ -3993,6 +4043,26 @@ fn display_id_for_screen(screen: id) -> Option<CGDirectDisplayID> {
         let screen_number: NSUInteger = msg_send![screen_number, unsignedIntegerValue];
         Some(screen_number as CGDirectDisplayID)
     }
+}
+
+fn install_titlebar_toolbar(
+    window: &Objc2NSWindow,
+    style: WindowToolbarStyle,
+) -> Retained<NSToolbar> {
+    let mtm = MainThreadMarker::new().expect("windows are created on the AppKit main thread");
+    let toolbar = NSToolbar::initWithIdentifier(NSToolbar::alloc(mtm), ns_string!("GPUI.Titlebar"));
+    toolbar.setAllowsUserCustomization(false);
+    toolbar.setAllowsDisplayModeCustomization(false);
+    toolbar.setAutosavesConfiguration(false);
+    toolbar.setAllowsExtensionItems(false);
+    window.setToolbarStyle(match style {
+        WindowToolbarStyle::Unified => NSWindowToolbarStyle::Unified,
+        WindowToolbarStyle::UnifiedCompact => NSWindowToolbarStyle::UnifiedCompact,
+    });
+    window.setTitlebarSeparatorStyle(NSTitlebarSeparatorStyle::None);
+    window.setToolbar(Some(&toolbar));
+    toolbar.setVisible(true);
+    toolbar
 }
 
 unsafe fn remove_hosted_backdrop(view: &mut Option<id>) {

@@ -5,6 +5,11 @@ GPUI Box combines Apache-2.0 framework code with MIT kit/MCP code. Imported
 source and assets retain the licenses and attribution below. GPUI Box is an
 independent derivative and is not an official Zed Industries project.
 
+Opt-in macOS toolbar window chrome and fullscreen recovery are original GPUI
+Box framework work under Apache-2.0, using public AppKit APIs and the existing
+objc2 bindings. No third-party source, assets, or new packages were imported;
+existing notices and frozen historical receipts remain unchanged.
+
 Window-local keyboard focus visibility, neutral focus handoffs, and Kit editable
 focus-decoration corrections are original GPUI Box work. They add no third-party
 source, assets, or dependencies and preserve the frozen import receipts.

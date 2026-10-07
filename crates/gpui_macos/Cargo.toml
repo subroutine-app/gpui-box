@@ -16,6 +16,10 @@ workspace = true
 name = "gpui_macos"
 path = "src/gpui_macos.rs"
 
+[[example]]
+name = "window_toolbar"
+required-features = ["font-kit"]
+
 [features]
 default = ["gpui/default"]
 test-support = ["gpui/test-support"]

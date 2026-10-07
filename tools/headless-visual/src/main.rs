@@ -99,14 +99,14 @@ mod imp {
     use std::sync::{Arc, Mutex};
     use std::time::Instant;
 
-    use anyhow::{Context as _, Result, bail};
+    use anyhow::{bail, Context as _, Result};
     use gpui::{
-        AnyWindowHandle, App, Context, HeadlessAppContext, IntoElement, Render, Window, div,
-        prelude::*, px, size,
+        div, prelude::*, px, size, AnyWindowHandle, App, Context, HeadlessAppContext, IntoElement,
+        Render, Window,
     };
     use gpui_kit::prelude::set_layout_direction;
     use gpui_kit_semantics::SemanticCoordinator;
-    use gpui_kit_theme::{Theme, activate_theme};
+    use gpui_kit_theme::{activate_theme, Theme};
 
     use crate::Shard;
 
@@ -495,7 +495,7 @@ mod imp {
 
         #[test]
         fn unclipped_deferred_pixels_keep_scale_and_restore_ancestor_masks() -> Result<()> {
-            use gpui::{Bounds, ContentMask, Corners, RoundedClip, canvas, point};
+            use gpui::{canvas, point, Bounds, ContentMask, Corners, RoundedClip};
             fn inner<R>(w: &mut Window, f: impl FnOnce(&mut Window) -> R) -> R {
                 let bounds = Bounds::new(point(px(10.), px(8.)), size(px(80.), px(60.)));
                 w.with_content_mask(Some(ContentMask { bounds }), |w| {
@@ -684,7 +684,7 @@ mod imp {
 
         #[test]
         fn visual_scale_rasterizes_glyph_and_svg_at_effective_resolution() -> Result<()> {
-            use gpui::{Bounds, TransformationMatrix, canvas, point};
+            use gpui::{canvas, point, Bounds, TransformationMatrix};
             struct Host {
                 mode: u8,
             }
@@ -767,9 +767,8 @@ mod imp {
         #[test]
         fn framework_rounded_subtree_clip_pixels() -> Result<()> {
             use gpui::{
-                BackdropGlass, Background, Bounds, ClipChain, ClipId, ContentMask, Corners,
+                point, BackdropGlass, Background, Bounds, ClipChain, ClipId, ContentMask, Corners,
                 DevicePixels, GlassMaterial, Hsla, Path, Quad, RoundedClip, ScaledPixels, Scene,
-                point,
             };
             let mut renderer = gpui_platform::current_headless_renderer()
                 .expect("platform headless renderer required");
@@ -907,7 +906,7 @@ mod imp {
         fn glass_focus_is_an_inner_report_even_after_budget_refusal() -> Result<()> {
             use gpui::rgb;
             use gpui_kit::foundation::ThemeOverlay;
-            use gpui_kit::overlay::{OverlaySurface, surface};
+            use gpui_kit::overlay::{surface, OverlaySurface};
             use gpui_kit::prelude::{Glass, GlassPreset};
             use gpui_kit_theme::{Elevation, Radius};
 
@@ -1016,8 +1015,152 @@ mod imp {
         }
 
         #[test]
+        fn settings_focus_rings_paint_above_glass_panel_fills() -> Result<()> {
+            use gpui::{rgb, Entity};
+            use gpui_kit::prelude::{
+                Button, GlassExt, GlassPreset, Select, SelectOption, SettingsRow, SettingsSection,
+                Switch, ThemeOverlay,
+            };
+
+            const CONTROLS: [&str; 4] = [
+                "test.settings.block.button",
+                "test.settings.row.button",
+                "test.settings.select",
+                "test.settings.switch",
+            ];
+            struct FocusHost {
+                preset: GlassPreset,
+                select: Entity<Select>,
+            }
+            impl Render for FocusHost {
+                fn render(
+                    &mut self,
+                    window: &mut Window,
+                    cx: &mut Context<Self>,
+                ) -> impl IntoElement {
+                    SemanticCoordinator::global(cx).begin_frame(window);
+                    let theme = Theme::get(cx).clone().modify(|theme| {
+                        theme.colors.focus = rgb(0xff0088).into();
+                        theme.effects.focus_ring_width = 4.;
+                        theme.effects.focus_ring_alpha = 1.;
+                        theme.elevation.raised.clear();
+                    });
+                    let canvas = theme.colors.canvas;
+                    ThemeOverlay::theme(
+                        theme,
+                        div().size_full().bg(canvas).p(px(24.)).child(
+                            div()
+                                .id("test.settings.glass")
+                                .w(px(592.))
+                                .p(px(24.))
+                                .bg_glass()
+                                .glass_preset(self.preset)
+                                .child(
+                                    SettingsSection::new("test.settings.section", "Settings")
+                                        .label_width(px(140.))
+                                        .child(
+                                            Button::new("test.settings.block.button")
+                                                .label("Custom block action")
+                                                .on_click(|_, _| {}),
+                                        )
+                                        .row(
+                                            SettingsRow::new("test.settings.action", "Action")
+                                                .control(
+                                                    Button::new("test.settings.row.button")
+                                                        .label("Row action")
+                                                        .on_click(|_, _| {}),
+                                                ),
+                                        )
+                                        .row(
+                                            SettingsRow::new("test.settings.mode", "Mode")
+                                                .select(self.select.clone()),
+                                        )
+                                        .row(
+                                            SettingsRow::new("test.settings.enabled", "Enabled")
+                                                .switch(
+                                                    Switch::new("test.settings.switch")
+                                                        .on(true)
+                                                        .on_change(|_, _, _| {}),
+                                                ),
+                                        ),
+                                ),
+                        ),
+                    )
+                }
+            }
+
+            let is_ring = |pixel: &Rgba<u8>| {
+                pixel[0].abs_diff(255) <= 2
+                    && pixel[1] <= 2
+                    && pixel[2].abs_diff(136) <= 2
+                    && pixel[3] == 255
+            };
+            for theme in ["studio-dark", "studio-light"] {
+                for preset in [GlassPreset::Liquid, GlassPreset::Frosted] {
+                    let text_system = Arc::new(
+                        gpui_wgpu::CosmicTextSystem::new_without_system_fonts("Geist"),
+                    );
+                    let mut cx = HeadlessAppContext::with_platform(
+                        text_system,
+                        Arc::new(gpui_kit::assets::Assets),
+                        gpui_platform::current_headless_renderer,
+                    );
+                    cx.update(|cx| {
+                        gpui_kit::install(cx);
+                        cx.set_reduce_motion(true);
+                        activate_theme(theme, cx);
+                    });
+                    let coordinator = cx.update(|cx| SemanticCoordinator::global(cx));
+                    let _diagnostics = coordinator.arm();
+                    let window: AnyWindowHandle = cx
+                        .open_window(size(px(640.), px(480.)), |window, cx| {
+                            let select = cx.new(|cx| {
+                                Select::new("test.settings.select", window, cx)
+                                    .options([SelectOption::new("local", "Local")])
+                                    .selected("local")
+                            });
+                            cx.new(|_| FocusHost { preset, select })
+                        })?
+                        .into();
+                    let initial = settled_image(&mut cx, window)?;
+                    assert!(
+                        !initial.pixels().any(is_ring),
+                        "{theme} {preset:?}: selected values are not focus rings"
+                    );
+                    for focused in CONTROLS {
+                        cx.update_window(window, |_, window, cx| window.focus_next(cx))?;
+                        let frame = settled_image(&mut cx, window)?;
+                        let scale = frame.width() as f32 / 640.;
+                        let snapshot = coordinator.snapshot(window.window_id()).unwrap();
+                        for id in CONTROLS {
+                            let node = snapshot.find(id).expect("settings control is mounted");
+                            assert_eq!(node.focused, id == focused, "{theme} {preset:?}: {id}");
+                            let bounds = node.bounds;
+                            assert!(bounds.width > 0. && bounds.height > 0.);
+                            // Probe the solid external band, not a selected fill or a corner.
+                            for (x, y) in [
+                                (bounds.x + bounds.width / 2., bounds.y - 2.),
+                                (bounds.x + bounds.width / 2., bounds.y + bounds.height + 2.),
+                                (bounds.x - 2., bounds.y + bounds.height / 2.),
+                                (bounds.x + bounds.width + 2., bounds.y + bounds.height / 2.),
+                            ] {
+                                let pixel = frame.get_pixel((x * scale) as u32, (y * scale) as u32);
+                                assert_eq!(
+                                    is_ring(pixel),
+                                    id == focused,
+                                    "{theme} {preset:?}: {id} ring at ({x}, {y}), focus={focused}, pixel={pixel:?}"
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+            Ok(())
+        }
+
+        #[test]
         fn cover_image_rounds_all_corners_in_a_clipped_media_card() -> Result<()> {
-            use gpui::{DevicePixels, ObjectFit, RenderImage, img, rgb};
+            use gpui::{img, rgb, DevicePixels, ObjectFit, RenderImage};
             use gpui_kit::prelude::{Glass, GlassPreset};
             use gpui_kit_theme::{Elevation, Radius};
 
@@ -1103,8 +1246,8 @@ mod imp {
         #[test]
         fn glass_press_changes_optics_without_moving_semantic_bounds() -> Result<()> {
             use gpui::{
-                MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, PlatformInput, point,
-                rgb,
+                point, rgb, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
+                PlatformInput,
             };
             use gpui_kit::prelude::{Glass, GlassPreset};
             use gpui_kit_theme::Elevation;
@@ -1231,8 +1374,8 @@ mod imp {
         #[test]
         fn glass_foreground_press_renders_about_each_logical_center() -> Result<()> {
             use gpui::{
-                MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, PlatformInput, point,
-                rgb,
+                point, rgb, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
+                PlatformInput,
             };
             use gpui_kit::{
                 motion::{MotionPolicy, MotionRole},
@@ -1515,7 +1658,7 @@ mod imp {
 
         #[test]
         fn clear_pill_dims_media_inside_a_clipped_card() -> Result<()> {
-            use gpui::{DevicePixels, ObjectFit, RenderImage, img};
+            use gpui::{img, DevicePixels, ObjectFit, RenderImage};
             use gpui_kit::foundation::Sizable;
             use gpui_kit::prelude::{Button, ControlSize, Glass, GlassPreset};
             use gpui_kit_theme::{Elevation, Radius};

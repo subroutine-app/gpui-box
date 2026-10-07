@@ -264,18 +264,33 @@ fn an_open_collapsible_publishes_its_body(cx: &mut TestAppContext) {
 
 #[gpui::test]
 fn the_header_reports_the_state_it_asks_for_by_click_and_by_key(cx: &mut TestAppContext) {
+    use gpui::{InputEvent as _, KeyUpEvent, Keystroke};
+
     let (mut harness, calls) = collapsible(cx, false);
 
     harness.click("panel.advanced.header");
     assert_eq!(*calls.borrow(), vec![true]);
 
-    calls.borrow_mut().clear();
-    harness.keystrokes("enter");
-    assert_eq!(
-        *calls.borrow(),
-        vec![true],
-        "the keyboard reaches the header the pointer reaches"
-    );
+    for key in ["enter", "space"] {
+        calls.borrow_mut().clear();
+        harness.keystrokes(key);
+        harness.frame();
+        assert!(calls.borrow().is_empty(), "no activation on key down");
+        harness.update(|window, cx| {
+            window.dispatch_event(
+                KeyUpEvent {
+                    keystroke: Keystroke::parse(key).expect("valid activation keystroke"),
+                }
+                .to_platform_input(),
+                cx,
+            );
+        });
+        assert_eq!(
+            *calls.borrow(),
+            vec![true],
+            "one activation per completed keyboard press"
+        );
+    }
 }
 
 #[gpui::test]

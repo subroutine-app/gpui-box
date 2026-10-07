@@ -573,7 +573,7 @@
           "features": []
         }
       ],
-      "symbolCount": 2776
+      "symbolCount": 2777
     },
     {
       "name": "gpui-box-android",
@@ -29709,7 +29709,7 @@
       "source": "crates/gpui/src/platform.rs",
       "summary": "The options that can be configured for a window's titlebar",
       "documentation": "The options that can be configured for a window's titlebar",
-      "signature": "# [doc = \" The options that can be configured for a window's titlebar\"] # [derive (Debug, Default)] pub struct TitlebarOptions { # [doc = \" The initial title of the window\"] pub title : Option<SharedString>, # [doc = \" Should the default system titlebar be hidden to allow for a custom-drawn titlebar? (macOS and Windows only)\"] # [doc = \" Refer to [`WindowOptions::window_decorations`] on Linux\"] pub appears_transparent : bool, # [doc = \" The position of the macOS traffic light buttons\"] pub traffic_light_position : Option<Point<Pixels>>, }",
+      "signature": "# [doc = \" The options that can be configured for a window's titlebar\"] # [derive (Debug, Default)] pub struct TitlebarOptions { # [doc = \" The initial title of the window\"] pub title : Option<SharedString>, # [doc = \" Should the default system titlebar be hidden to allow for a custom-drawn titlebar? (macOS and Windows only)\"] # [doc = \" Refer to [`WindowOptions::window_decorations`] on Linux\"] pub appears_transparent : bool, # [doc = \" The position of the macOS traffic light buttons\"] pub traffic_light_position : Option<Point<Pixels>>, # [doc = \" Opt into native toolbar window chrome on macOS 26+.\"] # [doc = \"\"] # [doc = \" AppKit owns the outer corners and shadow; this does not specify a numeric\"] # [doc = \" radius or change the window background material. An empty native toolbar\"] # [doc = \" hosts the chrome, while `appears_transparent` lets GPUI draw the header.\"] # [doc = \" The toolbar is hidden in fullscreen. Native tabs still occupy native\"] # [doc = \" titlebar space; custom headers should normally disable `tabbing_identifier`.\"] # [doc = \" `None`, older macOS versions, and other platforms keep existing behavior.\"] pub toolbar_style : Option<WindowToolbarStyle>, }",
       "cfg": []
     },
     {
@@ -29999,6 +29999,20 @@
       "summary": "The variables that can be configured when creating a new window",
       "documentation": "The variables that can be configured when creating a new window",
       "signature": "# [doc = \" The variables that can be configured when creating a new window\"] # [derive (Debug)] # [cfg_attr (all (any (target_os = \"linux\", target_os = \"freebsd\"), not (any (feature = \"x11\", feature = \"wayland\"))), allow (dead_code))] # [allow (missing_docs)] pub struct WindowParams { pub bounds : Bounds<Pixels>, # [doc = \" The titlebar configuration of the window\"] # [cfg_attr (feature = \"wayland\", allow (dead_code))] pub titlebar : Option<TitlebarOptions>, # [doc = \" The kind of window to create\"] # [cfg_attr (any (target_os = \"linux\", target_os = \"freebsd\"), allow (dead_code))] pub kind : WindowKind, # [doc = \" Whether the window should be movable by the user\"] # [cfg_attr (any (target_os = \"linux\", target_os = \"freebsd\"), allow (dead_code))] pub is_movable : bool, # [doc = \" Whether the application owns dragging of the (custom) titlebar (macOS only)\"] # [cfg_attr (any (target_os = \"linux\", target_os = \"freebsd\", target_os = \"windows\"), allow (dead_code))] pub app_owns_titlebar_drag : bool, # [doc = \" Whether the window should be resizable by the user\"] # [cfg_attr (any (target_os = \"linux\", target_os = \"freebsd\"), allow (dead_code))] pub is_resizable : bool, # [doc = \" Whether the window should be minimized by the user\"] # [cfg_attr (any (target_os = \"linux\", target_os = \"freebsd\"), allow (dead_code))] pub is_minimizable : bool, # [cfg_attr (any (target_os = \"linux\", target_os = \"freebsd\", target_os = \"windows\"), allow (dead_code))] pub focus : bool, # [cfg_attr (any (target_os = \"linux\", target_os = \"freebsd\"), allow (dead_code))] pub show : bool, # [doc = \" An image to set as the window icon (x11 only)\"] # [cfg_attr (feature = \"wayland\", allow (dead_code))] pub icon : Option<Arc<image::RgbaImage>>, # [cfg_attr (feature = \"wayland\", allow (dead_code))] pub display_id : Option<DisplayId>, # [cfg_attr (feature = \"wayland\", allow (dead_code))] pub app_id : Option<String>, pub window_min_size : Option<Size<Pixels>>, # [cfg (target_os = \"macos\")] pub tabbing_identifier : Option<String>, }",
+      "cfg": []
+    },
+    {
+      "id": "gpui::platform::WindowToolbarStyle",
+      "name": "WindowToolbarStyle",
+      "kind": "enum",
+      "package": "gpui-box",
+      "crate": "gpui",
+      "module": "platform",
+      "path": "gpui::platform",
+      "source": "crates/gpui/src/platform.rs",
+      "summary": "Native macOS toolbar chrome. Corner geometry follows the operating system, not a fixed radius in logical or device pixels.",
+      "documentation": "Native macOS toolbar chrome. Corner geometry follows the operating system,\nnot a fixed radius in logical or device pixels.",
+      "signature": "# [doc = \" Native macOS toolbar chrome. Corner geometry follows the operating system,\"] # [doc = \" not a fixed radius in logical or device pixels.\"] # [derive (Clone, Copy, Debug, PartialEq, Eq)] pub enum WindowToolbarStyle { # [doc = \" A full-height unified toolbar, with the larger system window corners.\"] Unified, # [doc = \" A compact unified toolbar, with the smaller toolbar-window corners.\"] UnifiedCompact, }",
       "cfg": []
     },
     {
@@ -111035,8 +111049,8 @@
       "path": "gpui_kit::overlay::glass",
       "source": "crates/gpui-kit/src/overlay/glass.rs",
       "summary": "Fluent backdrop-material helpers for an identified [`Div`].",
-      "documentation": "Fluent backdrop-material helpers for an identified [`Div`].\n\nIdentity comes from the div's existing [`.id(...)`](gpui::InteractiveElement::id),\nso the effect does not ask callers to repeat the same business identity. The\nreturned [`GlassFrame`] still behaves like a styled parent: ordinary methods\nconfigure the content frame, while `glass_*` methods configure the backdrop.\n\n```no_run\n# use gpui::{InteractiveElement as _, ParentElement as _, Styled as _, div, prelude::FluentBuilder as _, px};\n# use gpui_kit::overlay::{GlassExt as _, GlassPreset};\nlet portable = cfg!(not(target_os = \"macos\"));\nlet panel = div()\n.id(\"settings\")\n.bg_glass()\n.rounded(px(20.0))\n.border_1()\n.glass_radius_px(20.0)\n.glass_blur(18.0)\n.when(portable, |frame| frame.glass_preset(GlassPreset::Frosted))\n.child(\"Settings\");\n# let _ = panel;\n```\n\nThis is deliberately structural rather than a style refinement: [`Glass`]\nisolates the subtree in one scene layer so its backdrop snapshot cannot\nreorder the frame's own fill, border, or children.",
-      "signature": "# [doc = \" Fluent backdrop-material helpers for an identified [`Div`].\"] # [doc = \"\"] # [doc = \" Identity comes from the div's existing [`.id(...)`](gpui::InteractiveElement::id),\"] # [doc = \" so the effect does not ask callers to repeat the same business identity. The\"] # [doc = \" returned [`GlassFrame`] still behaves like a styled parent: ordinary methods\"] # [doc = \" configure the content frame, while `glass_*` methods configure the backdrop.\"] # [doc = \"\"] # [doc = \" ```no_run\"] # [doc = \" # use gpui::{InteractiveElement as _, ParentElement as _, Styled as _, div, prelude::FluentBuilder as _, px};\"] # [doc = \" # use gpui_kit::overlay::{GlassExt as _, GlassPreset};\"] # [doc = \" let portable = cfg!(not(target_os = \\\"macos\\\"));\"] # [doc = \" let panel = div()\"] # [doc = \" .id(\\\"settings\\\")\"] # [doc = \" .bg_glass()\"] # [doc = \" .rounded(px(20.0))\"] # [doc = \" .border_1()\"] # [doc = \" .glass_radius_px(20.0)\"] # [doc = \" .glass_blur(18.0)\"] # [doc = \" .when(portable, |frame| frame.glass_preset(GlassPreset::Frosted))\"] # [doc = \" .child(\\\"Settings\\\");\"] # [doc = \" # let _ = panel;\"] # [doc = \" ```\"] # [doc = \"\"] # [doc = \" This is deliberately structural rather than a style refinement: [`Glass`]\"] # [doc = \" isolates the subtree in one scene layer so its backdrop snapshot cannot\"] # [doc = \" reorder the frame's own fill, border, or children.\"] pub trait GlassExt : Sized { # [doc = \" Place this identified frame on Regular Liquid glass.\"] fn bg_glass (self) -> GlassFrame; # [doc = \" Place this identified frame on portable frosted glass.\"] fn bg_frost (self) -> GlassFrame; }",
+      "documentation": "Fluent backdrop-material helpers for an identified [`Div`].\n\nIdentity comes from the div's existing [`.id(...)`](gpui::InteractiveElement::id),\nso the effect does not ask callers to repeat the same business identity. The\nreturned [`GlassFrame`] still behaves like a styled parent: ordinary methods\nconfigure the content frame, while `glass_*` methods configure the backdrop.\n\n```no_run\n# use gpui::{InteractiveElement as _, ParentElement as _, Styled as _, div, prelude::FluentBuilder as _, px};\n# use gpui_kit::overlay::{GlassExt as _, GlassPreset};\nlet portable = cfg!(not(target_os = \"macos\"));\nlet panel = div()\n.id(\"settings\")\n.bg_glass()\n.rounded(px(20.0))\n.border_1()\n.glass_radius_px(20.0)\n.glass_blur(18.0)\n.when(portable, |frame| frame.glass_preset(GlassPreset::Frosted))\n.child(\"Settings\");\n# let _ = panel;\n```\n\nThis is deliberately structural rather than a style refinement: [`Glass`]\npaints its backdrop before the content while preserving descendant paint\norder, so control shadows and focus rings stay above their parent fills.",
+      "signature": "# [doc = \" Fluent backdrop-material helpers for an identified [`Div`].\"] # [doc = \"\"] # [doc = \" Identity comes from the div's existing [`.id(...)`](gpui::InteractiveElement::id),\"] # [doc = \" so the effect does not ask callers to repeat the same business identity. The\"] # [doc = \" returned [`GlassFrame`] still behaves like a styled parent: ordinary methods\"] # [doc = \" configure the content frame, while `glass_*` methods configure the backdrop.\"] # [doc = \"\"] # [doc = \" ```no_run\"] # [doc = \" # use gpui::{InteractiveElement as _, ParentElement as _, Styled as _, div, prelude::FluentBuilder as _, px};\"] # [doc = \" # use gpui_kit::overlay::{GlassExt as _, GlassPreset};\"] # [doc = \" let portable = cfg!(not(target_os = \\\"macos\\\"));\"] # [doc = \" let panel = div()\"] # [doc = \" .id(\\\"settings\\\")\"] # [doc = \" .bg_glass()\"] # [doc = \" .rounded(px(20.0))\"] # [doc = \" .border_1()\"] # [doc = \" .glass_radius_px(20.0)\"] # [doc = \" .glass_blur(18.0)\"] # [doc = \" .when(portable, |frame| frame.glass_preset(GlassPreset::Frosted))\"] # [doc = \" .child(\\\"Settings\\\");\"] # [doc = \" # let _ = panel;\"] # [doc = \" ```\"] # [doc = \"\"] # [doc = \" This is deliberately structural rather than a style refinement: [`Glass`]\"] # [doc = \" paints its backdrop before the content while preserving descendant paint\"] # [doc = \" order, so control shadows and focus rings stay above their parent fills.\"] pub trait GlassExt : Sized { # [doc = \" Place this identified frame on Regular Liquid glass.\"] fn bg_glass (self) -> GlassFrame; # [doc = \" Place this identified frame on portable frosted glass.\"] fn bg_frost (self) -> GlassFrame; }",
       "cfg": []
     },
     {
@@ -166441,6 +166455,17 @@
         "a_reacquired_probe_requires_its_own_admitted_metal_submission",
         "a_reacquired_probe_requires_its_own_admitted_wgpu_submission"
       ]
+    },
+    "framework_macos_toolbar": {
+      "command": "cargo run --locked -p gpui-box-macos --features font-kit --example window_toolbar -- --smoke",
+      "contract": "TitlebarOptions.toolbar_style opts into an empty native NSToolbar (Unified or UnifiedCompact) on macOS 26+. AppKit owns window corners, clipping and shadows; no numeric radius or background-material change is promised. Default, older macOS and other platforms retain their existing chrome. The toolbar hides before fullscreen entry and restores after exit or failed entry. Failed exit restores fullscreen titlebar transparency. Full-size GPUI content keeps its bounds and native header hit targets.",
+      "limitations": [
+        "Native tabs occupy their own strip; custom headers must accommodate it or disable tabbing",
+        "Real failed/cancelled fullscreen transitions and older-macOS fallback were not executed",
+        "No exact 20/26-point radius guarantee",
+        "Linux and Windows execution remains unverified for this change"
+      ],
+      "validation": "Native GPUI/Metal smoke passed on macOS 26.6.2 (25G83), SDK 27.0, with default, compact and unified windows: native toolbar identity/style/emptiness, content bounds, header hit targets, resize, real fullscreen entry/exit and simulated failed-entry/failed-exit delegate callbacks. Real-window diagnostic captures were visually inspected; they are not headless baselines."
     },
     "framework_mask_escape": {
       "contract": "without_content_masks clears inherited rectangular and rounded masks in paired prepaint/paint scopes, restores siblings, and preserves transforms, offsets and accessibility ownership. Own inner masks and the viewport still apply. Deferred::unclipped opts into escape; default deferred clipping is unchanged. Kit Overlay opts in for its window-level surfaces.",

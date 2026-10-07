@@ -267,7 +267,7 @@ impl Registry {
             "native reference owner quota exceeded"
         );
         let number = NEXT
-            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+            .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
             .map_err(|_| anyhow::anyhow!("native reference id space exhausted"))?;
         let id = format!("native-{number}");
         let result = json!({"$nativeRef": id, "type": entry.kind});

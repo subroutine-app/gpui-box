@@ -523,20 +523,10 @@ impl RenderOnce for Button {
 
         let action_bounds = Rc::new(Cell::new(Bounds::default()));
         if let (true, Some(handler)) = (actionable, self.on_click.clone()) {
-            let on_click = Rc::clone(&handler);
             let click_bounds = Rc::clone(&action_bounds);
             button
                 .interactivity()
-                .on_click(move |_, window, cx| on_click(click_bounds.get(), window, cx));
-            let key_bounds = Rc::clone(&action_bounds);
-            button
-                .interactivity()
-                .on_key_down(move |event, window, cx| {
-                    if matches!(event.keystroke.key.as_str(), "enter" | "space") {
-                        handler(key_bounds.get(), window, cx);
-                        cx.stop_propagation();
-                    }
-                });
+                .on_click(move |_, window, cx| handler(click_bounds.get(), window, cx));
         }
 
         let mut spec = NodeSpec::new(self.ident.semantic_id(), Role::Button)
@@ -1250,6 +1240,8 @@ mod tests {
     fn bounds_aware_icon_button_reports_its_complete_geometry_for_every_activation(
         cx: &mut gpui::TestAppContext,
     ) {
+        use gpui::{InputEvent as _, KeyUpEvent, Keystroke};
+
         let reported = Rc::new(RefCell::new(Vec::new()));
         let action_focus = Rc::new(RefCell::new(None));
         let disabled_focus = Rc::new(RefCell::new(None));
@@ -1312,7 +1304,22 @@ mod tests {
                 .expect("action focus")
                 .focus(window, cx)
         });
-        harness.keystrokes("enter space");
+        for key in ["enter", "space"] {
+            let before = reported.borrow().len();
+            harness.keystrokes(key);
+            harness.frame();
+            assert_eq!(reported.borrow().len(), before, "no activation on key down");
+            harness.update(|window, cx| {
+                window.dispatch_event(
+                    KeyUpEvent {
+                        keystroke: Keystroke::parse(key).expect("valid activation keystroke"),
+                    }
+                    .to_platform_input(),
+                    cx,
+                );
+            });
+            assert_eq!(reported.borrow().len(), before + 1);
+        }
         assert_eq!(
             reported.borrow().as_slice(),
             &[expected, expected, expected]
@@ -1326,7 +1333,18 @@ mod tests {
                 .expect("disabled focus")
                 .focus(window, cx)
         });
-        harness.keystrokes("enter space");
+        for key in ["enter", "space"] {
+            harness.keystrokes(key);
+            harness.update(|window, cx| {
+                window.dispatch_event(
+                    KeyUpEvent {
+                        keystroke: Keystroke::parse(key).expect("valid activation keystroke"),
+                    }
+                    .to_platform_input(),
+                    cx,
+                );
+            });
+        }
         assert_eq!(
             reported.borrow().len(),
             3,

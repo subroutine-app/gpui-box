@@ -8,15 +8,12 @@
 //! the stronger accessibility-oriented scattering radius without bending the
 //! backdrop.
 //!
-//! # One layer, in one order
+//! # Backdrop before content
 //!
-//! The whole subtree paints inside a single scene layer, which is the reason
-//! `BackdropLayer` is an element and not a styled `div`. Paint order is
-//! per-primitive otherwise, so a repaint elsewhere in the frame can reorder
-//! the surface's own quads underneath the blur — a divider or a border is then
-//! snapshotted and blurred away, intermittently, in a way no test reproduces.
-//! Inside one layer the relationship is structural: surface first, fill and
-//! content after.
+//! `BackdropLayer` reserves one scene layer for the backdrop, then paints the
+//! content in normal overlap order. Flattening descendants into the backdrop's
+//! layer would batch their shadows before their parents' fills, hiding focus
+//! rings inside panels. Nested glass surfaces keep the same ordering boundary.
 //!
 //! Regular Liquid owns its blur, saturation and achromatic wash in the
 //! material, not in a source-over fill. Clear is reserved for media, with a
@@ -275,8 +272,8 @@ struct GlassState {
 /// ```
 ///
 /// This is deliberately structural rather than a style refinement: [`Glass`]
-/// isolates the subtree in one scene layer so its backdrop snapshot cannot
-/// reorder the frame's own fill, border, or children.
+/// paints its backdrop before the content while preserving descendant paint
+/// order, so control shadows and focus rings stay above their parent fills.
 pub trait GlassExt: Sized {
     /// Place this identified frame on Regular Liquid glass.
     fn bg_glass(self) -> GlassFrame;
@@ -1768,8 +1765,10 @@ impl Element for BackdropLayer {
             } else {
                 window.paint_backdrop_glass(bounds, corner_radii, material, lobes);
             }
-            paint_content(window, cx);
         });
+        // A single layer batches all shadows before all fills, hiding descendant
+        // focus rings beneath their parent panels. Only the backdrop shares a layer.
+        paint_content(window, cx);
     }
 }
 
