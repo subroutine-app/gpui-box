@@ -154423,13 +154423,13 @@
               "y": 1,
               "blur": 3,
               "spread": 0,
-              "color": "{neutral.0}/0c"
+              "color": "{neutral.0}/06"
             },
             {
               "y": 2,
               "blur": 6,
               "spread": -1,
-              "color": "{neutral.0}/14"
+              "color": "{neutral.0}/0a"
             }
           ],
           "overlay": [
@@ -154437,13 +154437,13 @@
               "y": 2,
               "blur": 6,
               "spread": -1,
-              "color": "{neutral.0}/10"
+              "color": "{neutral.0}/08"
             },
             {
               "y": 8,
               "blur": 24,
               "spread": -4,
-              "color": "{neutral.0}/1a"
+              "color": "{neutral.0}/0d"
             }
           ],
           "modal": [
@@ -154451,13 +154451,13 @@
               "y": 4,
               "blur": 12,
               "spread": -2,
-              "color": "{neutral.0}/16"
+              "color": "{neutral.0}/0b"
             },
             {
               "y": 16,
               "blur": 48,
               "spread": -8,
-              "color": "{neutral.0}/24"
+              "color": "{neutral.0}/12"
             }
           ]
         },
@@ -155221,13 +155221,13 @@
               "y": 1,
               "blur": 3,
               "spread": 0,
-              "color": "{neutral.0}/35"
+              "color": "{neutral.0}/1b"
             },
             {
               "y": 2,
               "blur": 6,
               "spread": -1,
-              "color": "{neutral.0}/59"
+              "color": "{neutral.0}/2d"
             }
           ],
           "overlay": [
@@ -155235,13 +155235,13 @@
               "y": 2,
               "blur": 6,
               "spread": -1,
-              "color": "{neutral.0}/3d"
+              "color": "{neutral.0}/1f"
             },
             {
               "y": 8,
               "blur": 24,
               "spread": -4,
-              "color": "{neutral.0}/66"
+              "color": "{neutral.0}/33"
             }
           ],
           "modal": [
@@ -155249,13 +155249,13 @@
               "y": 4,
               "blur": 12,
               "spread": -2,
-              "color": "{neutral.0}/54"
+              "color": "{neutral.0}/2a"
             },
             {
               "y": 16,
               "blur": 48,
               "spread": -8,
-              "color": "{neutral.0}/8c"
+              "color": "{neutral.0}/46"
             }
           ]
         },
@@ -156019,13 +156019,13 @@
               "y": 1,
               "blur": 3,
               "spread": 0,
-              "color": "{neutral.0}/35"
+              "color": "{neutral.0}/1b"
             },
             {
               "y": 2,
               "blur": 6,
               "spread": -1,
-              "color": "{neutral.0}/59"
+              "color": "{neutral.0}/2d"
             }
           ],
           "overlay": [
@@ -156033,13 +156033,13 @@
               "y": 2,
               "blur": 6,
               "spread": -1,
-              "color": "{neutral.0}/3d"
+              "color": "{neutral.0}/1f"
             },
             {
               "y": 8,
               "blur": 24,
               "spread": -4,
-              "color": "{neutral.0}/66"
+              "color": "{neutral.0}/33"
             }
           ],
           "modal": [
@@ -156047,13 +156047,13 @@
               "y": 4,
               "blur": 12,
               "spread": -2,
-              "color": "{neutral.0}/54"
+              "color": "{neutral.0}/2a"
             },
             {
               "y": 16,
               "blur": 48,
               "spread": -8,
-              "color": "{neutral.0}/8c"
+              "color": "{neutral.0}/46"
             }
           ]
         },
@@ -156817,13 +156817,13 @@
               "y": 1,
               "blur": 3,
               "spread": 0,
-              "color": "{neutral.0}/35"
+              "color": "{neutral.0}/1b"
             },
             {
               "y": 2,
               "blur": 6,
               "spread": -1,
-              "color": "{neutral.0}/59"
+              "color": "{neutral.0}/2d"
             }
           ],
           "overlay": [
@@ -156831,13 +156831,13 @@
               "y": 2,
               "blur": 6,
               "spread": -1,
-              "color": "{neutral.0}/3d"
+              "color": "{neutral.0}/1f"
             },
             {
               "y": 8,
               "blur": 24,
               "spread": -4,
-              "color": "{neutral.0}/66"
+              "color": "{neutral.0}/33"
             }
           ],
           "modal": [
@@ -156845,13 +156845,13 @@
               "y": 4,
               "blur": 12,
               "spread": -2,
-              "color": "{neutral.0}/54"
+              "color": "{neutral.0}/2a"
             },
             {
               "y": 16,
               "blur": 48,
               "spread": -8,
-              "color": "{neutral.0}/8c"
+              "color": "{neutral.0}/46"
             }
           ]
         },
@@ -157615,13 +157615,13 @@
               "y": 1,
               "blur": 3,
               "spread": 0,
-              "color": "{neutral.0}/35"
+              "color": "{neutral.0}/1b"
             },
             {
               "y": 2,
               "blur": 6,
               "spread": -1,
-              "color": "{neutral.0}/59"
+              "color": "{neutral.0}/2d"
             }
           ],
           "overlay": [
@@ -157629,13 +157629,13 @@
               "y": 2,
               "blur": 6,
               "spread": -1,
-              "color": "{neutral.0}/3d"
+              "color": "{neutral.0}/1f"
             },
             {
               "y": 8,
               "blur": 24,
               "spread": -4,
-              "color": "{neutral.0}/66"
+              "color": "{neutral.0}/33"
             }
           ],
           "modal": [
@@ -157643,13 +157643,13 @@
               "y": 4,
               "blur": 12,
               "spread": -2,
-              "color": "{neutral.0}/54"
+              "color": "{neutral.0}/2a"
             },
             {
               "y": 16,
               "blur": 48,
               "spread": -8,
-              "color": "{neutral.0}/8c"
+              "color": "{neutral.0}/46"
             }
           ]
         },
@@ -158413,13 +158413,13 @@
               "y": 1,
               "blur": 3,
               "spread": 0,
-              "color": "{neutral.0}/35"
+              "color": "{neutral.0}/1b"
             },
             {
               "y": 2,
               "blur": 6,
               "spread": -1,
-              "color": "{neutral.0}/59"
+              "color": "{neutral.0}/2d"
             }
           ],
           "overlay": [
@@ -158427,13 +158427,13 @@
               "y": 2,
               "blur": 6,
               "spread": -1,
-              "color": "{neutral.0}/3d"
+              "color": "{neutral.0}/1f"
             },
             {
               "y": 8,
               "blur": 24,
               "spread": -4,
-              "color": "{neutral.0}/66"
+              "color": "{neutral.0}/33"
             }
           ],
           "modal": [
@@ -158441,13 +158441,13 @@
               "y": 4,
               "blur": 12,
               "spread": -2,
-              "color": "{neutral.0}/54"
+              "color": "{neutral.0}/2a"
             },
             {
               "y": 16,
               "blur": 48,
               "spread": -8,
-              "color": "{neutral.0}/8c"
+              "color": "{neutral.0}/46"
             }
           ]
         },
@@ -159211,13 +159211,13 @@
               "y": 1,
               "blur": 3,
               "spread": 0,
-              "color": "{neutral.0}/0c"
+              "color": "{neutral.0}/06"
             },
             {
               "y": 2,
               "blur": 6,
               "spread": -1,
-              "color": "{neutral.0}/14"
+              "color": "{neutral.0}/0a"
             }
           ],
           "overlay": [
@@ -159225,13 +159225,13 @@
               "y": 2,
               "blur": 6,
               "spread": -1,
-              "color": "{neutral.0}/10"
+              "color": "{neutral.0}/08"
             },
             {
               "y": 8,
               "blur": 24,
               "spread": -4,
-              "color": "{neutral.0}/1a"
+              "color": "{neutral.0}/0d"
             }
           ],
           "modal": [
@@ -159239,13 +159239,13 @@
               "y": 4,
               "blur": 12,
               "spread": -2,
-              "color": "{neutral.0}/16"
+              "color": "{neutral.0}/0b"
             },
             {
               "y": 16,
               "blur": 48,
               "spread": -8,
-              "color": "{neutral.0}/24"
+              "color": "{neutral.0}/12"
             }
           ]
         },
@@ -160009,13 +160009,13 @@
               "y": 1,
               "blur": 3,
               "spread": 0,
-              "color": "{neutral.0}/35"
+              "color": "{neutral.0}/1b"
             },
             {
               "y": 2,
               "blur": 6,
               "spread": -1,
-              "color": "{neutral.0}/59"
+              "color": "{neutral.0}/2d"
             }
           ],
           "overlay": [
@@ -160023,13 +160023,13 @@
               "y": 2,
               "blur": 6,
               "spread": -1,
-              "color": "{neutral.0}/3d"
+              "color": "{neutral.0}/1f"
             },
             {
               "y": 8,
               "blur": 24,
               "spread": -4,
-              "color": "{neutral.0}/66"
+              "color": "{neutral.0}/33"
             }
           ],
           "modal": [
@@ -160037,13 +160037,13 @@
               "y": 4,
               "blur": 12,
               "spread": -2,
-              "color": "{neutral.0}/54"
+              "color": "{neutral.0}/2a"
             },
             {
               "y": 16,
               "blur": 48,
               "spread": -8,
-              "color": "{neutral.0}/8c"
+              "color": "{neutral.0}/46"
             }
           ]
         },
@@ -160807,13 +160807,13 @@
               "y": 1,
               "blur": 3,
               "spread": 0,
-              "color": "{neutral.0}/0c"
+              "color": "{neutral.0}/06"
             },
             {
               "y": 2,
               "blur": 6,
               "spread": -1,
-              "color": "{neutral.0}/14"
+              "color": "{neutral.0}/0a"
             }
           ],
           "overlay": [
@@ -160821,13 +160821,13 @@
               "y": 2,
               "blur": 6,
               "spread": -1,
-              "color": "{neutral.0}/10"
+              "color": "{neutral.0}/08"
             },
             {
               "y": 8,
               "blur": 24,
               "spread": -4,
-              "color": "{neutral.0}/1a"
+              "color": "{neutral.0}/0d"
             }
           ],
           "modal": [
@@ -160835,13 +160835,13 @@
               "y": 4,
               "blur": 12,
               "spread": -2,
-              "color": "{neutral.0}/16"
+              "color": "{neutral.0}/0b"
             },
             {
               "y": 16,
               "blur": 48,
               "spread": -8,
-              "color": "{neutral.0}/24"
+              "color": "{neutral.0}/12"
             }
           ]
         },
@@ -161605,13 +161605,13 @@
               "y": 1,
               "blur": 3,
               "spread": 0,
-              "color": "{neutral.0}/35"
+              "color": "{neutral.0}/1b"
             },
             {
               "y": 2,
               "blur": 6,
               "spread": -1,
-              "color": "{neutral.0}/59"
+              "color": "{neutral.0}/2d"
             }
           ],
           "overlay": [
@@ -161619,13 +161619,13 @@
               "y": 2,
               "blur": 6,
               "spread": -1,
-              "color": "{neutral.0}/3d"
+              "color": "{neutral.0}/1f"
             },
             {
               "y": 8,
               "blur": 24,
               "spread": -4,
-              "color": "{neutral.0}/66"
+              "color": "{neutral.0}/33"
             }
           ],
           "modal": [
@@ -161633,13 +161633,13 @@
               "y": 4,
               "blur": 12,
               "spread": -2,
-              "color": "{neutral.0}/54"
+              "color": "{neutral.0}/2a"
             },
             {
               "y": 16,
               "blur": 48,
               "spread": -8,
-              "color": "{neutral.0}/8c"
+              "color": "{neutral.0}/46"
             }
           ]
         },

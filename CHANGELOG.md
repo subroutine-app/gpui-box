@@ -19,6 +19,10 @@ See `crates/docs/releasing.md` for the protected publication and verification ru
 
 ### Changed
 
+- Raised, overlay, and modal shadow layers use half their previous opacity
+  across all bundled light and dark themes. Shadow colours and geometry are
+  unchanged; Glass, Frost, and opaque elevated surfaces share the quieter
+  elevation tokens without brightening their surfaces or weakening focus rings.
 - `CommandPalette` accepts `HEADER_EXTRA` controls beside its query and a
   `FOOTER` inside the same modal surface. Hosts can present compact drill-down
   pickers without stacking a second navigation card over the command list.
