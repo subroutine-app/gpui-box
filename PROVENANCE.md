@@ -17,6 +17,12 @@ focus indicators; keyboard input and tab traversal reveal them. Editable Kit
 fields retain click-focus decoration. No source, assets, dependencies, platform
 backends, or frozen historical receipts were imported or changed by this work.
 
+Selectable-text Tab participation is original GPUI Box framework work.
+`InteractiveText::tab_stop` retains the default participation and updates the
+persisted focus handle on each render without removing selection or accessibility.
+No source or assets were imported, and no dependencies, platform backends,
+or frozen import receipts were changed by this addition.
+
 Concentric ring-shadow corner geometry is original GPUI Box framework work.
 It adjusts the shared shadow primitive without changing renderer backends,
 dependencies, or frozen import receipts; no source or assets were imported.

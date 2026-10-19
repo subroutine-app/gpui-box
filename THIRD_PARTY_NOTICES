@@ -14,6 +14,10 @@ Window-local keyboard focus visibility, neutral focus handoffs, and Kit editable
 focus-decoration corrections are original GPUI Box work. They add no third-party
 source, assets, or dependencies and preserve the frozen import receipts.
 
+Selectable-text Tab participation and its retained-focus updates are original
+GPUI Box framework work under Apache-2.0. No third-party source, assets, or
+dependencies were added; existing notices and frozen import receipts are unchanged.
+
 Concentric ring-shadow corner geometry is original GPUI Box framework work
 under Apache-2.0. No third-party source, assets, or dependencies were added;
 frozen import receipts and existing notices remain unchanged.

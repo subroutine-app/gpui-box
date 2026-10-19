@@ -10,6 +10,11 @@ See `crates/docs/releasing.md` for the protected publication and verification ru
 
 ### Added
 
+- `Markdown::tab_navigation` lets hosts retain all tab stops, include only
+  actionable controls, or exclude built-in tab stops for collapsed previews.
+  `InteractiveText::tab_stop` controls selectable text's Tab participation
+  without disabling pointer selection, keyboard copy, or accessibility.
+  Both APIs preserve existing navigation behavior by default.
 - `SettingsRow::info` puts supplementary help behind an info icon beside the
   setting's name, so a row can keep a short visible description (or none)
   without dropping context. The icon is a keyboard stop using
