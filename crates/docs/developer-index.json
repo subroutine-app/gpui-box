@@ -573,7 +573,7 @@
           "features": []
         }
       ],
-      "symbolCount": 2777
+      "symbolCount": 2778
     },
     {
       "name": "gpui-box-android",
@@ -1436,7 +1436,7 @@
           "features": []
         }
       ],
-      "symbolCount": 5012
+      "symbolCount": 5014
     },
     {
       "name": "gpui-box-kit-assets",
@@ -20075,7 +20075,7 @@
       "source": "crates/gpui/src/elements/text.rs",
       "summary": "A text element that can be interacted with.",
       "documentation": "A text element that can be interacted with.",
-      "signature": "# [doc = \" A text element that can be interacted with.\"] pub struct InteractiveText { element_id : ElementId, text : StyledText, click_listener : Option<Box<dyn Fn (& [Range<usize>], InteractiveTextClickEvent, & mut Window, & mut App)>>, hover_listener : Option<Box<dyn Fn (Option<usize>, MouseMoveEvent, & mut Window, & mut App)>>, tooltip_builder : Option<Rc<dyn Fn (usize, & mut Window, & mut App) -> Option<AnyView>>>, tooltip_id : Option<TooltipId>, clickable_ranges : Vec<Range<usize>>, selectable : bool, document : Option<DocumentParticipation>, }",
+      "signature": "# [doc = \" A text element that can be interacted with.\"] pub struct InteractiveText { element_id : ElementId, text : StyledText, click_listener : Option<Box<dyn Fn (& [Range<usize>], InteractiveTextClickEvent, & mut Window, & mut App)>>, hover_listener : Option<Box<dyn Fn (Option<usize>, MouseMoveEvent, & mut Window, & mut App)>>, tooltip_builder : Option<Rc<dyn Fn (usize, & mut Window, & mut App) -> Option<AnyView>>>, tooltip_id : Option<TooltipId>, clickable_ranges : Vec<Range<usize>>, selectable : bool, tab_stop : bool, document : Option<DocumentParticipation>, }",
       "cfg": []
     },
     {
@@ -20165,6 +20165,21 @@
       "summary": "Refuses to take part in the document selection at all.",
       "documentation": "Refuses to take part in the document selection at all.\n\nA sensitive value is never registered, so it cannot reach the aggregate\ncopy path by being mounted beside content that can.",
       "signature": "pub fn sensitive_participant (mut self, sensitive : bool) -> Self",
+      "cfg": [],
+      "target": "InteractiveText"
+    },
+    {
+      "id": "gpui::elements::text::InteractiveText::tab_stop",
+      "name": "tab_stop",
+      "kind": "method",
+      "package": "gpui-box",
+      "crate": "gpui",
+      "module": "elements::text",
+      "path": "gpui::elements::text",
+      "source": "crates/gpui/src/elements/text.rs",
+      "summary": "Sets whether selectable text participates in Tab navigation (default: `true`).",
+      "documentation": "Sets whether selectable text participates in Tab navigation (default: `true`).\n\nDisabling this preserves pointer and programmatic focus, selection, and accessibility.",
+      "signature": "pub fn tab_stop (mut self, tab_stop : bool) -> Self",
       "cfg": [],
       "target": "InteractiveText"
     },
@@ -57325,7 +57340,7 @@
       "source": "crates/gpui-kit/src/content/markdown.rs",
       "summary": "A rendered Markdown document.",
       "documentation": "A rendered Markdown document.",
-      "signature": "# [doc = \" A rendered Markdown document.\"] # [derive (IntoElement)] pub struct Markdown { ident : Ident, source : SharedString, parsed : Option<Rc<Document>>, parsed_tail : Option<Arc<Document>>, parsed_starts : Option<Rc<Vec<usize>>>, pending : bool, block_renderer : Option<BlockRenderer>, max_lines : Option<usize>, # [doc = \" The first reading-order value this document may claim when it is\"] # [doc = \" embedded in a larger document.\"] selection_order_start : u64, on_event : Option<EventHandler>, image : Option<ImageSource>, highlighter : Option<Highlighter>, code_presentation : MarkdownCodePresentation, streaming : bool, }",
+      "signature": "# [doc = \" A rendered Markdown document.\"] # [derive (IntoElement)] pub struct Markdown { ident : Ident, source : SharedString, parsed : Option<Rc<Document>>, parsed_tail : Option<Arc<Document>>, parsed_starts : Option<Rc<Vec<usize>>>, pending : bool, block_renderer : Option<BlockRenderer>, max_lines : Option<usize>, # [doc = \" The first reading-order value this document may claim when it is\"] # [doc = \" embedded in a larger document.\"] selection_order_start : u64, on_event : Option<EventHandler>, image : Option<ImageSource>, highlighter : Option<Highlighter>, code_presentation : MarkdownCodePresentation, tab_navigation : MarkdownTabNavigation, streaming : bool, }",
       "cfg": []
     },
     {
@@ -57464,6 +57479,21 @@
       "target": "Markdown"
     },
     {
+      "id": "gpui_kit::content::markdown::Markdown::tab_navigation",
+      "name": "tab_navigation",
+      "kind": "method",
+      "package": "gpui-box-kit",
+      "crate": "gpui_kit",
+      "module": "content::markdown",
+      "path": "gpui_kit::content::markdown",
+      "source": "crates/gpui-kit/src/content/markdown.rs",
+      "summary": "Chooses which built-in elements participate in Tab and Shift-Tab navigation.",
+      "documentation": "Chooses which built-in elements participate in Tab and Shift-Tab navigation.\n\nDefaults to [`MarkdownTabNavigation::All`]. The policy applies throughout\nnested content, including link children and code. Pointer selection,\nactions, and semantic content are unchanged; this is not a disabled state.\nCustom image and block renderers remain responsible for their own tab stops.",
+      "signature": "pub fn tab_navigation (mut self, policy : MarkdownTabNavigation) -> Self",
+      "cfg": [],
+      "target": "Markdown"
+    },
+    {
       "id": "gpui_kit::content::markdown::MarkdownCodePresentation",
       "name": "MarkdownCodePresentation",
       "kind": "enum",
@@ -57489,6 +57519,20 @@
       "summary": "What a rendered document reports. It applies none of it.",
       "documentation": "What a rendered document reports. It applies none of it.",
       "signature": "# [doc = \" What a rendered document reports. It applies none of it.\"] # [derive (Debug, Clone, PartialEq, Eq)] pub enum MarkdownEvent { # [doc = \" A link was taken. The crate opens nothing.\"] LinkClicked { href : SharedString }, # [doc = \" An image the host has not supplied was drawn as a placeholder.\"] # [doc = \"\"] # [doc = \" Reported once per source per rendered document, not once per frame, so\"] # [doc = \" a host may answer it by supplying the image without the answer\"] # [doc = \" provoking another request.\"] ImageRequested { src : SharedString, alt : SharedString, }, # [doc = \" A code block's exact text was put on the clipboard.\"] CodeCopied { language : Option<SharedString>, text : SharedString, }, # [doc = \" The owner's clipboard policy refused the code-copy operation.\"] # [doc = \" A refusal contains no copied payload and is never a success event.\"] CodeCopyRefused { language : Option<SharedString>, reason : gpui::ClipboardDenied, }, # [doc = \" The reader asked for the lines [`Markdown::max_lines`] left out.\"] MoreRequested { lines : usize }, }",
+      "cfg": []
+    },
+    {
+      "id": "gpui_kit::content::markdown::MarkdownTabNavigation",
+      "name": "MarkdownTabNavigation",
+      "kind": "enum",
+      "package": "gpui-box-kit",
+      "crate": "gpui_kit",
+      "module": "content::markdown",
+      "path": "gpui_kit::content::markdown",
+      "source": "crates/gpui-kit/src/content/markdown.rs",
+      "summary": "Which built-in Markdown elements participate in sequential keyboard navigation.",
+      "documentation": "Which built-in Markdown elements participate in sequential keyboard navigation.\n\nThis does not disable pointer selection or actions. Elements supplied by\n[`Markdown::image`] or [`Markdown::block_renderer`] manage their own tab stops.",
+      "signature": "# [doc = \" Which built-in Markdown elements participate in sequential keyboard navigation.\"] # [doc = \"\"] # [doc = \" This does not disable pointer selection or actions. Elements supplied by\"] # [doc = \" [`Markdown::image`] or [`Markdown::block_renderer`] manage their own tab stops.\"] # [derive (Debug, Clone, Copy, PartialEq, Eq, Default)] pub enum MarkdownTabNavigation { # [doc = \" Selectable text and controls, preserving the default navigation behavior.\"] # [default] All, # [doc = \" Links, code Copy buttons, and the truncation More button, but not text runs.\"] Controls, # [doc = \" No built-in tab stops, including controls.\"] None, }",
       "cfg": []
     },
     {
@@ -59219,7 +59263,7 @@
     },
     {
       "id": "gpui_kit::content::reexport-9",
-      "name": "markdown :: { Block , CellAlign , CodeBlock , CodeSpan , Document , ImageRequest , Inline , ListEntry , Markdown , MarkdownCodePresentation , MarkdownEvent , }",
+      "name": "markdown :: { Block , CellAlign , CodeBlock , CodeSpan , Document , ImageRequest , Inline , ListEntry , Markdown , MarkdownCodePresentation , MarkdownEvent , MarkdownTabNavigation , }",
       "kind": "reexport",
       "package": "gpui-box-kit",
       "crate": "gpui_kit",
@@ -59228,7 +59272,7 @@
       "source": "crates/gpui-kit/src/content/mod.rs",
       "summary": "",
       "documentation": "",
-      "signature": "pub use markdown::{ Block, CellAlign, CodeBlock, CodeSpan, Document, ImageRequest, Inline, ListEntry, Markdown, MarkdownCodePresentation, MarkdownEvent, };",
+      "signature": "pub use markdown::{ Block, CellAlign, CodeBlock, CodeSpan, Document, ImageRequest, Inline, ListEntry, Markdown, MarkdownCodePresentation, MarkdownEvent, MarkdownTabNavigation, };",
       "cfg": []
     },
     {
@@ -139722,6 +139766,7 @@
       "options": [
         "block_renderer(renderer: impl Fn(&Ident, &Block, u64, &mut Window, &mut App) -> Option<AnyElement> + 'static) -> Self",
         "max_lines(lines: usize) -> Self",
+        "tab_navigation(policy: MarkdownTabNavigation) -> Self",
         "selection_order_start(order: u64) -> Self",
         "on_event(handler: impl Fn(&MarkdownEvent, &mut Window, &mut App) + 'static) -> Self",
         "image(source: impl Fn(&ImageRequest, &mut Window, &mut App) -> Option<AnyElement> + 'static) -> Self",
@@ -148791,6 +148836,20 @@
         "work() -> MarkdownWork",
         "document() -> &Document"
       ]
+    },
+    {
+      "name": "MarkdownTabNavigation",
+      "path": "gpui_kit::content::MarkdownTabNavigation",
+      "summary": "Which built-in Markdown elements participate in sequential keyboard navigation.",
+      "variants": [
+        "All",
+        "Controls",
+        "None"
+      ],
+      "construct": [],
+      "options": [],
+      "commands": [],
+      "queries": []
     },
     {
       "name": "MarkdownWork",
@@ -166559,6 +166618,18 @@
       "contract": "Explicit with_rounded_content_mask scopes must surround descendants in both prepaint and paint using window-coordinate logical pixels. Geometry-equal inherited chains govern pointer hitboxes and retained/deferred execution. Scene-local parent-first replay masks primitive writes, leaving rectangular ContentMask culling and optical source capture/probes unchanged. AccessKit uses conservative outer rectangle intersections, not curved bounds. Style overflow behavior is unchanged.",
       "portable_test": "framework_rounded_subtree_clip_pixels",
       "validation": "Combined Linux CPU613/WGPU57/headless13 tests and 364 catalog images pass. The integer-texture test is not browser GL runtime evidence. Native Metal executed the portable clip pixel test in source snapshot ccf09bc1b45fa3fdaff4c6411beba30a0603c3bd844a39f882da3f371cd0c79c (macOS27 build26A5416b, M4 Pro, SDK26.2). CVPixelBuffer pixels, native D3D/FXC and native full-catalog validation remain pending; this evidence does not cover subsequent visual-scale work."
+    },
+    "framework_selectable_text_tab_stop": {
+      "commands": [
+        "cargo test --locked -p gpui-box --features test-support --lib elements::text::tests",
+        "cargo run -p xtask -- dependencies check"
+      ],
+      "contract": "InteractiveText::tab_stop defaults to true. False skips selectable text during forward and reverse Tab traversal without removing pointer/programmatic focus, keyboard selection/copy, or accessibility. Rerenders update the retained focus handle in both directions without replacing its identity.",
+      "limitations": [
+        "Native GUI and screenshot validation are intentionally out of scope",
+        "Linux and Windows execution remains pending"
+      ],
+      "validation": "On macOS, all 14 elements::text::tests passed, including TestAppContext regressions for Tab/Shift-Tab, default participation, true/false rerenders, pointer/programmatic focus, grapheme selection/copy, and accessible text/actions/geometry publication. The dependency-authority check passed. Tests use TestPlatform/TestWindow, not native GUI windows."
     },
     "framework_typed_scopes_and_scroll_axes": {
       "contract": "EffectScoped<T> retains the child's EffectOwner through typed map operations until element rendering. From<T> inherits ambient ownership. Vertical Div/UniformList no longer project pure horizontal wheel input into row scrolling; diagonal residuals preserve independent axes.",

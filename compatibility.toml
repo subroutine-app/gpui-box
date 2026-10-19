@@ -28,6 +28,12 @@ contract = "Windows start with keyboard-only focus decoration hidden. KeyDown an
 commands = ["cargo test -p gpui-box --features test-support --lib elements::div::tests", "cargo test -p gpui-box-kit --all-features", "cargo run -p xtask -- dependencies check", "cargo run -p xtask -- headless check"]
 validation = "Portable framework paint/input tests and Kit control regressions executed on macOS. Metal catalog comparison reviewed separately; Linux and Windows native execution remain pending."
 
+[framework_selectable_text_tab_stop]
+contract = "InteractiveText::tab_stop defaults to true. False skips selectable text during forward and reverse Tab traversal without removing pointer/programmatic focus, keyboard selection/copy, or accessibility. Rerenders update the retained focus handle in both directions without replacing its identity."
+commands = ["cargo test --locked -p gpui-box --features test-support --lib elements::text::tests", "cargo run -p xtask -- dependencies check"]
+validation = "On macOS, all 14 elements::text::tests passed, including TestAppContext regressions for Tab/Shift-Tab, default participation, true/false rerenders, pointer/programmatic focus, grapheme selection/copy, and accessible text/actions/geometry publication. The dependency-authority check passed. Tests use TestPlatform/TestWindow, not native GUI windows."
+limitations = ["Native GUI and screenshot validation are intentionally out of scope", "Linux and Windows execution remains pending"]
+
 [focusable_tooltip]
 contract = "Explicit opt-in focusable help shares one tooltip across hover and real GPUI focus. Focus opens immediately from displayed owner bounds; Escape dismisses for the current focus tenure; blur and unmount clear it. Existing hover-only tooltip behavior is unchanged."
 commands = ["cargo test -p gpui-box focusable_tooltip --lib", "cargo run -p xtask -- gate full"]

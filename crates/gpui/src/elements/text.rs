@@ -1192,6 +1192,7 @@ pub struct InteractiveText {
     tooltip_id: Option<TooltipId>,
     clickable_ranges: Vec<Range<usize>>,
     selectable: bool,
+    tab_stop: bool,
     document: Option<DocumentParticipation>,
 }
 
@@ -1273,6 +1274,7 @@ impl InteractiveText {
             tooltip_id: None,
             clickable_ranges: Vec::new(),
             selectable: false,
+            tab_stop: true,
             document: None,
         }
     }
@@ -1285,6 +1287,14 @@ impl InteractiveText {
     /// click, but not when the same gesture selected text.
     pub fn selectable(mut self) -> Self {
         self.selectable = true;
+        self
+    }
+
+    /// Sets whether selectable text participates in Tab navigation (default: `true`).
+    ///
+    /// Disabling this preserves pointer and programmatic focus, selection, and accessibility.
+    pub fn tab_stop(mut self, tab_stop: bool) -> Self {
+        self.tab_stop = tab_stop;
         self
     }
 
@@ -1819,8 +1829,11 @@ impl Element for InteractiveText {
                     if let Some(state) = interactive_state.as_mut() {
                         let focus_handle = state
                             .focus_handle
-                            .get_or_insert_with(|| cx.focus_handle().tab_stop(true));
-                        window.set_focus_handle(focus_handle, cx);
+                            .take()
+                            .unwrap_or_else(|| cx.focus_handle())
+                            .tab_stop(self.tab_stop);
+                        window.set_focus_handle(&focus_handle, cx);
+                        state.focus_handle = Some(focus_handle);
                     }
                     if let Some(global_id) = global_id {
                         window.register_pointer_capture_hitbox(global_id, hitbox.id);
@@ -2366,6 +2379,223 @@ mod tests {
         cx.update_window(window, |_, window, cx| window.draw(cx).clear(cx))
             .expect("selectable text test window draws");
         window
+    }
+
+    struct SelectableTextTabStopTestView {
+        before: FocusHandle,
+        after: FocusHandle,
+        tab_stop: Option<bool>,
+        layout: TextLayout,
+    }
+
+    impl Render for SelectableTextTabStopTestView {
+        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+            let text = StyledText::new("e\u{301}👩‍💻 hello");
+            self.layout = text.layout().clone();
+            let text = text.selectable("tab-stop-text");
+            let text = match self.tab_stop {
+                Some(tab_stop) => text.tab_stop(tab_stop),
+                None => text,
+            };
+            div()
+                .size_full()
+                .flex()
+                .flex_col()
+                .on_key_down(|event, window, cx| {
+                    if event.keystroke.key == "tab" {
+                        if event.keystroke.modifiers.shift {
+                            window.focus_prev(cx);
+                        } else {
+                            window.focus_next(cx);
+                        }
+                        cx.stop_propagation();
+                    }
+                })
+                .child(div().id("before").h(px(20.)).track_focus(&self.before))
+                .child(text)
+                .child(div().id("after").h(px(20.)).track_focus(&self.after))
+        }
+    }
+
+    fn selectable_tab_stop_window(
+        cx: &mut TestAppContext,
+        tab_stop: Option<bool>,
+    ) -> crate::WindowHandle<SelectableTextTabStopTestView> {
+        let handle = cx.add_window(|_, cx| SelectableTextTabStopTestView {
+            before: cx.focus_handle().tab_stop(true),
+            after: cx.focus_handle().tab_stop(true),
+            tab_stop,
+            layout: TextLayout::default(),
+        });
+        cx.update_window(handle.into(), |_, window, cx| window.draw(cx).clear(cx))
+            .expect("tab stop test window draws");
+        handle
+    }
+
+    #[gpui::test]
+    fn selectable_text_tab_stop_tracks_rerenders_in_both_directions(cx: &mut TestAppContext) {
+        let handle = selectable_tab_stop_window(cx, None);
+        let (before, after) = handle
+            .update(cx, |view, _, _| (view.before.clone(), view.after.clone()))
+            .expect("neighbor focus handles");
+        let text_focus = cx
+            .update_window(handle.into(), |_, window, cx| {
+                window.focus(&before, cx);
+                window.dispatch_keystroke(Keystroke::parse("tab").unwrap(), cx);
+                let focused = window.focused(cx).expect("default text tab stop");
+                assert_ne!(focused, before);
+                assert_ne!(focused, after);
+                focused
+            })
+            .expect("default text participates in traversal");
+
+        for tab_stop in [None, Some(false), Some(true), Some(false)] {
+            handle
+                .update(cx, |view, _, cx| {
+                    view.tab_stop = tab_stop;
+                    cx.notify();
+                })
+                .expect("change tab participation");
+            cx.update_window(handle.into(), |_, window, cx| {
+                window.draw(cx).clear(cx);
+                assert!(text_focus.is_focused(window), "rerender preserves focus");
+                assert_eq!(
+                    window.focused(cx).unwrap().tab_stop,
+                    tab_stop.unwrap_or(true)
+                );
+                window.focus(&before, cx);
+                let expected = if tab_stop.unwrap_or(true) {
+                    [&text_focus, &after, &text_focus, &before]
+                } else {
+                    [&after, &before, &after, &before]
+                };
+                for (key, expected) in ["tab", "tab", "shift-tab", "shift-tab"]
+                    .into_iter()
+                    .zip(expected)
+                {
+                    window.dispatch_keystroke(Keystroke::parse(key).unwrap(), cx);
+                    assert_eq!(window.focused(cx).as_ref(), Some(expected), "{key}");
+                    window.draw(cx).clear(cx);
+                }
+                window.focus(&text_focus, cx);
+                assert!(
+                    text_focus.is_focused(window),
+                    "programmatic focus is retained"
+                );
+            })
+            .expect("tab traversal follows current participation");
+        }
+    }
+
+    #[gpui::test]
+    fn selectable_text_without_tab_stop_keeps_selection_and_accessibility(cx: &mut TestAppContext) {
+        let handle = selectable_tab_stop_window(cx, Some(false));
+        cx.activate_accessibility(handle.into());
+        cx.update_window(handle.into(), |_, window, cx| window.draw(cx).clear(cx))
+            .expect("accessible text frame draws");
+        let (before, layout) = handle
+            .update(cx, |view, _, _| (view.before.clone(), view.layout.clone()))
+            .expect("text layout and neighboring focus");
+        cx.update_window(handle.into(), |_, window, cx| {
+            let tree: serde_json::Value =
+                serde_json::from_str(&window.debug_a11y_tree_json().expect("active accessibility"))
+                    .expect("accessibility tree");
+            let nodes = tree["nodes"].as_object().expect("accessibility nodes");
+            let label = nodes
+                .values()
+                .find(|node| node["aria"]["role"] == "Label")
+                .expect("selectable text label");
+            let actions = label["aria"]["on_action"].as_array().expect("text actions");
+            assert!(actions.iter().any(|action| action == "Focus"));
+            assert!(actions.iter().any(|action| action == "SetTextSelection"));
+            let run = nodes
+                .values()
+                .find(|node| node["aria"]["role"] == "TextRun")
+                .expect("accessible text run");
+            assert_eq!(run["aria"]["value"], "e\u{301}👩‍💻 hello");
+            assert!(
+                run["aria"]["character_widths"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|width| width.as_f64().unwrap_or(0.) > 0.)
+            );
+
+            let start = layout.position_for_index(0).expect("text start")
+                + point(px(0.), layout.line_height() / 2.);
+            let end = layout
+                .position_for_index("e\u{301}".len())
+                .expect("first grapheme end")
+                + point(px(0.), layout.line_height() / 2.);
+            window.dispatch_event(
+                MouseDownEvent {
+                    position: start,
+                    button: MouseButton::Left,
+                    click_count: 1,
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                cx,
+            );
+            let text_focus = window.focused(cx).expect("pointer focuses text");
+            assert_ne!(text_focus, before);
+            assert!(!text_focus.tab_stop);
+            assert!(window.captured_hitbox().is_some());
+            window.draw(cx).clear(cx);
+            window.dispatch_event(
+                MouseMoveEvent {
+                    position: end,
+                    pressed_button: Some(MouseButton::Left),
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.dispatch_event(
+                MouseUpEvent {
+                    position: end,
+                    button: MouseButton::Left,
+                    click_count: 1,
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                cx,
+            );
+            assert!(window.captured_hitbox().is_none());
+            let copy = if cfg!(target_os = "macos") {
+                "cmd-c"
+            } else {
+                "ctrl-c"
+            };
+            window.dispatch_keystroke(Keystroke::parse(copy).unwrap(), cx);
+            assert_eq!(
+                cx.read_from_clipboard().and_then(|item| item.text()),
+                Some("e\u{301}".into())
+            );
+
+            window.focus(&before, cx);
+            window.focus(&text_focus, cx);
+            assert!(text_focus.is_focused(window));
+            for key in ["home", "shift-right", "shift-right", copy] {
+                window.dispatch_keystroke(Keystroke::parse(key).unwrap(), cx);
+            }
+            assert_eq!(
+                cx.read_from_clipboard().and_then(|item| item.text()),
+                Some("e\u{301}👩‍💻".into())
+            );
+            let select_all = if cfg!(target_os = "macos") {
+                "cmd-a"
+            } else {
+                "ctrl-a"
+            };
+            window.dispatch_keystroke(Keystroke::parse(select_all).unwrap(), cx);
+            window.dispatch_keystroke(Keystroke::parse(copy).unwrap(), cx);
+            assert_eq!(
+                cx.read_from_clipboard().and_then(|item| item.text()),
+                Some("e\u{301}👩‍💻 hello".into())
+            );
+        })
+        .expect("selection remains independent of tab participation");
     }
 
     #[test]

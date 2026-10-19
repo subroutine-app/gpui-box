@@ -3207,6 +3207,7 @@
       "options": [
         "block_renderer(renderer: impl Fn(&Ident, &Block, u64, &mut Window, &mut App) -> Option<AnyElement> + 'static) -> Self",
         "max_lines(lines: usize) -> Self",
+        "tab_navigation(policy: MarkdownTabNavigation) -> Self",
         "selection_order_start(order: u64) -> Self",
         "on_event(handler: impl Fn(&MarkdownEvent, &mut Window, &mut App) + 'static) -> Self",
         "image(source: impl Fn(&ImageRequest, &mut Window, &mut App) -> Option<AnyElement> + 'static) -> Self",
@@ -12276,6 +12277,20 @@
         "work() -> MarkdownWork",
         "document() -> &Document"
       ]
+    },
+    {
+      "name": "MarkdownTabNavigation",
+      "path": "gpui_kit::content::MarkdownTabNavigation",
+      "summary": "Which built-in Markdown elements participate in sequential keyboard navigation.",
+      "variants": [
+        "All",
+        "Controls",
+        "None"
+      ],
+      "construct": [],
+      "options": [],
+      "commands": [],
+      "queries": []
     },
     {
       "name": "MarkdownWork",

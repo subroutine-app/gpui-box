@@ -35,9 +35,9 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use gpui::{
-    AnyElement, App, ClipboardItem, FontWeight, HighlightStyle, Hsla, InteractiveElement,
-    IntoElement, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement, Styled,
-    StyledText, Window, div, prelude::FluentBuilder, px,
+    AnyElement, App, ClipboardItem, FocusHandle, FontWeight, HighlightStyle, Hsla,
+    InteractiveElement, IntoElement, ParentElement, RenderOnce, SharedString,
+    StatefulInteractiveElement, Styled, StyledText, Window, div, prelude::FluentBuilder, px,
 };
 use gpui_kit_assets::Icon;
 use gpui_kit_semantics::{NodeSpec, Role, Semantic};
@@ -127,6 +127,21 @@ pub enum MarkdownCodePresentation {
     Flat,
 }
 
+/// Which built-in Markdown elements participate in sequential keyboard navigation.
+///
+/// This does not disable pointer selection or actions. Elements supplied by
+/// [`Markdown::image`] or [`Markdown::block_renderer`] manage their own tab stops.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum MarkdownTabNavigation {
+    /// Selectable text and controls, preserving the default navigation behavior.
+    #[default]
+    All,
+    /// Links, code Copy buttons, and the truncation More button, but not text runs.
+    Controls,
+    /// No built-in tab stops, including controls.
+    None,
+}
+
 type EventHandler = Rc<dyn Fn(&MarkdownEvent, &mut Window, &mut App)>;
 type ImageSource = Rc<dyn Fn(&ImageRequest, &mut Window, &mut App) -> Option<AnyElement>>;
 type Highlighter = Rc<dyn Fn(&CodeBlock) -> Vec<CodeSpan>>;
@@ -150,6 +165,7 @@ pub struct Markdown {
     image: Option<ImageSource>,
     highlighter: Option<Highlighter>,
     code_presentation: MarkdownCodePresentation,
+    tab_navigation: MarkdownTabNavigation,
     streaming: bool,
 }
 
@@ -163,6 +179,7 @@ impl std::fmt::Debug for Markdown {
             .field("has_images", &self.image.is_some())
             .field("has_highlighter", &self.highlighter.is_some())
             .field("code_presentation", &self.code_presentation)
+            .field("tab_navigation", &self.tab_navigation)
             .field("streaming", &self.streaming)
             .finish()
     }
@@ -207,6 +224,7 @@ impl Markdown {
             image: None,
             highlighter: None,
             code_presentation: MarkdownCodePresentation::Flat,
+            tab_navigation: MarkdownTabNavigation::default(),
             streaming: false,
         }
     }
@@ -219,6 +237,17 @@ impl Markdown {
     /// layout knows.
     pub fn max_lines(mut self, lines: usize) -> Self {
         self.max_lines = Some(lines);
+        self
+    }
+
+    /// Chooses which built-in elements participate in Tab and Shift-Tab navigation.
+    ///
+    /// Defaults to [`MarkdownTabNavigation::All`]. The policy applies throughout
+    /// nested content, including link children and code. Pointer selection,
+    /// actions, and semantic content are unchanged; this is not a disabled state.
+    /// Custom image and block renderers remain responsible for their own tab stops.
+    pub fn tab_navigation(mut self, policy: MarkdownTabNavigation) -> Self {
+        self.tab_navigation = policy;
         self
     }
 
@@ -406,6 +435,7 @@ impl RenderOnce for Markdown {
             image: self.image.clone(),
             highlighter: self.highlighter.clone(),
             code_presentation: self.code_presentation,
+            tab_navigation: self.tab_navigation,
             used: HashMap::new(),
             reading_order: self.selection_order_start,
             requested: Vec::new(),
@@ -439,7 +469,7 @@ impl RenderOnce for Markdown {
         }
 
         if hidden > 0 {
-            column = column.child(painter.more(hidden, cx));
+            column = column.child(painter.more(hidden, window, cx));
         }
 
         let requests = std::mem::take(&mut painter.requested);
@@ -576,6 +606,7 @@ struct Painter {
     image: Option<ImageSource>,
     highlighter: Option<Highlighter>,
     code_presentation: MarkdownCodePresentation,
+    tab_navigation: MarkdownTabNavigation,
     /// How many parts have already claimed each id stem, so a document that
     /// links to the same place twice still publishes two distinct nodes.
     used: HashMap<String, usize>,
@@ -678,6 +709,20 @@ impl Painter {
     fn report(&self, event: MarkdownEvent) -> Option<impl Fn(&mut Window, &mut App) + use<>> {
         let handler = self.on_event.clone()?;
         Some(move |window: &mut Window, cx: &mut App| handler(&event, window, cx))
+    }
+
+    fn button(&self, ident: Ident, window: &Window, cx: &mut App) -> Button {
+        let retained = keyed::slot::<Option<FocusHandle>>(
+            &ident.child("focus").semantic_id(),
+            window.window_handle().window_id(),
+            cx,
+        );
+        let handle = retained
+            .borrow_mut()
+            .get_or_insert_with(|| cx.focus_handle())
+            .clone()
+            .tab_stop(self.tab_navigation != MarkdownTabNavigation::None);
+        Button::new(ident).track_focus(&handle)
     }
 
     fn block(&mut self, block: &Block, window: &mut Window, cx: &mut App) -> AnyElement {
@@ -795,7 +840,15 @@ impl Painter {
                     let ident = self.ident_for("text", text.as_ref());
                     let order = self.next_reading_order();
                     let fading = self.arriving(text.as_ref());
-                    elements.push(run(&theme, &ident, order, text.clone(), style, &fading));
+                    elements.push(run(
+                        &theme,
+                        &ident,
+                        order,
+                        text.clone(),
+                        style,
+                        &fading,
+                        self.tab_navigation == MarkdownTabNavigation::All,
+                    ));
                 }
                 Inline::Code(text) => {
                     let ident = self.ident_for("code", text.as_ref());
@@ -815,7 +868,8 @@ impl Painter {
                                         ident.element_id(),
                                         ident.semantic_id(),
                                         order,
-                                    ),
+                                    )
+                                    .tab_stop(self.tab_navigation == MarkdownTabNavigation::All),
                             )
                             .into_any_element(),
                     );
@@ -860,7 +914,15 @@ impl Painter {
                     let ident = self.ident_for("text", "soft break");
                     let order = self.next_reading_order();
                     let fading = self.arriving(" ");
-                    elements.push(run(&theme, &ident, order, " ".into(), style, &fading));
+                    elements.push(run(
+                        &theme,
+                        &ident,
+                        order,
+                        " ".into(),
+                        style,
+                        &fading,
+                        self.tab_navigation == MarkdownTabNavigation::All,
+                    ));
                 }
                 Inline::HardBreak => {
                     elements.push(div().w_full().h(px(0.0)).flex_none().into_any_element())
@@ -928,14 +990,15 @@ impl Painter {
             .flex()
             .flex_row()
             .flex_wrap()
-            // A link that can be followed can be reached. It publishes
-            // `Role::Link` whether or not anybody can get to it, so without a
-            // tab stop the document told a reader there were links in it and
-            // then handed them to the pointer alone. The underline stays: on a
-            // link it is not decoration but the second channel, so colour is
-            // not the only thing separating a link from the prose around it.
+            // Only completed links are actionable. Opting out of tab navigation
+            // leaves pointer activation and focus styling intact. The underline
+            // distinguishes links without relying on colour alone.
             .when(!unfinished, |element| {
-                element.cursor_pointer().tab_index(0).focus_ring(&theme)
+                element
+                    .cursor_pointer()
+                    .tab_index(0)
+                    .tab_stop(self.tab_navigation != MarkdownTabNavigation::None)
+                    .focus_ring(&theme)
             })
             .text_color(theme.colors.accent)
             .underline()
@@ -951,6 +1014,7 @@ impl Painter {
                     label.clone(),
                     style,
                     &fading,
+                    self.tab_navigation == MarkdownTabNavigation::All,
                 )]
             } else {
                 runs
@@ -1114,11 +1178,13 @@ impl Painter {
             .text_color(theme.colors.text)
             .child({
                 let text_ident = ident.child("text");
-                styled_code(&theme, text.clone(), &spans).selectable_in_document(
-                    text_ident.element_id(),
-                    text_ident.semantic_id(),
-                    code_order,
-                )
+                styled_code(&theme, text.clone(), &spans)
+                    .selectable_in_document(
+                        text_ident.element_id(),
+                        text_ident.semantic_id(),
+                        code_order,
+                    )
+                    .tab_stop(self.tab_navigation == MarkdownTabNavigation::All)
             });
 
         let block = div()
@@ -1139,7 +1205,7 @@ impl Painter {
                             .gap_token(&theme, Space::Xs)
                             .children(refusal)
                             .child(
-                                Button::new(copy_ident)
+                                self.button(copy_ident, window, cx)
                                     .label(cx.strings().text(StringKey::Copy))
                                     .ghost()
                                     .control_size(gpui_kit_theme::ControlSize::Xs)
@@ -1494,7 +1560,7 @@ impl Painter {
     /// A count and a named action, rather than a fade: a gradient over the
     /// last line says something was cut without saying how much, which is a
     /// decoration standing where a fact belongs.
-    fn more(&mut self, hidden: usize, cx: &mut App) -> AnyElement {
+    fn more(&mut self, hidden: usize, window: &Window, cx: &mut App) -> AnyElement {
         let theme = self.theme.clone();
         let ident = self.ident.child("truncated");
         let digits = cx.numbers().count(hidden);
@@ -1511,7 +1577,7 @@ impl Painter {
             .w_full()
             .gap_token(&theme, Space::Sm)
             .child(
-                Button::new(ident.child("more"))
+                self.button(ident.child("more"), window, cx)
                     .label(label.clone())
                     .link()
                     .on_click(move |window, cx| {
@@ -1549,6 +1615,7 @@ fn run(
     text: SharedString,
     style: RunStyle,
     fading: &[(Range<usize>, f32)],
+    tab_stop: bool,
 ) -> AnyElement {
     let color = if style.struck {
         theme.colors.text_muted
@@ -1572,7 +1639,8 @@ fn run(
         .child(
             StyledText::new(text)
                 .with_highlights(fade(fading, color))
-                .selectable_in_document(ident.element_id(), ident.semantic_id(), order),
+                .selectable_in_document(ident.element_id(), ident.semantic_id(), order)
+                .tab_stop(tab_stop),
         )
         .into_any_element()
 }

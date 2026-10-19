@@ -4,7 +4,7 @@
 //! dropped, a link states where it goes and is only reported, an image is
 //! named rather than fetched, and a code block is never coloured by guessing.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use gpui::{IntoElement, ParentElement, Styled, TestAppContext};
@@ -71,6 +71,265 @@ fn markdown(
         document.into_any_element()
     });
     (harness, calls)
+}
+
+const NAVIGATION_DOCUMENT: &str = r#"# Heading
+
+prose
+soft
+
+**strong***emphasis*~~struck~~`inline`
+
+- list
+  - [**nested**`code`](nested)
+
+> quote
+>
+> [link](quote)
+>
+> ```text
+> quoted
+> ```
+
+| Column |
+| --- |
+| [cell](table) |
+
+```rust
+code
+```
+"#;
+
+fn assert_focused(harness: &mut Harness, id: &str) {
+    let tree = harness.accessibility_tree();
+    let focused = tree["gpui_focus"]
+        .as_str()
+        .unwrap_or_else(|| panic!("expected focused node {id}"));
+    assert_eq!(
+        tree["nodes"][focused]["element_id"],
+        format!("Name({id:?})")
+    );
+}
+
+#[gpui::test]
+fn tab_navigation_updates_nested_text_and_controls_without_remounting(cx: &mut TestAppContext) {
+    let policy = Rc::new(Cell::new(None));
+    let rendered_policy = policy.clone();
+    let (events, into) = sink::<MarkdownEvent>();
+    let mut harness = Harness::new(cx, gpui_kit::install, move |_, _| {
+        let into_doc = into.clone();
+        let into_preview = into.clone();
+        let mut document = Markdown::new("doc", NAVIGATION_DOCUMENT)
+            .on_event(move |event, _, _| into_doc.borrow_mut().push(event.clone()));
+        let mut preview = Markdown::new("preview", "shown\n\nhidden")
+            .selection_order_start(1 << 32)
+            .max_lines(1)
+            .on_event(move |event, _, _| into_preview.borrow_mut().push(event.clone()));
+        if let Some(policy) = rendered_policy.get() {
+            document = document.tab_navigation(policy);
+            preview = preview.tab_navigation(policy);
+        }
+        gpui::div()
+            .column()
+            .child(document)
+            .child(preview)
+            .into_any_element()
+    });
+    let original = harness.node("doc").expect("document");
+    let heading = harness.point_across("doc.heading-heading", 0.0);
+    harness
+        .context()
+        .simulate_click(heading, gpui::Modifiers::none());
+    harness.context().run_until_parked();
+    let heading_focus = harness.update(|window, cx| window.focused(cx).expect("heading focus"));
+    let controls = [
+        "doc.link-nested",
+        "doc.link-quote",
+        "doc.code-text.copy",
+        "doc.link-table",
+        "doc.code-rust.copy",
+        "preview.truncated.more",
+    ];
+
+    for (next, stops) in [
+        (None, 24),
+        (Some(MarkdownTabNavigation::Controls), 6),
+        (Some(MarkdownTabNavigation::None), 0),
+        (Some(MarkdownTabNavigation::All), 24),
+        (Some(MarkdownTabNavigation::Controls), 6),
+    ] {
+        policy.set(next);
+        harness.update(|window, _| window.blur());
+        let tree = harness.accessibility_tree();
+        assert_eq!(tree["frame"]["tab_stop_count"], stops, "policy {next:?}");
+        let document = harness.node("doc").expect("document");
+        assert_eq!(document.bounds, original.bounds);
+        assert_eq!(document.role, original.role);
+        assert_eq!(document.value, original.value);
+
+        match next.unwrap_or_default() {
+            MarkdownTabNavigation::All => {
+                harness.update(|window, cx| window.focus_next(cx));
+                assert_eq!(
+                    harness.update(|window, cx| window.focused(cx)),
+                    Some(heading_focus.clone()),
+                    "All reaches the same selectable heading as the pointer"
+                );
+            }
+            MarkdownTabNavigation::Controls => {
+                events.borrow_mut().clear();
+                for id in controls {
+                    harness.update(|window, cx| window.focus_next(cx));
+                    assert_focused(&mut harness, id);
+                    harness.keystrokes("enter");
+                    harness.context().simulate_event(gpui::KeyUpEvent {
+                        keystroke: gpui::Keystroke::parse("enter").expect("activation key"),
+                    });
+                    harness.context().run_until_parked();
+                }
+                assert_eq!(
+                    events.borrow().as_slice(),
+                    [
+                        MarkdownEvent::LinkClicked {
+                            href: "nested".into()
+                        },
+                        MarkdownEvent::LinkClicked {
+                            href: "quote".into()
+                        },
+                        MarkdownEvent::CodeCopied {
+                            language: Some("text".into()),
+                            text: "quoted".into(),
+                        },
+                        MarkdownEvent::LinkClicked {
+                            href: "table".into()
+                        },
+                        MarkdownEvent::CodeCopied {
+                            language: Some("rust".into()),
+                            text: "code".into(),
+                        },
+                        MarkdownEvent::MoreRequested { lines: 1 },
+                    ]
+                );
+                for id in controls.iter().rev().skip(1) {
+                    harness.update(|window, cx| window.focus_prev(cx));
+                    assert_focused(&mut harness, id);
+                }
+            }
+            MarkdownTabNavigation::None => {
+                harness.update(|window, cx| window.focus_next(cx));
+                assert!(harness.update(|window, cx| window.focused(cx).is_none()));
+            }
+        }
+    }
+}
+
+#[gpui::test]
+fn tab_navigation_preserves_pointer_selection_and_actions(cx: &mut TestAppContext) {
+    let mut original_selection = None;
+    for policy in [
+        MarkdownTabNavigation::All,
+        MarkdownTabNavigation::Controls,
+        MarkdownTabNavigation::None,
+    ] {
+        let (events, into) = sink::<MarkdownEvent>();
+        let mut harness = Harness::new(cx, gpui_kit::install, move |_, _| {
+            let into = into.clone();
+            Markdown::new(
+                "doc",
+                "# Start\n\nprose **strong** `inline` [link](target)\n\n```rust\ncode\n```\n\n# End\n\nhidden",
+            )
+            .tab_navigation(policy)
+            .max_lines(4)
+            .on_event(move |event, _, _| into.borrow_mut().push(event.clone()))
+            .into_any_element()
+        });
+        let start = harness.point_across("doc.heading-start", 0.0);
+        let end = harness.point_across("doc.heading-end", 0.98);
+        harness.context().simulate_mouse_down(
+            start,
+            gpui::MouseButton::Left,
+            gpui::Modifiers::none(),
+        );
+        harness.context().run_until_parked();
+        harness.drag_to(end);
+        harness.drop_here();
+        let selected = harness
+            .update(|window, _| window.document_selection_text())
+            .expect("pointer drag selects text under every policy");
+        assert!(selected.complete);
+        for text in ["strong", "inline", "link", "code"] {
+            assert!(
+                selected.text.contains(text),
+                "missing {text} under {policy:?}"
+            );
+        }
+        if let Some(original) = &original_selection {
+            assert_eq!(&selected, original);
+        } else {
+            original_selection = Some(selected);
+        }
+        assert!(
+            events.borrow().is_empty(),
+            "selection must not activate links"
+        );
+
+        harness.click("doc.link-target");
+        harness.click("doc.code-rust.copy");
+        harness.click("doc.truncated.more");
+        assert_eq!(
+            events.borrow().as_slice(),
+            [
+                MarkdownEvent::LinkClicked {
+                    href: "target".into()
+                },
+                MarkdownEvent::CodeCopied {
+                    language: Some("rust".into()),
+                    text: "code".into(),
+                },
+                MarkdownEvent::MoreRequested { lines: 1 },
+            ]
+        );
+        assert_eq!(
+            harness.update(|_, cx| cx.read_from_clipboard().and_then(|item| item.text())),
+            Some("code".into())
+        );
+        if policy == MarkdownTabNavigation::None {
+            assert_eq!(harness.accessibility_tree()["frame"]["tab_stop_count"], 0);
+        }
+    }
+}
+
+#[gpui::test]
+fn tab_navigation_leaves_custom_image_and_block_focus_to_the_caller(cx: &mut TestAppContext) {
+    let mut harness = Harness::new(cx, gpui_kit::install, |_, _| {
+        Markdown::new(
+            "doc",
+            "![custom](image)\n\n```custom\nblock\n```\n\nbuilt-in",
+        )
+        .tab_navigation(MarkdownTabNavigation::None)
+        .image(|_, _, _| {
+            Some(
+                Button::new("custom-image")
+                    .label("Image")
+                    .on_click(|_, _| {})
+                    .into_any_element(),
+            )
+        })
+        .block_renderer(|_, block, _, _, _| {
+            matches!(block, gpui_kit::content::Block::Code { .. }).then(|| {
+                Button::new("custom-block")
+                    .label("Block")
+                    .on_click(|_, _| {})
+                    .into_any_element()
+            })
+        })
+        .into_any_element()
+    });
+    assert_eq!(harness.accessibility_tree()["frame"]["tab_stop_count"], 2);
+    for id in ["custom-image", "custom-block"] {
+        harness.update(|window, cx| window.focus_next(cx));
+        assert_focused(&mut harness, id);
+    }
 }
 
 #[gpui::test]
