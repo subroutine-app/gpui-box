@@ -81,7 +81,8 @@ region ownership are original GPUI Box corrections; no additional source was
 imported and the historical receipts remain frozen.
 Shared mouse cancellation, button-bound capture and text/click cleanup,
 browser chord reconciliation, and Windows chord capture lifetime are also
-original GPUI Box work without additional imports.
+original GPUI Box work without additional imports. The held element drag
+(`drag_hold`) is original GPUI Box work without additional imports as well.
 Opt-in inline deferred accessibility ancestry, ordered child reservations,
 active-accessibility cache rebuilding, and the shared coarse-wheel scroll
 transition are original GPUI Box work; no new third-party source or licenses

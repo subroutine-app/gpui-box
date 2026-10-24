@@ -856,6 +856,17 @@ also exposes a real path remains a path drop to avoid duplicate delivery.
 Linux keeps its existing real-path drag support and does not yet publish the
 new pathless payload. Web has no native desktop drag bridge in this cohort.
 
+## Held element drags
+
+`drag_hold` lets an element require the primary button to stay pressed for a
+caller-supplied duration before its `on_drag` may begin. Movement during the
+hold does not start the drag, and the press still resolves as an ordinary click
+if it is released over the element. The first movement past the drag threshold
+after the hold starts the drag, and the preview keeps the press point under the
+cursor. The hold is measured on the executor clock, so it is shared by every
+platform's mouse path and deterministic under the test scheduler. Touch drags
+remain governed by the long-press recognizer, not by this hold.
+
 ## Framework development contract
 
 GPUI Box is the sole framework and platform development authority. Changes are

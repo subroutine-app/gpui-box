@@ -129,6 +129,8 @@ GPUI Box work. They do not change either frozen import receipt.
 The shared mouse cancellation event, button-bound pointer capture, text/click
 cleanup, browser chord reconciliation, and Windows chord capture lifetime are
 likewise local framework corrections with no imported source.
+The held element drag (`drag_hold`) is original GPUI Box framework work on the
+existing element drag path and imports no source.
 Opt-in inline deferred accessibility ancestry, source-order child reservations, and
 active-accessibility cache rebuilding are original GPUI Box corrections. The
 80 ms coarse-wheel transition shared by overflowing elements and variable-height
