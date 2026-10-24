@@ -831,6 +831,15 @@ already carry that fill. Adaptive surfaces begin with the safe tint and release
 it after the first non-opposing probe reading, so first paint and renderers
 without probe delivery do not expose content over an unknown backdrop.
 
+## Warm tooltip handoff
+
+While a tooltip is on screen, or for 300 ms after one leaves it, a newly hovered
+element shows its tooltip immediately instead of waiting out its show delay, so
+help can be read across a run of adjacent controls. The grace period is measured
+on the executor clock when the window stops painting a tooltip, so it is shared
+by every platform's mouse path and deterministic under the test scheduler.
+Focus-driven tooltips already show without a delay and are unaffected.
+
 ## Native external data drag and drop
 
 macOS and Windows preserve the existing `ExternalPaths` contract for real

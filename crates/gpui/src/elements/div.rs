@@ -776,7 +776,8 @@ impl Interactivity {
         });
     }
 
-    /// Set the delay before this element's tooltip is shown.
+    /// Set the delay before this element's tooltip is shown. The delay is skipped while another
+    /// tooltip is on screen or has just left it.
     /// The imperative API equivalent to [`StatefulInteractiveElement::tooltip_show_delay`].
     pub fn tooltip_show_delay(&mut self, delay: Duration) {
         self.tooltip_show_delay = Some(delay);
@@ -4280,6 +4281,13 @@ fn handle_tooltip_mouse_move(
             // Cancel waiting to show tooltip when it is no longer hovered.
             active_tooltip.borrow_mut().take();
         }
+        Action::ScheduleShow if window.tooltip_is_warm(cx) => show_tooltip(
+            active_tooltip,
+            build_tooltip,
+            check_is_active_during_prepaint,
+            window,
+            cx,
+        ),
         Action::ScheduleShow => {
             let owner = cx.current_effect_owner();
             let delayed_show_task = window.spawn(cx, {
@@ -4293,23 +4301,13 @@ fn handle_tooltip_mouse_move(
                     };
                     cx.update(|window, cx| {
                         let _owner = cx.effect_owner_scope(owner);
-                        let new_tooltip =
-                            build_tooltip(window, cx).map(|(view, tooltip_is_hoverable)| {
-                                ActiveTooltip::Visible {
-                                    tooltip: AnyTooltip {
-                                        view,
-                                        mouse_position: window.mouse_position(),
-                                        check_visible_and_update: tooltip_check_visible_callback(
-                                            &active_tooltip,
-                                            tooltip_is_hoverable,
-                                            check_is_active_during_prepaint.clone(),
-                                        ),
-                                    },
-                                    is_hoverable: tooltip_is_hoverable,
-                                }
-                            });
-                        *active_tooltip.borrow_mut() = new_tooltip;
-                        window.refresh();
+                        show_tooltip(
+                            &active_tooltip,
+                            &build_tooltip,
+                            &check_is_active_during_prepaint,
+                            window,
+                            cx,
+                        );
                     })
                     .ok();
                 }
@@ -4322,6 +4320,30 @@ fn handle_tooltip_mouse_move(
         }
         Action::CheckVisible => cx.notify(current_view),
     }
+}
+
+fn show_tooltip(
+    active_tooltip: &Rc<RefCell<Option<ActiveTooltip>>>,
+    build_tooltip: &Rc<dyn Fn(&mut Window, &mut App) -> Option<(AnyView, bool)>>,
+    check_is_active_during_prepaint: &Rc<dyn Fn(&Window) -> bool>,
+    window: &mut Window,
+    cx: &mut App,
+) {
+    let new_tooltip =
+        build_tooltip(window, cx).map(|(view, is_hoverable)| ActiveTooltip::Visible {
+            tooltip: AnyTooltip {
+                view,
+                mouse_position: window.mouse_position(),
+                check_visible_and_update: tooltip_check_visible_callback(
+                    active_tooltip,
+                    is_hoverable,
+                    check_is_active_during_prepaint.clone(),
+                ),
+            },
+            is_hoverable,
+        });
+    *active_tooltip.borrow_mut() = new_tooltip;
+    window.refresh();
 }
 
 /// Returns a callback which will be called by window prepaint to update tooltip visibility. The
@@ -4896,6 +4918,7 @@ mod tests {
         AnyWindowHandle, AppContext as _, Context, InputEvent, Keystroke, LongPressEvent,
         Modifiers, MouseDownEvent, MouseMoveEvent, MouseUpEvent, ScrollDelta, TestAppContext,
         TouchDragEvent, TouchEvent, TouchPhase, canvas, rgb, util::FluentBuilder as _,
+        window::TOOLTIP_WARM_GRACE,
     };
     use std::{
         cell::{Cell, RefCell},
@@ -6276,6 +6299,54 @@ mod tests {
         test_app.run_until_parked();
 
         assert!(active_tooltip.borrow().is_none());
+    }
+
+    #[gpui::test]
+    #[gpui::test]
+    fn warm_tooltip_skips_show_delay_for_the_next_target(cx: &mut TestAppContext) {
+        struct TooltipRow;
+        impl Render for TooltipRow {
+            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+                let target = |id: &'static str| {
+                    div()
+                        .id(id)
+                        .size(px(40.))
+                        .tooltip(|_, cx| cx.new(|_| TestTooltipView).into())
+                };
+                div()
+                    .size_full()
+                    .flex()
+                    .gap(px(10.))
+                    .child(target("a"))
+                    .child(target("b"))
+            }
+        }
+
+        let (_, cx) = cx.add_window_view(|_, _| TooltipRow);
+        let hover = |cx: &mut crate::VisualTestContext, x: f32| {
+            cx.simulate_mouse_move(point(px(x), px(10.)), None, Modifiers::none());
+            cx.update(|window, cx| {
+                window.draw(cx).clear(cx);
+                window.tooltip_bounds.is_some()
+            })
+        };
+        let (a, gap, b) = (10., 45., 60.);
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        assert!(!hover(cx, a), "a cold hover waits for the show delay");
+        cx.executor().advance_clock(DEFAULT_TOOLTIP_SHOW_DELAY);
+        assert!(hover(cx, a));
+
+        assert!(!hover(cx, gap));
+        cx.executor().advance_clock(TOOLTIP_WARM_GRACE / 2);
+        assert!(hover(cx, b), "crossing a short gap keeps tooltips warm");
+
+        assert!(!hover(cx, gap));
+        cx.executor()
+            .advance_clock(TOOLTIP_WARM_GRACE + Duration::from_millis(1));
+        assert!(!hover(cx, a), "warmth expires after the grace period");
+        cx.executor().advance_clock(DEFAULT_TOOLTIP_SHOW_DELAY);
+        assert!(hover(cx, a));
     }
 
     struct FocusTooltipOwner {

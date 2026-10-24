@@ -721,3 +721,7 @@ frozen import receipts are unchanged.
 Focusable tooltip lifecycle, Escape dismissal and displayed-bounds anchoring
 are original GPUI Box work. No third-party source or dependency was added, and
 frozen import receipts are unchanged.
+
+The warm tooltip handoff, which skips the show delay while another tooltip is
+visible or has just hidden, is original GPUI Box work. No third-party source or
+dependency was added, and frozen import receipts are unchanged.

@@ -947,6 +947,17 @@ pub(crate) struct TooltipBounds {
     pub(crate) bounds: Bounds<Pixels>,
 }
 
+/// How long after a tooltip leaves the screen another hover still shows its tooltip without the
+/// show delay, so help can be scanned across a run of adjacent controls.
+pub(crate) const TOOLTIP_WARM_GRACE: Duration = Duration::from_millis(300);
+
+#[derive(Clone, Copy)]
+enum TooltipPresence {
+    Cold,
+    Shown,
+    HiddenAt(Instant),
+}
+
 #[derive(Clone)]
 pub(crate) struct TooltipRequest {
     id: TooltipId,
@@ -1231,6 +1242,7 @@ pub struct Window {
     next_hitbox_id: HitboxId,
     pub(crate) next_tooltip_id: TooltipId,
     pub(crate) tooltip_bounds: Option<TooltipBounds>,
+    tooltip_presence: TooltipPresence,
     next_frame_callbacks: Rc<RefCell<Vec<FrameCallback>>>,
     pub(crate) dirty_views: FxHashSet<EntityId>,
     focus_listeners: SubscriberSet<(), AnyWindowFocusListener>,
@@ -2152,6 +2164,7 @@ impl Window {
             next_hitbox_id: HitboxId(0),
             next_tooltip_id: TooltipId::default(),
             tooltip_bounds: None,
+            tooltip_presence: TooltipPresence::Cold,
             dirty_views: FxHashSet::default(),
             focus_listeners: SubscriberSet::new(),
             focus_lost_listeners: SubscriberSet::new(),
@@ -3875,6 +3888,7 @@ impl Window {
         } else {
             tooltip_element = self.prepaint_tooltip(cx);
         }
+        self.record_tooltip_presence(tooltip_element.is_some(), cx);
 
         self.mouse_hit_test = self.next_frame.hit_test(self.mouse_position);
 
@@ -3942,6 +3956,31 @@ impl Window {
 
     pub(crate) fn is_painting_transparent_overlay(&self) -> bool {
         self.painting_transparent_overlay
+    }
+
+    fn record_tooltip_presence(&mut self, shown: bool, cx: &App) {
+        self.tooltip_presence = match (shown, self.tooltip_presence) {
+            (true, _) => TooltipPresence::Shown,
+            (false, TooltipPresence::Shown) => {
+                TooltipPresence::HiddenAt(cx.background_executor().now())
+            }
+            (false, presence) => presence,
+        };
+    }
+
+    /// Whether a tooltip is on screen or left it within [`TOOLTIP_WARM_GRACE`], in which case a
+    /// newly hovered tooltip skips its show delay.
+    pub(crate) fn tooltip_is_warm(&self, cx: &App) -> bool {
+        match self.tooltip_presence {
+            TooltipPresence::Cold => false,
+            TooltipPresence::Shown => true,
+            TooltipPresence::HiddenAt(hidden_at) => {
+                cx.background_executor()
+                    .now()
+                    .saturating_duration_since(hidden_at)
+                    <= TOOLTIP_WARM_GRACE
+            }
+        }
     }
 
     fn prepaint_tooltip(&mut self, cx: &mut App) -> Option<AnyElement> {

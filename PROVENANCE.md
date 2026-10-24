@@ -1227,6 +1227,13 @@ existing focus, visual-transform and tooltip authorities without importing an
 implementation, adding a dependency or changing the frozen historical import
 receipt.
 
+### Warm tooltip handoff
+
+Skipping the tooltip show delay while another tooltip is on screen or left it
+within the grace period is original GPUI Box framework work on the existing
+tooltip path. It imports no source and adds no dependency; frozen import
+receipts are unchanged.
+
 ## P21: gpui-ce transition coordinate rebasing
 
 - Upstream: <https://github.com/brendon-felix/gpui-ce>
